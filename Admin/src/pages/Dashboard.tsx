@@ -20,6 +20,11 @@ interface Booking {
   checkOut: string;
   guestInfo: {
     fullName: string;
+    phoneNumber?: string;
+  };
+  customerId?: {
+    fullName: string;
+    email: string;
   };
 }
 
@@ -27,6 +32,10 @@ interface Room {
   _id: string;
   roomNumber: string;
   status: string;
+  typeId: {
+    name: string;
+    pricePerNight: number;
+  };
 }
 
 interface Service {
@@ -43,6 +52,26 @@ interface ServiceBooking {
   price: number;
   status: string;
   scheduledAt: string;
+  bookingId: {
+    guestInfo: {
+      fullName: string;
+    };
+  };
+}
+
+interface Invoice {
+  _id: string;
+  totalAmount: number;
+  status: string;
+  bookingId: {
+    _id: string;
+    checkIn: string;
+    checkOut: string;
+  };
+  customerId: {
+    fullName: string;
+    email: string;
+  };
 }
 
 const Dashboard: React.FC = () => {
@@ -74,14 +103,20 @@ const Dashboard: React.FC = () => {
         const rooms: Room[] = roomsRes.data.data.rooms || [];
         const services: Service[] = servicesRes.data.data.data || [];
         const serviceBookings: ServiceBooking[] = serviceBookingsRes.data.data.serviceBookings || [];
-        const invoices = invoicesRes.data.data.invoices || [];
+        const invoices: Invoice[] = invoicesRes.data.data.invoices || [];
 
         // Calculate statistics
-        const totalRevenue = bookings.reduce((sum, booking) => sum + (booking.totalPrice || 0), 0);
+        const totalRevenue = invoices
+          .filter(invoice => invoice.status === 'paid')
+          .reduce((sum, invoice) => sum + (invoice.totalAmount || 0), 0);
+
         const availableRooms = rooms.filter(room => room.status === 'available').length;
-        const upcomingCheckIns = bookings.filter(booking => 
-          new Date(booking.checkIn) > new Date()
-        ).length;
+        
+        const now = new Date();
+        const upcomingCheckIns = bookings.filter(booking => {
+          const checkIn = new Date(booking.checkIn);
+          return checkIn > now && checkIn <= new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        }).length;
 
         // Calculate popular services
         const serviceCounts: Record<string, number> = {};
@@ -101,10 +136,22 @@ const Dashboard: React.FC = () => {
           availableRooms,
           totalServices: services.length,
           upcomingCheckIns,
-          pendingInvoices: invoices.filter((i: any) => i.status === 'pending').length
+          pendingInvoices: invoices.filter(invoice => invoice.status === 'pending').length
         });
 
-        setRecentBookings(bookings.slice(0, 5));
+        // Prepare recent bookings data
+        const formattedBookings = bookings
+          .sort((a, b) => new Date(b.checkIn).getTime() - new Date(a.checkIn).getTime())
+          .slice(0, 5)
+          .map(booking => ({
+            ...booking,
+            guestInfo: {
+              fullName: booking.guestInfo?.fullName || booking.customerId?.fullName || 'Không tên',
+              phoneNumber: booking.guestInfo?.phoneNumber || 'Chưa cập nhật'
+            }
+          }));
+
+        setRecentBookings(formattedBookings);
         setPopularServices(popularServices);
         setLoading(false);
       } catch (error) {
@@ -121,12 +168,24 @@ const Dashboard: React.FC = () => {
       title: 'Khách hàng',
       dataIndex: ['guestInfo', 'fullName'],
       key: 'guestName',
+      render: (text: string, record: Booking) => (
+        <div>
+          <div>{record.guestInfo?.fullName}</div>
+          <div className="text-xs text-gray-500">{record.guestInfo?.phoneNumber}</div>
+        </div>
+      ),
+    },
+    {
+      title: 'Ngày nhận phòng',
+      dataIndex: 'checkIn',
+      key: 'checkIn',
+      render: (date: string) => new Date(date).toLocaleDateString('vi-VN'),
     },
     {
       title: 'Tổng tiền',
       dataIndex: 'totalPrice',
       key: 'totalPrice',
-      render: (price: number) => `${price.toLocaleString()} VND`,
+      render: (price: number) => `${price?.toLocaleString('vi-VN')} VND` || '0 VND',
     },
     {
       title: 'Trạng thái',
@@ -147,13 +206,14 @@ const Dashboard: React.FC = () => {
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={8} xl={4}>
           <Card>
-            <Statistic
-              title="Doanh thu"
-              value={stats.totalRevenue}
-              prefix={<DollarOutlined />}
-              valueStyle={{ color: '#3f8600' }}
-              formatter={value => `${Number(value).toLocaleString()} VND`}
-            />
+          <Statistic
+            title="Doanh thu"
+            value={stats.totalRevenue}
+            prefix={<DollarOutlined />}
+            valueStyle={{ color: '#3f8600' }}
+            formatter={(value: any) => `${Number(value).toLocaleString('vi-VN')} VND`}
+          />
+
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={8} xl={4}>
@@ -186,7 +246,7 @@ const Dashboard: React.FC = () => {
         <Col xs={24} sm={12} lg={8} xl={4}>
           <Card>
             <Statistic
-              title="Check-in sắp tới"
+              title="Check-in sắp tới (7 ngày)"
               value={stats.upcomingCheckIns}
               prefix={<UserOutlined />}
             />
@@ -228,6 +288,9 @@ const Dashboard: React.FC = () => {
                   </Tag>
                 </div>
               ))}
+              {!loading && popularServices.length === 0 && (
+                <div className="text-center text-gray-500">Chưa có dữ liệu</div>
+              )}
             </div>
           </Card>
         </Col>
