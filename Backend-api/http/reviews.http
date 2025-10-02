@@ -1,0 +1,34 @@
+### Lấy tất cả review
+GET http://localhost:8080/api/v1/reviews
+Content-Type: application/json
+
+### Lấy review theo ID
+GET http://localhost:8080/api/v1/reviews
+Content-Type: application/json
+
+### Tạo review mới
+POST http://localhost:8080/api/v1/reviews
+Content-Type: application/json
+
+{
+  "reviewerId": "64f7a1b2c9e77b001f8e2e1f",       
+  "targetType": "room",                             
+  "targetId": "64f7b3d7c9e77b001f8e2e20",         
+  "rating": 5,
+  "comment": "Phòng sạch sẽ, dịch vụ ok!",
+  "status": "active"
+}
+
+### Cập nhật review
+PUT http://localhost:8080/api/v1/reviews
+Content-Type: application/json
+
+{
+  "rating": 4,
+  "comment": "Phòng đẹp nhưng hơi ồn",
+  "status": "active"
+}
+
+### Xoá review
+DELETE http://localhost:8080/api/v1/reviews
+Content-Type: application/json

@@ -1,0 +1,40 @@
+### Get all hotels
+GET http://localhost:8080/api/v1/users
+
+### Create new user
+POST http://localhost:8080/api/v1/users
+Content-Type: application/json
+
+{
+    "fullName": "Nguyen Van Tu",
+    "email": "user@gmail.com",
+    "phoneNumber": "0704627403",
+    "password": "123456",
+    "role": "customer",
+    "status": "active",
+    "preferences": ["tham quan","ăn uống","thể thao","phim ảnh","sách","game","du lịch","thư giãn","thăm bảo tàng","thăm vườn quốc gia"]
+}
+
+### Create admin user
+POST http://localhost:8080/api/v1/users/
+Content-Type: application/json
+
+{
+    "fullName": "Admin User",
+    "email": "na@example.com",
+    "phoneNumber": "0987654321",
+    "password": "admin123",
+    "status": "blocked",
+    "preferences": ["tham quan","ăn uống","thể thao","phim ảnh","sách","game","du lịch","thư giãn","thăm bảo tàng","thăm vườn quốc gia"]
+}
+### Update user (thay thế :id bằng ID thực tế)
+PUT http://localhost:8080/api/v1/users/68cb70183c0249ce4ed2998f
+Content-Type: application/json
+
+{
+    "status": "blocked"
+}
+
+### Delete user (thay thế :id bằng ID thực tế)
+DELETE http://localhost:8080/api/v1/users/68c63072a7aeb4a2436fc779
+

@@ -1,0 +1,30 @@
+### Lấy tất cả booking status logs
+GET http://localhost:8080/api/v1/bookingStatus
+Content-Type: application/json
+
+### Lấy log theo ID
+GET http://localhost:8080/api/v1/bookingStatus
+Content-Type: application/json
+
+### Tạo log mới
+POST http://localhost:8080/api/v1/bookingStatus
+Content-Type: application/json
+
+{
+  "bookingId": "68cb70a13c0249ce4ed29994",   
+  "actorId": "68cb70183c0249ce4ed2998f",     
+  "action": "check_in",                     
+  "note": "Khách tới sớm 30 phút"
+}
+
+### Cập nhật log (nếu cần chỉnh note)
+PUT http://localhost:8080/api/v1/bookingStatus
+Content-Type: application/json
+
+{
+  "note": "Khách tới sớm 15 phút (update)"
+}
+
+### Xoá log
+DELETE http://localhost:8080/api/v1/bookingStatus
+Content-Type: application/json

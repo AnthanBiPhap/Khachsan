@@ -1,0 +1,35 @@
+### Get all services
+GET http://localhost:8080/api/v1/services
+Content-Type: application/json
+### Get service by ID
+GET http://localhost:8080/api/v1/services/64f7a1b2c9e77b001f8e2e1f
+Content-Type: application/json
+
+### Create new service
+POST http://localhost:8080/api/v1/services
+Content-Type: application/json
+
+{
+    "name": "Spa & 2Massage",
+    "description": "Relaxing full body massage",
+    "basePrice": 500000,
+    "slots": ["09:00", "11:00", "14:00", "16:00"],
+    "images": ["https://example.com/spa1.jpg"],
+    "status": "active"
+}
+
+### Update service
+PUT http://localhost:8080/api/v1/services/68cb6c74cf7a213ac259bd8d
+Content-Type: application/json
+
+{
+    "name": "Premium Spa & Massage",
+    "description": "Premium full body massage with aromatherapy",
+    "basePrice": 600000,
+    "slots": ["09:00", "11:00", "14:00", "16:00", "18:00"],
+    "status": "active"
+}
+
+### Delete service
+DELETE http://localhost:8080/api/v1/services/68ca74b110353a7fa6c042c2
+Content-Type: application/json

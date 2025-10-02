@@ -1,0 +1,33 @@
+### Lấy danh sách tất cả phòng
+GET http://localhost:8080/api/v1/rooms
+Content-Type: application/json
+
+### Lấy chi tiết phòng theo ID
+GET http://localhost:8080/api/v1/rooms/68de83beacef62d44bd0d90c
+Content-Type: application/json
+
+### Tạo phòng mới
+POST http://localhost:8080/api/v1/rooms
+Content-Type: application/json
+
+{
+  "roomNumber": "10111A",
+  "typeId": "68cb6e99cf7a213ac259bdb6",
+  "status": "available",
+  "amenities": ["wifi", "balcony", "air conditioning"],
+  "images": ["https://katahome.com/wp-content/uploads/2018/10/thiet-ke-noi-that-phong-ngu-khach-san-5-sao-chuan-khong-can-chinh-4.jpg", "https://katahome.com/wp-content/uploads/2018/10/thiet-ke-noi-that-phong-ngu-khach-san-5-sao-chuan-khong-can-chinh-4.jpg"]
+}
+
+### Cập nhật thông tin phòng
+PUT http://localhost:8080/api/v1/rooms/68cb6ecdcf7a213ac259bdba
+Content-Type: application/json
+
+{
+  "roomNumber": "11101A",
+  "status": "maintenance",
+  "amenities": ["wifi", "television", "balcony"]
+}
+
+### Xoá phòng
+DELETE http://localhost:8080/api/v1/rooms
+Content-Type: application/json

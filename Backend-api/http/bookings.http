@@ -1,0 +1,42 @@
+### Lấy tất cả bookings
+GET http://localhost:8080/api/v1/bookings
+Content-Type: application/json
+
+### Lấy booking theo ID
+GET http://localhost:8080/api/v1/bookings/ID_BOOKING
+Content-Type: application/json
+
+### Tạo booking mới (walk-in)
+POST http://localhost:8080/api/v1/bookings
+Content-Type: application/json
+
+{
+  "guestInfo": {
+    "fullName": "Nguyễn Văn Tứ",
+    "phoneNumber": "1234567890",
+    "idNumber": "12345678909",
+    "age": 87
+  },
+  "roomId": "68ca76e0df61ff9fa5f4ca97",
+  "checkIn": "2026-02-12T00:00:00.000Z",
+  "checkOut": "2026-08-20T00:00:00.000Z",
+  "guests": 6,
+  "totalPrice": 22222222,
+  "status": "pending",
+  "paymentStatus": "pending",
+  "notes": "2222",
+  "specialRequests": "2222"
+}
+
+### Cập nhật booking
+PUT http://localhost:8080/api/v1/bookings/ID_BOOKING
+Content-Type: application/json
+
+{
+  "paymentStatus": "paid",
+  "notes": "Khách đã thanh toán full"
+}
+
+### Xoá booking
+DELETE http://localhost:8080/api/v1/bookings/ID_BOOKING
+Content-Type: application/json

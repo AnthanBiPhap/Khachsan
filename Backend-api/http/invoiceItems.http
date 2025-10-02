@@ -1,0 +1,31 @@
+### Lấy danh sách tất cả invoice items
+GET http://localhost:8080/api/v1/invoiceItems
+Content-Type: application/json
+
+### Lấy invoice item theo ID
+GET http://localhost:8080/api/v1/invoiceItems
+Content-Type: application/json
+
+### Tạo invoice item mới
+POST http://localhost:8080/api/v1/invoiceItems
+Content-Type: application/json
+
+{
+  "invoiceId": "68cb71463c0249ce4ed2999c",     
+  "itemType": "service",                        
+  "description": "Phí dọn phòng thêm giờ",
+  "amount": 200000
+}
+
+### Cập nhật invoice item
+PUT http://localhost:8080/api/v1/invoiceItems
+Content-Type: application/json
+
+{
+  "description": "Phí dọn phòng (update)",
+  "amount": 250000
+}
+
+### Xoá invoice item
+DELETE http://localhost:8080/api/v1/invoiceItems
+Content-Type: application/json

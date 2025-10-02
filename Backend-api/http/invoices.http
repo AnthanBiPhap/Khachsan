@@ -1,0 +1,32 @@
+### Lấy danh sách hóa đơn
+GET http://localhost:8080/api/v1/invoices
+Content-Type: application/json
+
+### Lấy chi tiết hóa đơn theo ID
+GET http://localhost:8080/api/v1/invoices
+Content-Type: application/json
+
+### Tạo hóa đơn mới
+POST http://localhost:8080/api/v1/invoices
+Content-Type: application/json
+
+{
+  "bookingId": "68cb70a13c0249ce4ed29994",       
+  "customerId": "68cb70183c0249ce4ed2998f",     
+  "totalAmount": 1500000,
+  "status": "pending",
+  "issuedAt": "2025-09-17T10:00:00.000Z"
+}
+
+### Cập nhật hóa đơn
+PUT http://localhost:8080/api/v1/invoices
+Content-Type: application/json
+
+{
+  "totalAmount": 1600000,
+  "status": "paid"
+}
+
+### Xoá hóa đơn
+DELETE http://localhost:8080/api/v1/invoices
+Content-Type: application/json

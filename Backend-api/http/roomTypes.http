@@ -1,0 +1,36 @@
+### Lấy tất cả room type
+GET http://localhost:8080/api/v1/roomTypes
+Content-Type: application/json
+
+### Lấy room type theo ID
+GET http://localhost:8080/api/v1/roomTypes
+Content-Type: application/json
+
+### Tạo room type mới
+POST http://localhost:8080/api/v1/roomTypes
+Content-Type: application/json
+
+{
+  "name": "Phòng Deluxe11",
+  "description": "Phòng cao cấp view hồ bơi",
+  "pricePerNight": 1200000,
+  "capacity": 3,
+  "amenities": ["wifi","television","balcony"],
+  "images": ["https://example.com/deluxe1.jpg","https://example.com/deluxe2.jpg"]
+}
+
+### Cập nhật room type
+PUT http://localhost:8080/api/v1/roomTypes/68cb6e76cf7a213ac259bdae
+Content-Type: application/json
+
+{
+  "name": "Phòng Deluxe VIP",
+  "description": "Phòng view hồ bơi + bồn tắm",
+  "pricePerNight": 1500000,
+  "capacity": 4,
+  "amenities": ["wifi","balcony","bathtub"]
+}
+
+### Xoá room type
+DELETE http://localhost:8080/api/v1/roomTypes/68cb6e76cf7a213ac259bdae
+Content-Type: application/json

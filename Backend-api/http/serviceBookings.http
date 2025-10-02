@@ -1,0 +1,41 @@
+### Lấy tất cả service booking
+GET http://localhost:8080/api/v1/serviceBookings
+Content-Type: application/json
+
+### Lấy service booking theo ID
+GET http://localhost:8080/api/v1/serviceBookings/68cb6de7cf7a213ac259bd9d
+Content-Type: application/json
+
+### Tạo service booking mới
+POST http://localhost:8080/api/v1/serviceBookings
+Content-Type: application/json
+
+{
+  "bookingId": "64f7a1b2c9e77b001f8e2e1f",
+  "serviceId": "68cb6c74cf7a213ac259bd8d",
+  "customerId": "68c91b412069e3c320fd304c",
+  "scheduledAt": "2025-09-22T09:00:00.000Z",
+  "quantity": 2,
+  "price": 500000
+}
+
+### Cập nhật service booking
+PUT http://localhost:8080/api/v1/serviceBookings
+Content-Type: application/json
+
+{
+  "quantity": 3,
+  "price": 750000
+}
+
+### Cập nhật trạng thái service booking
+PATCH http://localhost:8080/api/v1/serviceBookings
+Content-Type: application/json
+
+{
+  "status": "completed"
+}
+
+### Xoá service booking
+DELETE http://localhost:8080/api/v1/serviceBookings
+Content-Type: application/json
