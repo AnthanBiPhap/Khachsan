@@ -142,7 +142,7 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
     return d;
   };
 
-  // Trong handlePayment
+  // Trong handlePayment - sử dụng Stripe Checkout để tránh tạo booking trùng lặp
   const handlePayment = async () => {
     if (!room) return;
 
@@ -150,16 +150,16 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
       const checkInDate = getCheckInDate();
       const checkOutDate = getCheckOutDate();
 
-      const payload = {
+      // Lưu thông tin đặt phòng vào localStorage để sử dụng sau khi thanh toán
+      const bookingData = {
         roomId: room._id,
+        roomName: `${room.roomNumber} - ${room.typeId.name}`,
         checkIn: checkInDate.toISOString(),
-        checkOut: new Date(checkOutDate).toISOString(), // gốc
-        extendHours: extraHours || 0,
-        actualCheckOut: new Date(checkOutDate).toISOString(), // đã cộng giờ
+        checkOut: new Date(checkOutDate).toISOString(),
+        extraHours: extraHours || 0,
+        actualCheckOut: new Date(checkOutDate).toISOString(),
         guests,
         totalPrice,
-        status: "pending",
-        paymentStatus: "paid",
         services: selectedServices.map((s) => {
           const srv = services.find((srv) => srv._id === s.serviceId);
           return {
@@ -172,32 +172,40 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         customerId: userData?._id,
       };
 
-      const res = await fetch("/api/bookings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      localStorage.setItem('stripe_booking_data', JSON.stringify(bookingData));
+
+      // Tạo Stripe Checkout Session
+      const payload = {
+        roomId: room._id,
+        roomName: bookingData.roomName,
+        totalPrice,
+        checkIn: checkInDate.toISOString(),
+        checkOut: new Date(checkOutDate).toISOString(),
+        guests,
+        nights: getNights(),
+        customerEmail: userData?.email || '',
+        customerId: userData?._id,
+        services: bookingData.services,
+      };
+
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text);
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Không thể tạo phiên thanh toán');
       }
 
-      const data = await res.json();
-      const { booking, invoice } = data?.data;
-      message.success("Thanh toán và đặt phòng thành công!", 5000);
-      setIsModalOpen(false);
+      const { url } = await res.json();
 
-      if (invoice?._id) {
-        window.open(`/api/invoices/${invoice._id}/print`, "_blank");
-      }
-
-      setTimeout(() => {
-        router.push(`/`);
-      }, 5000);
+      // Redirect đến Stripe Checkout
+      window.location.href = url;
     } catch (err) {
       console.error(err);
-      message.error("Không thể tạo booking. Vui lòng thử lại.");
+      message.error(err instanceof Error ? err.message : 'Không thể tạo phiên thanh toán. Vui lòng thử lại.');
     }
   };
 
@@ -323,11 +331,11 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         open={isModalOpen}
         onOk={handlePayment}
         onCancel={() => setIsModalOpen(false)}
-        okText="Thanh toán"
+        okText="Thanh toán với Stripe"
         cancelText="Hủy"
       >
         <p>Tổng tiền cần thanh toán: {totalPrice.toLocaleString()} VNĐ</p>
-        <p>Bạn có chắc chắn muốn thanh toán không?</p>
+        <p>Bạn sẽ được chuyển đến trang thanh toán an toàn của Stripe.</p>
       </Modal>
     </div>
   );
