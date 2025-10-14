@@ -224,8 +224,8 @@ export default function BookingForm({
                 rules={[{ required: true, message: "Chọn hành động" }]}
               >
                 <Select style={{ width: "100%" }}>
-                  <Option value="check_in">Check-in</Option>
-                  <Option value="check_out">Check-out</Option>
+                  {/* <Option value="check_in">Check-in</Option>
+                  <Option value="check_out">Check-out</Option> */}
                   <Option value="cancelled">Hủy đặt phòng</Option>
                   <Option value="extend">Gia hạn</Option>
                   <Option value="confirmed">Xác nhận</Option>

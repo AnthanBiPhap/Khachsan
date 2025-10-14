@@ -167,16 +167,18 @@ export default function BookingPage() {
           <Descriptions column={1} bordered size="middle">
             {/* <Descriptions.Item label="ID">{detailItem._id}</Descriptions.Item> */}
             <Descriptions.Item label="Khách hàng">
-              {detailItem.customerId?.fullName ||
-                detailItem.guestInfo?.fullName ||
-                "-"}{" "}
-              <br />
-              <span style={{ color: "#888", fontSize: 12 }}>
-                {detailItem.customerId?.email ||
-                  detailItem.guestInfo?.phoneNumber ||
-                  ""}
-              </span>
-            </Descriptions.Item>
+  {detailItem.customerId?.fullName ||
+    detailItem.guestInfo?.fullName ||
+    "-"}
+  <br />
+  <span style={{ color: "#888", fontSize: 12 }}>
+    {detailItem.customerId?.phoneNumber ||
+      detailItem.guestInfo?.phoneNumber ||
+      detailItem.customerId?.email ||
+      ""}
+  </span>
+</Descriptions.Item>
+
 
             <Descriptions.Item label="Phòng">
               {detailItem.roomId?.roomNumber ||

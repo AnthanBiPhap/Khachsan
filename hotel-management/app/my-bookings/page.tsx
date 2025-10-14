@@ -173,7 +173,10 @@ export default function MyBookingsPage() {
                     <p className="font-mono font-medium">{booking._id.slice(-8).toUpperCase()}</p>
                   </div>
                 </div>
-
+                <div className="mt-2 text-xs text-gray-500">
+                  <p>Tạo lúc: {formatDate(booking.createdAt)}</p>
+                  <p>Cập nhật: {formatDate(booking.updatedAt)}</p>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 mb-2">Thông tin đặt phòng</h3>

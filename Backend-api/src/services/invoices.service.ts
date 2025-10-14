@@ -29,7 +29,7 @@ const getAll = async (query: any) => {
 
   const invoices = await Invoice.find(where)
     .populate("bookingId", "_id checkIn checkOut")
-    .populate("customerId", "fullName email")
+    .populate("customerId", "fullName email phoneNumber")
     .skip((page - 1) * limit)
     .limit(limit)
     .sort(sortObject);
@@ -49,7 +49,7 @@ const getAll = async (query: any) => {
 const getById = async (id: string) => {
   const invoice = await Invoice.findById(id)
     .populate("bookingId", "_id checkIn checkOut")
-    .populate("customerId", "fullName email");
+    .populate("customerId", "fullName email phoneNumber");
   if (!invoice) throw createError(404, "Invoice not found");
   return invoice;
 };
@@ -63,7 +63,7 @@ const create = async (payload: any) => {
     issuedAt: payload.issuedAt || Date.now(),
   });
   await invoice.save();
-  return invoice.populate("customerId", "fullName email");
+  return invoice.populate("customerId", "fullName email phoneNumber");
 };
 
 const updateById = async (id: string, payload: any) => {
@@ -77,7 +77,7 @@ const updateById = async (id: string, payload: any) => {
 
   Object.assign(invoice, cleanUpdates);
   await invoice.save();
-  return invoice.populate("customerId", "fullName email");
+  return invoice.populate("customerId", "fullName email phoneNumber");
 };
 
 const deleteById = async (id: string) => {
@@ -106,7 +106,7 @@ const printInvoice = async (invoiceId: string) => {
   // Font Unicode (Google Noto Sans)
   doc.font("Helvetica");
 
-  const customer = invoice.customerId as { fullName?: string; email?: string };
+  const customer = invoice.customerId as { fullName?: string; email?: string; phoneNumber?: string };
   const booking = invoice.bookingId as any;
 
   // --- Header ---
@@ -134,8 +134,14 @@ const printInvoice = async (invoiceId: string) => {
   doc.text(
     `Email: ${
       customer?.email ||
-      booking?.guestInfo?.phoneNumber ||
       booking?.guestInfo?.email ||
+      "-"
+    }`
+  );
+  doc.text(
+    `Phone: ${
+      customer?.phoneNumber ||
+      booking?.guestInfo?.phoneNumber ||
       "-"
     }`
   );
