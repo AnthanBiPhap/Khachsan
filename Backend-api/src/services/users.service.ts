@@ -65,7 +65,8 @@ const create = async (payload: any) => {
         phoneNumber: payload.phoneNumber,
         password: payload.password,
         role: payload.role,
-        isActive: payload.isActive
+        isActive: payload.isActive,
+        preferences: payload.preferences || []
        
     });
     // lưu vào database

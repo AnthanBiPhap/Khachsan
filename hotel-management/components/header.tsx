@@ -66,6 +66,11 @@ export function Header() {
             {user ? (
               <div className="flex items-center space-x-4">
                 <span className="text-sm font-medium">Xin chào, {user.fullName || user.email}</span>
+                <Link href="/dashboard">
+                  <Button variant="ghost" size="sm" className="text-foreground">
+                    Dashboard
+                  </Button>
+                </Link>
                 <Button 
                   variant="outline" 
                   size="sm" 

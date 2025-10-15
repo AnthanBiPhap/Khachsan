@@ -57,6 +57,7 @@ const authService = {
     email: string;
     password: string;
     phoneNumber: string;
+    preferences?: string[];
   }): Promise<void> => {
     try {
       await api.post('/users', userData);

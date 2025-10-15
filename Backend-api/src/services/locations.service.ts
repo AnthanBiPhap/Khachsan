@@ -21,10 +21,20 @@ const getAll = async (query: any) => {
     where.type = query.type;
   }
 
+  // Filter by multiple types (for user preferences)
+  if (query.types) {
+    const typesArray = query.types.split(',').map((type: string) => type.trim());
+    console.log('Filtering by types:', typesArray);
+    where.type = { $in: typesArray };
+  }
+
   // Filter by status (active/hidden)
   if (query.status) {
     where.status = query.status;
   }
+
+  console.log('Final where clause:', where);
+  console.log('Query parameters:', query);
 
   const locations = await Location.find(where)
     .skip((page - 1) * limit)
