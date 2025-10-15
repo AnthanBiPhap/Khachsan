@@ -1,9 +1,10 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Dumbbell, Clock, Heart, Flower2, Clock3, Clock4, Clock5, Clock6, Clock7, Clock8, Clock9, Clock10, Clock11, Clock12 } from "lucide-react"
-import { Button } from "./ui/button"
-import { Skeleton } from "./ui/skeleton"
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Dumbbell, Clock, Heart, Flower2, Clock3, Clock4, Clock5, Clock6, Clock7, Clock8, Clock9, Clock10, Clock11, Clock12 } from "lucide-react";
+import { Button } from "./ui/button";
+import { Skeleton } from "./ui/skeleton";
 
 type ServiceStatus = 'active' | 'hidden' | 'deleted'
 
@@ -29,6 +30,7 @@ export function ServicesSection() {
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const router = useRouter()
 
   useEffect(() => {
     const controller = new AbortController();
@@ -94,13 +96,6 @@ export function ServicesSection() {
       console.log('Hủy yêu cầu API services');
     };
   }, [])
-
-  // Hàm xử lý lỗi khi tải ảnh
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>) => {
-    const target = e.target as HTMLImageElement;
-    target.style.display = 'none';
-    target.nextElementSibling?.classList.remove('hidden');
-  };
 
   // Hàm lấy icon phù hợp cho từng loại dịch vụ
   const getServiceIcon = (serviceName: string) => {
@@ -207,17 +202,11 @@ export function ServicesSection() {
             >
               <div className="h-48 bg-gray-100 overflow-hidden relative">
                 {service.images?.[0] ? (
-                  <>
-                    <img
-                      src={service.images[0]}
-                      alt={service.name}
-                      className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                      onError={handleImageError}
-                    />
-                    <div className="hidden absolute inset-0 bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
-                      {getServiceIcon(service.name)}
-                    </div>
-                  </>
+                  <img
+                    src={service.images[0]}
+                    alt={service.name}
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
                     {getServiceIcon(service.name)}
@@ -261,9 +250,18 @@ export function ServicesSection() {
                   </div>
                 )}
                 
-                {/* <Button className="w-full bg-blue-600 hover:bg-blue-700 mt-4">
-                  Đặt dịch vụ ngay
-                </Button> */}
+                <div className="flex gap-2 mt-4">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => router.push(`/service-detail/${service._id}`)}
+                  >
+                    Xem chi tiết
+                  </Button>
+                  <Button className="flex-1 bg-blue-600 hover:bg-blue-700">
+                    Đặt dịch vụ ngay
+                  </Button>
+                </div>
               </div>
             </div>
           ))}

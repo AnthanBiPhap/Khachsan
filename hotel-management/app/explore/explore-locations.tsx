@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -25,6 +26,7 @@ export function ExploreLocations() {
   const [error, setError] = useState<string | null>(null);
   const [showRecommended, setShowRecommended] = useState(false);
   const { user } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -96,12 +98,12 @@ export function ExploreLocations() {
     return (
       <div className="text-center py-12">
         <p className="text-red-500 mb-4">{error}</p>
-        <button 
+        <Button 
           onClick={() => window.location.reload()}
           className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
         >
           Thử lại
-        </button>
+        </Button>
       </div>
     );
   }
@@ -201,7 +203,13 @@ export function ExploreLocations() {
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600 line-clamp-3">{location.description}</p>
+                <p className="text-gray-600 line-clamp-3 mb-4">{location.description}</p>
+                <Button
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  onClick={() => router.push(`/location-detail/${location._id}`)}
+                >
+                  Xem chi tiết
+                </Button>
               </CardContent>
             </Card>
           ))}

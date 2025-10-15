@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -29,6 +30,7 @@ interface Room {
 export function FeaturedRooms() {
   const [rooms, setRooms] = useState<Room[]>([])
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
 
   useEffect(() => {
     fetchRooms()
@@ -145,25 +147,30 @@ export function FeaturedRooms() {
                     </div>
                     <div className="text-sm text-muted-foreground">/đêm</div>
                   </div>
-                  {/* <Button 
+                  <Button
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                     onClick={() => {
-                      window.location.href = `/rooms/${room._id}`;
+                      window.location.href = `/room-detail/${room._id}`;
                     }}
                   >
                     Xem chi tiết
-                  </Button> */}
+                  </Button>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        <div className="text-center mt-12">
-          {/* <Button variant="outline" size="lg" className="border-blue-600 text-blue-600 hover:bg-blue-50 bg-transparent">
+        {/* <div className="text-center mt-12">
+          <Button
+            variant="outline"
+            size="lg"
+            className="border-blue-600 text-blue-600 hover:bg-blue-50 bg-transparent"
+            onClick={() => router.push('/')}
+          >
             Xem tất cả phòng
-          </Button> */}
-        </div>
+          </Button>
+        </div> */}
       </div>
     </section>
   )

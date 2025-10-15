@@ -192,7 +192,18 @@ export function RoomSearch() {
                             </div>
                           </div>
                         </div>
-                        <div className="mt-4 flex justify-end">
+                        <div className="mt-4 flex justify-end gap-2">
+                          <Button
+                            onClick={() =>
+                              router.push(
+                                `/room-detail/${room._id}`
+                              )
+                            }
+                            variant="outline"
+                            className="whitespace-nowrap"
+                          >
+                            Chi tiết phòng
+                          </Button>
                           <Button
                             onClick={() =>
                               router.push(

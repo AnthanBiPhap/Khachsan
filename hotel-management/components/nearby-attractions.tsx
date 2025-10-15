@@ -1,8 +1,11 @@
-"use client"
-import { useState, useEffect } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Star, MapPin, Camera } from "lucide-react"
+"use client";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Star, MapPin, Camera } from "lucide-react";
 
 interface Location {
   _id: string
@@ -29,8 +32,9 @@ interface LocationsResponse {
 }
 
 export function NearbyAttractions() {
-  const [locations, setLocations] = useState<Location[]>([])
-  const [loading, setLoading] = useState(true)
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchLocations = async () => {
@@ -161,9 +165,14 @@ export function NearbyAttractions() {
                     <span className="text-xs text-gray-500">
                       {location.status === "active" ? "Đang hoạt động" : "Tạm đóng"}
                     </span>
-                    <button className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-blue-600 hover:text-blue-700 p-0 h-auto font-medium"
+                      onClick={() => router.push(`/location-detail/${location._id}`)}
+                    >
                       Xem chi tiết →
-                    </button>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
