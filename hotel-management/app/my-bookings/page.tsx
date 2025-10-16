@@ -343,9 +343,11 @@ export default function MyBookingsPage() {
                     Thanh toán ngay
                   </Button>
                   )}
-                  <Button variant="outline" className="w-full sm:w-auto">
-                    Liên hệ hỗ trợ
-                  </Button>
+                  <Link href="/contact">
+                    <Button variant="outline" className="w-full sm:w-auto">
+                      Liên hệ hỗ trợ
+                    </Button>
+                  </Link>
                   {booking.paymentStatus === 'pending' && (
                     <Button
                       variant="outline"
