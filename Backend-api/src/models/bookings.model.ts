@@ -10,7 +10,7 @@ const bookingSchema = new Schema(
     guestInfo: {
       fullName: {
         type: String,
-        required: function () {
+        required: function (this: any) {
           return !this.customerId;
         },
       },
@@ -22,13 +22,13 @@ const bookingSchema = new Schema(
       },
       age: {
         type: Number,
-        required: function () {
+        required: function (this: any) {
           return !this.customerId;
         },
       },
       phoneNumber: {
         type: String,
-        required: function () {
+        required: function (this: any) {
           return !this.customerId;
         },
       },
@@ -60,6 +60,11 @@ const bookingSchema = new Schema(
         quantity: { type: Number, default: 1, min: 1 },
       },
     ],
+    source: {
+      type: String,
+      enum: ["online", "walk_in"],
+      default: "walk_in",
+    },
     totalPrice: {
       type: Number,
       required: [true, "Tổng tiền là bắt buộc"],
@@ -67,7 +72,7 @@ const bookingSchema = new Schema(
     },
     paymentStatus: {
       type: String,
-      enum: ["pending", "paid", "failed", "refunded"],
+      enum: ["pending", "paid", "failed", "refunded", "refund_requested"],
       default: "pending",
     },
     notes: {

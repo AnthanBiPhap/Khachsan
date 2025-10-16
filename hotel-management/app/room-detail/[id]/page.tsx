@@ -175,12 +175,12 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         <div className="text-sm text-gray-500">
           Nếu bạn muốn đặt phòng này, hãy quay lại trang tìm kiếm và chọn "Đặt ngay"
         </div>
-        <Button
+        {/* <Button
           onClick={() => router.push(`/rooms/${room._id}`)}
           className="bg-blue-600 hover:bg-blue-700"
         >
           Đặt phòng ngay
-        </Button>
+        </Button> */}
       </div>
     </div>
   );

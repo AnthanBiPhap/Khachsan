@@ -51,6 +51,19 @@ export const bookingService = {
     return response.data.data;
   },
 
+  createBooking: async (payload: any) => {
+    const response = await axios.post(`${API_URL}/bookings`, {
+      ...payload,
+      source: 'online',
+    });
+    return response.data;
+  },
+
+  updateBooking: async (id: string, payload: Record<string, unknown>) => {
+    const response = await axios.put(`${API_URL}/bookings/${id}`, payload);
+    return response.data;
+  },
+
   getRooms: async (): Promise<{ rooms: Room[] }> => {
     const response = await axios.get(`${API_URL}/rooms`);
     return response.data.data;

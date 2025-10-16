@@ -2,6 +2,11 @@ export interface BookingRef {
   _id: string;
   checkIn?: string;
   checkOut?: string;
+  guestInfo?: {
+    fullName?: string;
+    email?: string;
+    phoneNumber?: string;
+  };
 }
 
 export interface CustomerRef {

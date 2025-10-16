@@ -24,12 +24,16 @@ export const invoicesColumns = (
   {
     title: "Khách hàng",
     key: "customer",
-    render: (_, r) => (
-      <div>
-        <div>{r.customerId?.fullName || '-'}</div>
-        <div style={{ color: '#888', fontSize: 12 }}>{r.customerId?.email || ''}</div>
-      </div>
-    )
+    render: (_, r) => {
+      const name = r.customerId?.fullName || r.bookingId?.guestInfo?.fullName || '-';
+      const email = r.customerId?.email || r.bookingId?.guestInfo?.email || '';
+      return (
+        <div>
+          <div>{name}</div>
+          <div style={{ color: '#888', fontSize: 12 }}>{email}</div>
+        </div>
+      );
+    }
   },
   {
     title: "Tổng tiền",

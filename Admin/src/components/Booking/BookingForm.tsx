@@ -52,6 +52,9 @@ export default function BookingForm({
   const [extraHours, setExtraHours] = useState<number>(0);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
 
+  // Walk-in khi không có customerId (đặt trực tiếp tại quầy)
+  const isWalkIn = !booking?.customerId;
+
   const roomPrice = useMemo(() => {
     if (!selectedRoom || !checkIn || !checkOut) return 0;
     const nights = checkOut.diff(checkIn, "day") || 1;
@@ -124,16 +127,14 @@ export default function BookingForm({
         checkIn: booking.checkIn ? dayjs(booking.checkIn) : null,
         checkOut: booking.checkOut ? dayjs(booking.checkOut) : null,
         guestInfo: booking.guestInfo || {},
-        extraHours: booking.extraHours || 0,
+        extraHours: (booking as any).extendHours || 0,
       });
       setCheckIn(booking.checkIn ? dayjs(booking.checkIn) : null);
       setCheckOut(booking.checkOut ? dayjs(booking.checkOut) : null);
-      setExtraHours(booking.extraHours || 0);
+      setExtraHours((booking as any).extendHours || 0);
 
-      const room =
-        typeof booking.roomId === "string"
-          ? rooms.find((r) => r._id === booking.roomId)
-          : rooms.find((r) => r._id === booking.roomId._id);
+      const roomIdValue = (booking as any).roomId?._id || (booking as any).roomId;
+      const room = rooms.find((r) => r._id === roomIdValue);
       setSelectedRoom(room || null);
 
       if (booking.services) {
@@ -219,6 +220,11 @@ export default function BookingForm({
         })),
       };
 
+      // Với booking online (có customerId), không gửi guestInfo rỗng lên BE
+      if (!isWalkIn) {
+        delete (bookingData as any).guestInfo;
+      }
+
       await onSave(bookingData);
 
       if (!booking) {
@@ -264,7 +270,7 @@ export default function BookingForm({
             <Form.Item
               name={["guestInfo", "fullName"]}
               label="Họ và tên"
-              rules={[{ required: true, message: "Nhập họ và tên khách" }]}
+              rules={[{ required: isWalkIn, message: "Nhập họ và tên khách" }]}
             >
               <Input placeholder="Nhập họ và tên" />
             </Form.Item>
@@ -273,7 +279,7 @@ export default function BookingForm({
             <Form.Item
               name={["guestInfo", "phoneNumber"]}
               label="Số điện thoại"
-              rules={[{ required: true, message: "Nhập số điện thoại" }]}
+              rules={[{ required: isWalkIn, message: "Nhập số điện thoại" }]}
             >
               <Input placeholder="Nhập số điện thoại" />
             </Form.Item>
@@ -294,7 +300,7 @@ export default function BookingForm({
             <Form.Item
               name={["guestInfo", "idNumber"]}
               label="CMND/CCCD"
-              rules={[{ required: true, message: "Nhập CMND/CCCD" }]}
+              rules={[{ required: isWalkIn, message: "Nhập CMND/CCCD" }]}
             >
               <Input placeholder="Số CMND/CCCD" />
             </Form.Item>

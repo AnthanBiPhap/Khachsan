@@ -23,6 +23,21 @@ export const bookingColumns = (
     }
   },
   {
+    title: "Nguồn",
+    dataIndex: "source",
+    key: "source",
+    filters: [
+      { text: 'Online', value: 'online' },
+      { text: 'Trực tiếp', value: 'walk_in' },
+    ],
+    onFilter: (value, record) => record.source === value,
+    render: (_, r) => (
+      <Tag color={r.source === 'online' ? 'blue' : 'purple'}>
+        {r.source === 'online' ? 'Online' : 'Trực tiếp'}
+      </Tag>
+    )
+  },
+  {
     title: "Phòng",
     key: "room",
     render: (_, r) => (handleDetail ? <a onClick={() => handleDetail(r)}>{r.roomId?.roomNumber || r.roomId?._id || '-'}</a> : (r.roomId?.roomNumber || r.roomId?._id || '-'))

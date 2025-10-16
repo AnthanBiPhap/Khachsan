@@ -3,6 +3,7 @@ import Booking from "../models/bookings.model";
 import ServiceBooking from "../models/serviceBookings.model";
 import invoicesService from "./invoices.service";
 import bookingStatusService from "./bookingStatus.service";
+import Invoice from "../models/invoices.model";
 
 // Lấy tất cả booking với filter + pagination
 const getAll = async (query: any) => {
@@ -19,6 +20,7 @@ const getAll = async (query: any) => {
   if (query.customerId) where.customerId = query.customerId;
   if (query.roomId) where.roomId = query.roomId;
   if (query.paymentStatus) where.paymentStatus = query.paymentStatus;
+  if (query.source) where.source = query.source; // filter theo nguồn đặt
 
   // luôn loại booking đã huỷ
   where.paymentStatus = { $ne: "cancelled" };
@@ -85,6 +87,7 @@ const create = async (payload: any) => {
     checkOut,
     guests: payload.guests,
     totalPrice: payload.totalPrice,
+    source: payload.source || (payload.customerId ? "online" : "walk_in"),
     paymentStatus: payload.paymentStatus || "pending",
     notes: payload.notes || "",
     status: payload.status || "pending",
@@ -187,18 +190,89 @@ const updateById = async (id: string, payload: any) => {
     }
   }
 
+  // Không cho phép đổi nguồn đặt (source) khi update
+  if (payload && Object.prototype.hasOwnProperty.call(payload, 'source')) {
+    delete payload.source;
+  }
   // lọc payload hợp lệ
   const cleanUpdates = Object.fromEntries(
     Object.entries(payload).filter(
-      ([_, v]) => v !== "" && v !== null && v !== undefined
+      ([k, v]) => k !== 'source' && v !== "" && v !== null && v !== undefined
     )
   );
 
+  const previousPaymentStatus = (booking as any).paymentStatus;
   Object.assign(booking, cleanUpdates);
   const updatedBooking = await booking.save();
 
   await updatedBooking.populate("customerId", "fullName email phoneNumber");
   await updatedBooking.populate("roomId", "roomNumber typeId");
+
+  // Auto-create invoice when payment marked as paid (only on transition)
+  if (updatedBooking.paymentStatus === "paid" && previousPaymentStatus !== "paid") {
+    const existingInvoice = await Invoice.findOne({ bookingId: updatedBooking._id });
+    if (!existingInvoice) {
+      await invoicesService.create({
+        bookingId: updatedBooking._id,
+        customerId: (updatedBooking as any).customerId?._id,
+        totalAmount: updatedBooking.totalPrice,
+        status: "paid",
+        issuedAt: new Date(),
+      });
+    }
+    // Log booking status transition to paid
+    await bookingStatusService.create({
+      bookingId: updatedBooking._id.toString(),
+      actorId: payload.customerId || booking.customerId || undefined,
+      actorName: payload.customerId ? payload.guestInfo?.fullName : undefined,
+      action: "paid",
+      note: payload.note || "Đánh dấu đã thanh toán",
+    });
+  }
+
+  // Log refund transition
+  if (updatedBooking.paymentStatus === "refunded" && previousPaymentStatus !== "refunded") {
+    await bookingStatusService.create({
+      bookingId: updatedBooking._id.toString(),
+      actorId: payload.customerId || booking.customerId || undefined,
+      actorName: payload.customerId ? payload.guestInfo?.fullName : undefined,
+      action: "refunded",
+      note: payload.note || "Hoàn tiền cho đặt phòng",
+    });
+  }
+
+  // Log refund requested transition (khách gửi yêu cầu)
+  if (updatedBooking.paymentStatus === "refund_requested" && previousPaymentStatus !== "refund_requested") {
+    await bookingStatusService.create({
+      bookingId: updatedBooking._id.toString(),
+      actorId: payload.customerId || booking.customerId || undefined,
+      actorName: payload.customerId ? payload.guestInfo?.fullName : undefined,
+      action: "refund_requested",
+      note: payload.note || "Khách hàng yêu cầu hoàn tiền",
+    });
+  }
+
+  // Log failed payment transition
+  if (updatedBooking.paymentStatus === "failed" && previousPaymentStatus !== "failed") {
+    await bookingStatusService.create({
+      bookingId: updatedBooking._id.toString(),
+      actorId: payload.customerId || booking.customerId || undefined,
+      actorName: payload.customerId ? payload.guestInfo?.fullName : undefined,
+      action: "failed",
+      note: payload.note || "Thanh toán thất bại",
+    });
+  }
+
+  // If extend hours or checkOut changed forward, log extension
+  if (payload.extendHours || (payload.checkOut && new Date(payload.checkOut) > new Date(booking.checkOut))) {
+    await bookingStatusService.create({
+      bookingId: updatedBooking._id.toString(),
+      actorId: payload.customerId || booking.customerId || undefined,
+      actorName: payload.customerId ? payload.guestInfo?.fullName : undefined,
+      action: "extend_check_out",
+      note: `Gia hạn trả phòng đến ${new Date(updatedBooking.checkOut).toISOString()}`,
+    });
+  }
   return updatedBooking;
 };
 

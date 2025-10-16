@@ -181,8 +181,20 @@ export default function InvoicesPage() {
             </Descriptions.Item>
             <Descriptions.Item label="Khách hàng">
               {detailItem.customerId?.fullName ||
+                detailItem.bookingId?.guestInfo?.fullName ||
                 detailItem.customerId?._id ||
                 "-"}
+              {(
+                detailItem.customerId?.email ||
+                detailItem.bookingId?.guestInfo?.email ||
+                detailItem.bookingId?.guestInfo?.phoneNumber
+              ) && (
+                <div style={{ color: "#888", fontSize: 12 }}>
+                  {detailItem.customerId?.email ||
+                    detailItem.bookingId?.guestInfo?.email ||
+                    detailItem.bookingId?.guestInfo?.phoneNumber}
+                </div>
+              )}
             </Descriptions.Item>
             <Descriptions.Item label="Tổng tiền">
               {new Intl.NumberFormat("vi-VN", {

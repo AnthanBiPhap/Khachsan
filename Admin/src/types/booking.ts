@@ -2,6 +2,7 @@ interface User {
   _id: string;
   fullName: string;
   phoneNumber: string;
+  email?: string;
 }
 export interface GuestInfo {
   fullName: string;
@@ -37,6 +38,7 @@ export interface Booking {
   createdAt: string;
   updatedAt: string;
   extendHours?: number;
+  source?: 'online' | 'walk_in';
 }
 export interface RoomType {
   _id: string;

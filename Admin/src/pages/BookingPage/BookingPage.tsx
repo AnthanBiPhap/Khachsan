@@ -74,7 +74,7 @@ export default function BookingPage() {
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
+        body: JSON.stringify(editingBooking ? values : { ...values, source: 'walk_in' }),
       });
 
       if (!res.ok) {

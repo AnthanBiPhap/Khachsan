@@ -27,6 +27,10 @@ const bookingStatusLogSchema = new Schema(
         "checked_out",
         "extend",
         "extend_check_out",
+        "paid",
+        "failed",
+        "refunded",
+        "refund_requested",
       ],
       required: [true, "Thiếu thông tin hành động"],
     },
@@ -36,7 +40,7 @@ const bookingStatusLogSchema = new Schema(
     },
   },
   {
-    timestamps: false,
+    timestamps: true,
     versionKey: false,
   }
 );

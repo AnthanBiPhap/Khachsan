@@ -14,6 +14,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import Link from 'next/link';
+import { bookingService } from '@/services/bookingService';
 
 type Booking = {
   _id: string;
@@ -30,7 +31,7 @@ type Booking = {
   checkOut: string;
   guests: number;
   totalPrice: number;
-  paymentStatus: 'pending' | 'paid' | 'cancelled' | 'completed';
+  paymentStatus: 'pending' | 'paid' | 'cancelled' | 'completed' | 'refunded' | 'failed' | 'refund_requested';
   services?: Array<{
     name: string;
     price: number;
@@ -42,14 +43,15 @@ type Booking = {
 };
 
 export default function MyBookingsPage() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
 
-  // ✅ Chờ AuthContext load xong (tránh reload mất user)
+  // ✅ Chờ AuthContext load xong (tránh báo lỗi nhầm khi chưa có user)
   useEffect(() => {
-    if (user === undefined) return; // đợi auth load xong
+    if (isLoading) return; // đợi auth load xong
 
     if (!user?._id) {
       setLoading(false);
@@ -87,7 +89,7 @@ export default function MyBookingsPage() {
     };
 
     fetchBookings();
-  }, [user]);
+  }, [user, isLoading]);
 
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {
@@ -115,6 +117,24 @@ export default function MyBookingsPage() {
             <CheckCircle className="w-4 h-4 mr-1" /> Đã thanh toán
           </span>
         );
+      case 'refunded':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+            <CheckCircle className="w-4 h-4 mr-1" /> Đã hoàn tiền
+          </span>
+        );
+      case 'refund_requested':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
+            <ClockIcon className="w-4 h-4 mr-1" /> Đang yêu cầu hoàn tiền
+          </span>
+        );
+      case 'failed':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+            <XCircle className="w-4 h-4 mr-1" /> Thất bại
+          </span>
+        );
       case 'cancelled':
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
@@ -130,8 +150,8 @@ export default function MyBookingsPage() {
     }
   };
 
-  // ✅ Thêm loading AuthContext riêng
-  if (user === undefined) {
+  // ✅ Loading khi AuthContext đang tải
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <p className="text-gray-500 text-lg">Đang xác thực tài khoản...</p>
@@ -319,9 +339,9 @@ export default function MyBookingsPage() {
 
                 <div className="mt-6 pt-6 border-t border-gray-100 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
                   {booking.paymentStatus === 'pending' && (
-                    <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
-                      Thanh toán ngay
-                    </Button>
+                  <Button className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">
+                    Thanh toán ngay
+                  </Button>
                   )}
                   <Button variant="outline" className="w-full sm:w-auto">
                     Liên hệ hỗ trợ
@@ -330,8 +350,54 @@ export default function MyBookingsPage() {
                     <Button
                       variant="outline"
                       className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
+                      disabled={actionLoadingId === booking._id}
+                      onClick={async () => {
+                        try {
+                          setActionLoadingId(booking._id);
+                          await bookingService.updateBooking(booking._id, {
+                            paymentStatus: 'failed',
+                            status: 'cancelled',
+                            note: 'Khách hàng hủy đặt phòng',
+                          });
+                          // cập nhật lại danh sách
+                          const res = await fetch(`http://localhost:8080/api/v1/bookings?customerId=${user?._id}`);
+                          const data = await res.json();
+                          setBookings((data.data.bookings || []).filter((b: any) => b.customerId?._id === user?._id));
+                        } catch (e) {
+                          console.error(e);
+                          alert('Hủy đặt phòng thất bại');
+                        } finally {
+                          setActionLoadingId(null);
+                        }
+                      }}
                     >
-                      Hủy đặt phòng
+                      {actionLoadingId === booking._id ? 'Đang hủy...' : 'Hủy đặt phòng'}
+                    </Button>
+                  )}
+                  {booking.paymentStatus === 'paid' && (
+                    <Button
+                      variant="outline"
+                      className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto"
+                      disabled={actionLoadingId === booking._id}
+                      onClick={async () => {
+                        try {
+                          setActionLoadingId(booking._id);
+                          await bookingService.updateBooking(booking._id, {
+                            paymentStatus: 'refund_requested',
+                            note: 'Khách hàng yêu cầu hoàn tiền',
+                          });
+                          const res = await fetch(`http://localhost:8080/api/v1/bookings?customerId=${user?._id}`);
+                          const data = await res.json();
+                          setBookings((data.data.bookings || []).filter((b: any) => b.customerId?._id === user?._id));
+                        } catch (e) {
+                          console.error(e);
+                          alert('Yêu cầu hoàn tiền thất bại');
+                        } finally {
+                          setActionLoadingId(null);
+                        }
+                      }}
+                    >
+                      {actionLoadingId === booking._id ? 'Đang gửi yêu cầu...' : 'Yêu cầu hoàn tiền'}
                     </Button>
                   )}
                 </div>

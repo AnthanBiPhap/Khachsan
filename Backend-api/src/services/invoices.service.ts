@@ -28,7 +28,7 @@ const getAll = async (query: any) => {
   }
 
   const invoices = await Invoice.find(where)
-    .populate("bookingId", "_id checkIn checkOut")
+    .populate("bookingId", "_id checkIn checkOut guestInfo")
     .populate("customerId", "fullName email phoneNumber")
     .skip((page - 1) * limit)
     .limit(limit)
@@ -48,7 +48,7 @@ const getAll = async (query: any) => {
 
 const getById = async (id: string) => {
   const invoice = await Invoice.findById(id)
-    .populate("bookingId", "_id checkIn checkOut")
+    .populate("bookingId", "_id checkIn checkOut guestInfo")
     .populate("customerId", "fullName email phoneNumber");
   if (!invoice) throw createError(404, "Invoice not found");
   return invoice;

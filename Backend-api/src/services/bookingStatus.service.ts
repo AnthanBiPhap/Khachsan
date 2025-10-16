@@ -6,8 +6,11 @@ const getAll = async (query: any) => {
   const limit = Number(query.limit) || 10;
 
   const sortField = query.sort_by || "createdAt";
-  const sortType = query.sort_type === "asc" ? 1 : -1;
-  const sortObject: Record<string, 1 | -1> = { [sortField]: sortType };
+  const sortType = query.sort_type === "asc" ? 1 : -1; // mặc định mới nhất trước
+  // Nếu không truyền sort_by, ưu tiên createdAt rồi fallback theo _id để đảm bảo bản ghi cũ (không có createdAt) vẫn được sắp xếp đúng
+  const sortObject: Record<string, 1 | -1> = query.sort_by
+    ? { [sortField]: sortType }
+    : { createdAt: -1, _id: -1 };
 
   const where: Record<string, any> = {};
   if (query.bookingId) where.bookingId = query.bookingId;
