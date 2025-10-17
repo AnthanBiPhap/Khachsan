@@ -376,7 +376,7 @@ Trả lời bằng tiếng Việt, ngắn gọn và hữu ích.`;
               className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
             >
               <Bot className="h-4 w-4 mr-2" />
-              Hỏi trong trang
+              Nói chuyện với AI
             </Button>
             {/* <Button
               onClick={openChatGptWeb}

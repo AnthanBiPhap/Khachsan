@@ -7,6 +7,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
 import ChatBubble from "@/components/ui/bubble-chat";
+import AIChatBubble from "@/components/ui/ai-chat-bubble";
 import { Header } from "@/components/header";
 
 export const metadata: Metadata = {
@@ -50,6 +51,7 @@ export default function RootLayout({
             </Suspense>
           </main>
           <ChatBubble />
+          <AIChatBubble />
 
           <Toaster />
           <Analytics />
