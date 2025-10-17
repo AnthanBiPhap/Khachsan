@@ -1,8 +1,30 @@
-import { Form, Input, InputNumber, Modal, Select, Row, Col, Typography } from "antd";
+import { 
+  Form, 
+  Input, 
+  InputNumber, 
+  Modal, 
+  Select, 
+  Row, 
+  Col, 
+  Typography, 
+  Card, 
+  Space, 
+  Avatar, 
+  Tag 
+} from "antd";
+import { 
+  HomeOutlined, 
+  EditOutlined, 
+  PlusOutlined, 
+  DollarOutlined, 
+  ClockCircleOutlined, 
+  UserOutlined, 
+  SettingOutlined, 
+  PictureOutlined 
+} from "@ant-design/icons";
 import { useEffect } from "react";
-import type { RoomType, RoomTypesFormProps } from "../../types/room";
+import type { RoomTypesFormProps } from "../../types/room";
 
-const { TextArea } = Input;
 
 export default function RoomTypesForm({ open, roomType, onCancel, onSave, loading }: RoomTypesFormProps) {
   const [form] = Form.useForm();
@@ -41,56 +63,113 @@ export default function RoomTypesForm({ open, roomType, onCancel, onSave, loadin
   return (
     <Modal
       open={open}
-      title={roomType ? "Chỉnh sửa loại phòng" : "Thêm loại phòng mới"}
+      title={
+        <Space>
+          <Avatar 
+            style={{ backgroundColor: roomType ? '#1890ff' : '#52c41a' }} 
+            icon={roomType ? <EditOutlined /> : <PlusOutlined />} 
+          />
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            {roomType ? "Chỉnh sửa loại phòng" : "Thêm loại phòng mới"}
+          </Typography.Title>
+        </Space>
+      }
       onCancel={onCancel}
       onOk={handleSubmit}
       confirmLoading={loading}
-      width={700}
-      style={{ top: 50 }}
+      width={800}
+      style={{ top: 20 }}
       okText={roomType ? "Cập nhật" : "Tạo mới"}
       cancelText="Hủy bỏ"
     >
-      <Form form={form} layout="vertical" style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '8px' }}>
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Typography.Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Thông tin cơ bản</Typography.Title>
-          
-          <Row gutter={16}>
+      <Form form={form} layout="vertical" style={{ maxHeight: '75vh', overflowY: 'auto', padding: '0 8px' }}>
+        {/* Thông tin cơ bản */}
+        <Card 
+          title={
+            <Space>
+              <HomeOutlined style={{ color: '#1890ff' }} />
+              <span>Thông tin cơ bản</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={[16, 8]}>
             <Col span={12}>
               <Form.Item 
                 name="name" 
-                label="Tên loại phòng" 
+                label={
+                  <Space>
+                    <HomeOutlined />
+                    <span>Tên loại phòng</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Nhập tên loại phòng" }]}
               >
-                <Input placeholder="VD: Phòng Deluxe" />
+                <Input 
+                  placeholder="VD: Phòng Deluxe" 
+                  prefix={<HomeOutlined style={{ color: '#bfbfbf' }} />}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item 
                 name="capacity" 
-                label="Sức chứa (người)" 
+                label={
+                  <Space>
+                    <UserOutlined />
+                    <span>Sức chứa (người)</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Nhập sức chứa" }]}
               >
-                <InputNumber min={1} style={{ width: '100%' }} placeholder="VD: 2" />
+                <InputNumber 
+                  min={1} 
+                  style={{ width: '100%' }} 
+                  placeholder="VD: 2"
+                  prefix={<UserOutlined style={{ color: '#bfbfbf' }} />}
+                />
               </Form.Item>
             </Col>
           </Row>
 
           <Form.Item 
             name="description" 
-            label="Mô tả"
+            label={
+              <Space>
+                <EditOutlined />
+                <span>Mô tả</span>
+              </Space>
+            }
           >
-            <TextArea rows={2} placeholder="Nhập mô tả ngắn về loại phòng" />
+            <Input.TextArea 
+              rows={3} 
+              placeholder="Nhập mô tả ngắn về loại phòng" 
+            />
           </Form.Item>
-        </div>
+        </Card>
 
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Typography.Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Thông tin giá</Typography.Title>
-          
-          <Row gutter={16}>
+        {/* Thông tin giá */}
+        <Card 
+          title={
+            <Space>
+              <DollarOutlined style={{ color: '#52c41a' }} />
+              <span>Thông tin giá</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={[16, 8]}>
             <Col span={8}>
               <Form.Item 
                 name="pricePerNight" 
-                label="Giá/đêm" 
+                label={
+                  <Space>
+                    <DollarOutlined />
+                    <span>Giá/đêm</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Nhập giá/đêm" }]}
               >
                 <InputNumber 
@@ -103,13 +182,19 @@ export default function RoomTypesForm({ open, roomType, onCancel, onSave, loadin
                     parseInt(value?.replace(/₫\s?|(,*)/g, '') || '0', 10)
                   }
                   placeholder="0"
+                  prefix={<DollarOutlined style={{ color: '#bfbfbf' }} />}
                 />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item 
                 name="extraHourPrice" 
-                label="Giá phụ thu/giờ" 
+                label={
+                  <Space>
+                    <ClockCircleOutlined />
+                    <span>Giá phụ thu/giờ</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Nhập giá phụ thu mỗi giờ" }]}
               >
                 <InputNumber 
@@ -122,27 +207,53 @@ export default function RoomTypesForm({ open, roomType, onCancel, onSave, loadin
                     parseInt(value?.replace(/₫\s?|(,*)/g, '') || '0', 10)
                   }
                   placeholder="0"
+                  prefix={<ClockCircleOutlined style={{ color: '#bfbfbf' }} />}
                 />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item 
                 name="maxExtendHours" 
-                label="Giờ tối đa"
+                label={
+                  <Space>
+                    <ClockCircleOutlined />
+                    <span>Giờ tối đa</span>
+                    <Tag color="blue">Gia hạn</Tag>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Nhập số giờ tối đa gia hạn" }]}
               >
-                <InputNumber min={1} style={{ width: '100%' }} placeholder="Giờ" />
+                <InputNumber 
+                  min={1} 
+                  style={{ width: '100%' }} 
+                  placeholder="Giờ"
+                  prefix={<ClockCircleOutlined style={{ color: '#bfbfbf' }} />}
+                />
               </Form.Item>
             </Col>
           </Row>
-        </div>
+        </Card>
 
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Typography.Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Tiện nghi</Typography.Title>
-          
+        {/* Tiện nghi */}
+        <Card 
+          title={
+            <Space>
+              <SettingOutlined style={{ color: '#fa8c16' }} />
+              <span>Tiện nghi</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
           <Form.Item 
             name="amenities" 
-            label="Danh sách tiện nghi"
+            label={
+              <Space>
+                <SettingOutlined />
+                <span>Danh sách tiện nghi</span>
+                <Tag color="orange">Nhập từng tiện nghi và nhấn Enter</Tag>
+              </Space>
+            }
             help="Nhập từng tiện nghi và nhấn Enter"
           >
             <Select 
@@ -152,14 +263,27 @@ export default function RoomTypesForm({ open, roomType, onCancel, onSave, loadin
               style={{ width: '100%' }}
             />
           </Form.Item>
-        </div>
+        </Card>
 
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Typography.Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Hình ảnh</Typography.Title>
-          
+        {/* Hình ảnh */}
+        <Card 
+          title={
+            <Space>
+              <PictureOutlined style={{ color: '#722ed1' }} />
+              <span>Hình ảnh</span>
+            </Space>
+          }
+          size="small"
+        >
           <Form.Item 
             name="images" 
-            label="Danh sách URL ảnh"
+            label={
+              <Space>
+                <PictureOutlined />
+                <span>Danh sách URL ảnh</span>
+                <Tag color="purple">Dán từng URL ảnh và nhấn Enter</Tag>
+              </Space>
+            }
             help="Dán từng URL ảnh và nhấn Enter"
           >
             <Select 
@@ -169,7 +293,7 @@ export default function RoomTypesForm({ open, roomType, onCancel, onSave, loadin
               style={{ width: '100%' }}
             />
           </Form.Item>
-        </div>
+        </Card>
       </Form>
     </Modal>
   );

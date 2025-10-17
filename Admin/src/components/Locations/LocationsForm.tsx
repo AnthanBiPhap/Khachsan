@@ -1,9 +1,31 @@
-import { Form, Input, Modal, Select, InputNumber, Row, Col, Typography, Tag } from "antd";
+import { 
+  Form, 
+  Input, 
+  Modal, 
+  Select, 
+  InputNumber, 
+  Row, 
+  Col, 
+  Typography, 
+  Tag, 
+  Card, 
+  Space, 
+  Avatar 
+} from "antd";
+import { 
+  PlusOutlined, 
+  EditOutlined, 
+  EnvironmentOutlined, 
+  SettingOutlined, 
+  StarOutlined, 
+  PictureOutlined, 
+  CheckCircleOutlined, 
+  EyeInvisibleOutlined, 
+  DeleteOutlined 
+} from "@ant-design/icons";
 import { useEffect } from "react";
 import type { LocationStatus, LocationType, LocationsFormProps } from "../../types/location";
 
-const { TextArea } = Input;
-const { Title } = Typography;
 
 const LOCATION_TYPES: LocationType[] = [
   "tham_quan",
@@ -50,14 +72,6 @@ export default function LocationsForm({ open, item, onCancel, onSave, loading }:
     });
   };
 
-  const getStatusTag = (status: string) => {
-    switch (status) {
-      case 'active': return <Tag color="green">Hoạt động</Tag>;
-      case 'hidden': return <Tag color="orange">Ẩn</Tag>;
-      case 'deleted': return <Tag color="red">Xóa</Tag>;
-      default: return <Tag>{status}</Tag>;
-    }
-  };
 
   const getTypeLabel = (type: string) => {
     const typeLabels: Record<string, string> = {
@@ -78,34 +92,65 @@ export default function LocationsForm({ open, item, onCancel, onSave, loading }:
   return (
     <Modal
       open={open}
-      title={item ? "Chỉnh sửa địa điểm" : "Tạo địa điểm mới"}
+      title={
+        <Space>
+          <Avatar 
+            style={{ backgroundColor: item ? '#1890ff' : '#52c41a' }} 
+            icon={item ? <EditOutlined /> : <PlusOutlined />} 
+          />
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            {item ? "Chỉnh sửa địa điểm" : "Tạo địa điểm mới"}
+          </Typography.Title>
+        </Space>
+      }
       onCancel={onCancel}
       onOk={handleSubmit}
       confirmLoading={loading}
-      width={700}
-      style={{ top: 50 }}
+      width={800}
+      style={{ top: 20 }}
       okText="Lưu"
       cancelText="Hủy"
     >
-      <Form form={form} layout="vertical" style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '8px' }}>
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Thông tin cơ bản</Title>
-          
-          <Row gutter={16}>
+      <Form form={form} layout="vertical" style={{ maxHeight: '75vh', overflowY: 'auto', padding: '0 8px' }}>
+        {/* Thông tin cơ bản */}
+        <Card 
+          title={
+            <Space>
+              <EnvironmentOutlined style={{ color: '#1890ff' }} />
+              <span>Thông tin cơ bản</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={[16, 8]}>
             <Col span={24}>
               <Form.Item 
                 name="name" 
-                label="Tên địa điểm" 
+                label={
+                  <Space>
+                    <EnvironmentOutlined />
+                    <span>Tên địa điểm</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Nhập tên địa điểm" }]}
               >
-                <Input placeholder="Nhập tên địa điểm" />
+                <Input 
+                  placeholder="Nhập tên địa điểm" 
+                  prefix={<EnvironmentOutlined style={{ color: '#bfbfbf' }} />}
+                />
               </Form.Item>
             </Col>
 
             <Col span={12}>
               <Form.Item 
                 name="type" 
-                label="Loại địa điểm" 
+                label={
+                  <Space>
+                    <SettingOutlined />
+                    <span>Loại địa điểm</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Chọn loại địa điểm" }]}
               >
                 <Select 
@@ -121,32 +166,65 @@ export default function LocationsForm({ open, item, onCancel, onSave, loading }:
             <Col span={12}>
               <Form.Item 
                 name="status" 
-                label="Trạng thái" 
+                label={
+                  <Space>
+                    <SettingOutlined />
+                    <span>Trạng thái</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Chọn trạng thái" }]}
               >
                 <Select placeholder="Chọn trạng thái">
                   <Select.Option value="active">
-                    <Tag color="green">Hoạt động</Tag>
+                    <Space>
+                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                      <span>Hoạt động</span>
+                    </Space>
                   </Select.Option>
                   <Select.Option value="hidden">
-                    <Tag color="orange">Ẩn</Tag>
+                    <Space>
+                      <EyeInvisibleOutlined style={{ color: '#faad14' }} />
+                      <span>Ẩn</span>
+                    </Space>
                   </Select.Option>
                   <Select.Option value="deleted" disabled>
-                    <Tag color="red">Xóa</Tag>
+                    <Space>
+                      <DeleteOutlined style={{ color: '#ff4d4f' }} />
+                      <span>Xóa</span>
+                    </Space>
                   </Select.Option>
                 </Select>
               </Form.Item>
             </Col>
 
             <Col span={24}>
-              <Form.Item name="address" label="Địa chỉ">
-                <Input placeholder="Nhập địa chỉ chi tiết" />
+              <Form.Item 
+                name="address" 
+                label={
+                  <Space>
+                    <EnvironmentOutlined />
+                    <span>Địa chỉ</span>
+                  </Space>
+                }
+              >
+                <Input 
+                  placeholder="Nhập địa chỉ chi tiết" 
+                  prefix={<EnvironmentOutlined style={{ color: '#bfbfbf' }} />}
+                />
               </Form.Item>
             </Col>
 
             <Col span={24}>
-              <Form.Item name="description" label="Mô tả">
-                <TextArea 
+              <Form.Item 
+                name="description" 
+                label={
+                  <Space>
+                    <EditOutlined />
+                    <span>Mô tả</span>
+                  </Space>
+                }
+              >
+                <Input.TextArea 
                   rows={3} 
                   placeholder="Nhập mô tả chi tiết về địa điểm"
                   style={{ resize: 'none' }}
@@ -154,16 +232,29 @@ export default function LocationsForm({ open, item, onCancel, onSave, loading }:
               </Form.Item>
             </Col>
           </Row>
-        </div>
+        </Card>
 
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Đánh giá và hình ảnh</Title>
-          
-          <Row gutter={16}>
+        {/* Đánh giá và hình ảnh */}
+        <Card 
+          title={
+            <Space>
+              <StarOutlined style={{ color: '#fa8c16' }} />
+              <span>Đánh giá và hình ảnh</span>
+            </Space>
+          }
+          size="small"
+        >
+          <Row gutter={[16, 8]}>
             <Col span={8}>
               <Form.Item 
                 name="ratingAvg" 
-                label="Điểm đánh giá" 
+                label={
+                  <Space>
+                    <StarOutlined />
+                    <span>Điểm đánh giá</span>
+                    <Tag color="orange">0.0 - 5.0</Tag>
+                  </Space>
+                }
                 rules={[{ type: "number", min: 0, max: 5 }]}
               >
                 <InputNumber 
@@ -172,6 +263,7 @@ export default function LocationsForm({ open, item, onCancel, onSave, loading }:
                   step={0.1} 
                   style={{ width: '100%' }} 
                   placeholder="0.0 - 5.0"
+                  prefix={<StarOutlined style={{ color: '#bfbfbf' }} />}
                 />
               </Form.Item>
             </Col>
@@ -179,7 +271,13 @@ export default function LocationsForm({ open, item, onCancel, onSave, loading }:
             <Col span={24}>
               <Form.Item 
                 name="images" 
-                label="Hình ảnh (URL)"
+                label={
+                  <Space>
+                    <PictureOutlined />
+                    <span>Hình ảnh (URL)</span>
+                    <Tag color="purple">Nhập URL hình ảnh và nhấn Enter để thêm</Tag>
+                  </Space>
+                }
                 help="Nhập URL hình ảnh và nhấn Enter để thêm"
               >
                 <Select 
@@ -191,7 +289,7 @@ export default function LocationsForm({ open, item, onCancel, onSave, loading }:
               </Form.Item>
             </Col>
           </Row>
-        </div>
+        </Card>
       </Form>
     </Modal>
   );

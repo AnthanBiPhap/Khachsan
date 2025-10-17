@@ -1,11 +1,35 @@
-import { Form, InputNumber, Modal, Select, DatePicker, message, Row, Col, Typography, Tag } from "antd";
+import { 
+  Form, 
+  InputNumber, 
+  Modal, 
+  Select, 
+  DatePicker, 
+  message, 
+  Row, 
+  Col, 
+  Typography, 
+  Tag, 
+  Card, 
+  Space, 
+  Avatar 
+} from "antd";
+import { 
+  PlusOutlined, 
+  EditOutlined, 
+  SettingOutlined, 
+  DollarOutlined, 
+  CalendarOutlined, 
+  UserOutlined, 
+  LinkOutlined, 
+  CheckCircleOutlined, 
+  ClockCircleOutlined, 
+  CloseCircleOutlined 
+} from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import type { ServiceBookingItem, ServiceBookingsFormProps, SimpleRef } from "../../types/serviceBooking";
 import dayjs from "dayjs";
 
-const { Option } = Select;
-const { Title } = Typography;
 
 export default function ServiceBookingsForm({ open, item, onCancel, onSave, loading }: ServiceBookingsFormProps) {
   const [form] = Form.useForm();
@@ -85,41 +109,56 @@ export default function ServiceBookingsForm({ open, item, onCancel, onSave, load
         price: values.price,
         status: values.status,
       } as Partial<ServiceBookingItem>);
-    } catch (e) {
+    } catch {
       // validation error already shown
     }
   };
 
-  const getStatusTag = (status: string) => {
-    switch (status) {
-      case 'reserved': return <Tag color="blue">Đã đặt</Tag>;
-      case 'completed': return <Tag color="green">Hoàn thành</Tag>;
-      case 'cancelled': return <Tag color="red">Đã hủy</Tag>;
-      default: return <Tag>{status}</Tag>;
-    }
-  };
 
   return (
     <Modal
       open={open}
-      title={item ? "Chỉnh sửa lịch dịch vụ" : "Tạo lịch dịch vụ"}
+      title={
+        <Space>
+          <Avatar 
+            style={{ backgroundColor: item ? '#1890ff' : '#52c41a' }} 
+            icon={item ? <EditOutlined /> : <PlusOutlined />} 
+          />
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            {item ? "Chỉnh sửa lịch dịch vụ" : "Tạo lịch dịch vụ"}
+          </Typography.Title>
+        </Space>
+      }
       onCancel={onCancel}
       onOk={handleSubmit}
       confirmLoading={loading}
-      width={700}
-      style={{ top: 50 }}
+      width={800}
+      style={{ top: 20 }}
       okText="Lưu"
       cancelText="Hủy"
     >
-      <Form layout="vertical" form={form} style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '8px' }}>
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Thông tin dịch vụ</Title>
-          
-          <Row gutter={16}>
+      <Form layout="vertical" form={form} style={{ maxHeight: '75vh', overflowY: 'auto', padding: '0 8px' }}>
+        {/* Thông tin dịch vụ */}
+        <Card 
+          title={
+            <Space>
+              <SettingOutlined style={{ color: '#1890ff' }} />
+              <span>Thông tin dịch vụ</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={[16, 8]}>
             <Col span={24}>
               <Form.Item 
                 name="serviceId" 
-                label="Dịch vụ" 
+                label={
+                  <Space>
+                    <SettingOutlined />
+                    <span>Dịch vụ</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Chọn dịch vụ" }]}
               >
                 <Select
@@ -140,13 +179,19 @@ export default function ServiceBookingsForm({ open, item, onCancel, onSave, load
             <Col span={12}>
               <Form.Item 
                 name="quantity" 
-                label="Số lượng" 
+                label={
+                  <Space>
+                    <UserOutlined />
+                    <span>Số lượng</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Nhập số lượng" }]}
               >
                 <InputNumber 
                   min={1} 
                   style={{ width: '100%' }} 
                   placeholder="Nhập số lượng"
+                  prefix={<UserOutlined style={{ color: '#bfbfbf' }} />}
                 />
               </Form.Item>
             </Col>
@@ -154,7 +199,12 @@ export default function ServiceBookingsForm({ open, item, onCancel, onSave, load
             <Col span={12}>
               <Form.Item 
                 name="price" 
-                label="Giá" 
+                label={
+                  <Space>
+                    <DollarOutlined />
+                    <span>Giá</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Nhập giá" }]}
               >
                 <InputNumber 
@@ -167,20 +217,34 @@ export default function ServiceBookingsForm({ open, item, onCancel, onSave, load
                     parseInt(value?.replace(/₫\s?|(,*)/g, '') || '0', 10)
                   }
                   placeholder="0"
+                  prefix={<DollarOutlined style={{ color: '#bfbfbf' }} />}
                 />
               </Form.Item>
             </Col>
           </Row>
-        </div>
+        </Card>
 
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Thông tin đặt lịch</Title>
-          
-          <Row gutter={16}>
+        {/* Thông tin đặt lịch */}
+        <Card 
+          title={
+            <Space>
+              <CalendarOutlined style={{ color: '#52c41a' }} />
+              <span>Thông tin đặt lịch</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={[16, 8]}>
             <Col span={24}>
               <Form.Item 
                 name="scheduledAt" 
-                label="Thời gian thực hiện" 
+                label={
+                  <Space>
+                    <CalendarOutlined />
+                    <span>Thời gian thực hiện</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Chọn thời gian" }]}
               >
                 <DatePicker 
@@ -195,31 +259,61 @@ export default function ServiceBookingsForm({ open, item, onCancel, onSave, load
             <Col span={24}>
               <Form.Item 
                 name="status" 
-                label="Trạng thái" 
+                label={
+                  <Space>
+                    <SettingOutlined />
+                    <span>Trạng thái</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Chọn trạng thái" }]}
               >
                 <Select placeholder="Chọn trạng thái">
-                  <Option value="reserved">
-                    <Tag color="blue">Đã đặt</Tag>
-                  </Option>
-                  <Option value="completed">
-                    <Tag color="green">Hoàn thành</Tag>
-                  </Option>
-                  <Option value="cancelled">
-                    <Tag color="red">Đã hủy</Tag>
-                  </Option>
+                  <Select.Option value="reserved">
+                    <Space>
+                      <ClockCircleOutlined style={{ color: '#1890ff' }} />
+                      <span>Đã đặt</span>
+                    </Space>
+                  </Select.Option>
+                  <Select.Option value="completed">
+                    <Space>
+                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                      <span>Hoàn thành</span>
+                    </Space>
+                  </Select.Option>
+                  <Select.Option value="cancelled">
+                    <Space>
+                      <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
+                      <span>Đã hủy</span>
+                    </Space>
+                  </Select.Option>
                 </Select>
               </Form.Item>
             </Col>
           </Row>
-        </div>
+        </Card>
 
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Thông tin liên kết (tùy chọn)</Title>
-          
-          <Row gutter={16}>
+        {/* Thông tin liên kết (tùy chọn) */}
+        <Card 
+          title={
+            <Space>
+              <LinkOutlined style={{ color: '#fa8c16' }} />
+              <span>Thông tin liên kết</span>
+              <Tag color="orange">Tùy chọn</Tag>
+            </Space>
+          }
+          size="small"
+        >
+          <Row gutter={[16, 8]}>
             <Col span={12}>
-              <Form.Item name="bookingId" label="Booking">
+              <Form.Item 
+                name="bookingId" 
+                label={
+                  <Space>
+                    <LinkOutlined />
+                    <span>Booking</span>
+                  </Space>
+                }
+              >
                 <Select
                   showSearch
                   allowClear
@@ -237,7 +331,15 @@ export default function ServiceBookingsForm({ open, item, onCancel, onSave, load
             </Col>
 
             <Col span={12}>
-              <Form.Item name="customerId" label="Khách hàng">
+              <Form.Item 
+                name="customerId" 
+                label={
+                  <Space>
+                    <UserOutlined />
+                    <span>Khách hàng</span>
+                  </Space>
+                }
+              >
                 <Select
                   showSearch
                   allowClear
@@ -254,7 +356,7 @@ export default function ServiceBookingsForm({ open, item, onCancel, onSave, load
               </Form.Item>
             </Col>
           </Row>
-        </div>
+        </Card>
       </Form>
     </Modal>
   );

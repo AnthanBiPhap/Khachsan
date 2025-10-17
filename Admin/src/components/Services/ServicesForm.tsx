@@ -1,9 +1,31 @@
-import { Form, Input, InputNumber, Modal, Select, Row, Col, Typography, Tag } from "antd";
+import { 
+  Form, 
+  Input, 
+  InputNumber, 
+  Modal, 
+  Select, 
+  Row, 
+  Col, 
+  Typography, 
+  Tag, 
+  Card, 
+  Space, 
+  Avatar 
+} from "antd";
+import { 
+  PlusOutlined, 
+  EditOutlined, 
+  SettingOutlined, 
+  DollarOutlined, 
+  ClockCircleOutlined, 
+  PictureOutlined, 
+  CheckCircleOutlined, 
+  EyeInvisibleOutlined, 
+  DeleteOutlined 
+} from "@ant-design/icons";
 import { useEffect } from "react";
-import type { ServiceItem, ServicesFormProps } from "../../types/service";
+import type { ServicesFormProps } from "../../types/service";
 
-const { TextArea } = Input;
-const { Title } = Typography;
 
 export default function ServicesForm({ open, service, onCancel, onSave, loading }: ServicesFormProps) {
   const [form] = Form.useForm();
@@ -38,33 +60,67 @@ export default function ServicesForm({ open, service, onCancel, onSave, loading 
   return (
     <Modal
       open={open}
-      title={service ? "Chỉnh sửa dịch vụ" : "Tạo dịch vụ mới"}
+      title={
+        <Space>
+          <Avatar 
+            style={{ backgroundColor: service ? '#1890ff' : '#52c41a' }} 
+            icon={service ? <EditOutlined /> : <PlusOutlined />} 
+          />
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            {service ? "Chỉnh sửa dịch vụ" : "Tạo dịch vụ mới"}
+          </Typography.Title>
+        </Space>
+      }
       onCancel={onCancel}
       onOk={handleSubmit}
       confirmLoading={loading}
-      width={700}
-      style={{ top: 50 }}
+      width={800}
+      style={{ top: 20 }}
       okText="Lưu"
       cancelText="Hủy"
     >
-      <Form form={form} layout="vertical" style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '8px' }}>
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Thông tin cơ bản</Title>
-          
-          <Row gutter={16}>
+      <Form form={form} layout="vertical" style={{ maxHeight: '75vh', overflowY: 'auto', padding: '0 8px' }}>
+        {/* Thông tin cơ bản */}
+        <Card 
+          title={
+            <Space>
+              <SettingOutlined style={{ color: '#1890ff' }} />
+              <span>Thông tin cơ bản</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={[16, 8]}>
             <Col span={24}>
               <Form.Item 
                 name="name" 
-                label="Tên dịch vụ" 
+                label={
+                  <Space>
+                    <SettingOutlined />
+                    <span>Tên dịch vụ</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Nhập tên dịch vụ" }]}
               >
-                <Input placeholder="Nhập tên dịch vụ" />
+                <Input 
+                  placeholder="Nhập tên dịch vụ" 
+                  prefix={<SettingOutlined style={{ color: '#bfbfbf' }} />}
+                />
               </Form.Item>
             </Col>
 
             <Col span={24}>
-              <Form.Item name="description" label="Mô tả">
-                <TextArea 
+              <Form.Item 
+                name="description" 
+                label={
+                  <Space>
+                    <EditOutlined />
+                    <span>Mô tả</span>
+                  </Space>
+                }
+              >
+                <Input.TextArea 
                   rows={3} 
                   placeholder="Nhập mô tả chi tiết về dịch vụ"
                   style={{ resize: 'none' }}
@@ -72,16 +128,29 @@ export default function ServicesForm({ open, service, onCancel, onSave, loading 
               </Form.Item>
             </Col>
           </Row>
-        </div>
+        </Card>
 
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Thông tin giá và thời gian</Title>
-          
-          <Row gutter={16}>
+        {/* Thông tin giá và thời gian */}
+        <Card 
+          title={
+            <Space>
+              <DollarOutlined style={{ color: '#52c41a' }} />
+              <span>Thông tin giá và thời gian</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={[16, 8]}>
             <Col span={12}>
               <Form.Item 
                 name="basePrice" 
-                label="Giá cơ bản" 
+                label={
+                  <Space>
+                    <DollarOutlined />
+                    <span>Giá cơ bản</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Nhập giá cơ bản" }]}
               >
                 <InputNumber 
@@ -94,28 +163,56 @@ export default function ServicesForm({ open, service, onCancel, onSave, loading 
                     parseInt(value?.replace(/₫\s?|(,*)/g, '') || '0', 10)
                   }
                   placeholder="0"
+                  prefix={<DollarOutlined style={{ color: '#bfbfbf' }} />}
                 />
               </Form.Item>
             </Col>
 
             <Col span={12}>
-              <Form.Item name="status" label="Trạng thái" rules={[{ required: true, message: "Chọn trạng thái" }]}>
+              <Form.Item 
+                name="status" 
+                label={
+                  <Space>
+                    <SettingOutlined />
+                    <span>Trạng thái</span>
+                  </Space>
+                }
+                rules={[{ required: true, message: "Chọn trạng thái" }]}
+              >
                 <Select>
                   <Select.Option value="active">
-                    <Tag color="green">Đang bán</Tag>
+                    <Space>
+                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                      <span>Đang bán</span>
+                    </Space>
                   </Select.Option>
                   <Select.Option value="hidden">
-                    <Tag color="orange">Ẩn</Tag>
+                    <Space>
+                      <EyeInvisibleOutlined style={{ color: '#faad14' }} />
+                      <span>Ẩn</span>
+                    </Space>
                   </Select.Option>
                   <Select.Option value="deleted" disabled>
-                    <Tag color="red">Đã xóa</Tag>
+                    <Space>
+                      <DeleteOutlined style={{ color: '#ff4d4f' }} />
+                      <span>Đã xóa</span>
+                    </Space>
                   </Select.Option>
                 </Select>
               </Form.Item>
             </Col>
 
             <Col span={24}>
-              <Form.Item name="slots" label="Khung giờ">
+              <Form.Item 
+                name="slots" 
+                label={
+                  <Space>
+                    <ClockCircleOutlined />
+                    <span>Khung giờ</span>
+                    <Tag color="blue">Nhập từng khung giờ và nhấn Enter</Tag>
+                  </Space>
+                }
+              >
                 <Select 
                   mode="tags" 
                   tokenSeparators={[","]} 
@@ -125,14 +222,27 @@ export default function ServicesForm({ open, service, onCancel, onSave, loading 
               </Form.Item>
             </Col>
           </Row>
-        </div>
+        </Card>
 
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Hình ảnh dịch vụ</Title>
-          
+        {/* Hình ảnh dịch vụ */}
+        <Card 
+          title={
+            <Space>
+              <PictureOutlined style={{ color: '#722ed1' }} />
+              <span>Hình ảnh dịch vụ</span>
+            </Space>
+          }
+          size="small"
+        >
           <Form.Item 
             name="images" 
-            label="Danh sách URL hình ảnh"
+            label={
+              <Space>
+                <PictureOutlined />
+                <span>Danh sách URL hình ảnh</span>
+                <Tag color="purple">Nhập URL hình ảnh và nhấn Enter để thêm</Tag>
+              </Space>
+            }
             help="Nhập URL hình ảnh và nhấn Enter để thêm"
           >
             <Select 
@@ -142,7 +252,7 @@ export default function ServicesForm({ open, service, onCancel, onSave, loading 
               style={{ width: '100%' }}
             />
           </Form.Item>
-        </div>
+        </Card>
       </Form>
     </Modal>
   );

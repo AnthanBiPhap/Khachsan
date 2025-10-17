@@ -11,8 +11,23 @@ import {
   Typography,
   Button,
   Divider,
+  Card,
+  Space,
+  Tag,
+  Avatar,
 } from "antd";
-import { PlusOutlined, MinusOutlined } from "@ant-design/icons";
+import { 
+  PlusOutlined, 
+  MinusOutlined, 
+  UserOutlined, 
+  CalendarOutlined, 
+  HomeOutlined, 
+  DollarOutlined,
+  ClockCircleOutlined,
+  PhoneOutlined,
+  MailOutlined,
+  IdcardOutlined
+} from "@ant-design/icons";
 import { useEffect, useState, useMemo } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import axios from "axios";
@@ -127,13 +142,13 @@ export default function BookingForm({
         checkIn: booking.checkIn ? dayjs(booking.checkIn) : null,
         checkOut: booking.checkOut ? dayjs(booking.checkOut) : null,
         guestInfo: booking.guestInfo || {},
-        extraHours: (booking as any).extendHours || 0,
+        extraHours: (booking as Booking & { extendHours?: number }).extendHours || 0,
       });
       setCheckIn(booking.checkIn ? dayjs(booking.checkIn) : null);
       setCheckOut(booking.checkOut ? dayjs(booking.checkOut) : null);
-      setExtraHours((booking as any).extendHours || 0);
+      setExtraHours((booking as Booking & { extendHours?: number }).extendHours || 0);
 
-      const roomIdValue = (booking as any).roomId?._id || (booking as any).roomId;
+      const roomIdValue = (booking.roomId as Room)?._id || booking.roomId;
       const room = rooms.find((r) => r._id === roomIdValue);
       setSelectedRoom(room || null);
 
@@ -156,7 +171,7 @@ export default function BookingForm({
       setExtraHours(0);
       setSelectedServices([]);
     }
-  }, [booking, rooms]);
+  }, [booking, rooms, form]);
 
   const handleAddService = (serviceId: string) => {
     const service = services.find((s) => s._id === serviceId);
@@ -222,7 +237,7 @@ export default function BookingForm({
 
       // Với booking online (có customerId), không gửi guestInfo rỗng lên BE
       if (!isWalkIn) {
-        delete (bookingData as any).guestInfo;
+        delete (bookingData as Partial<Booking> & { guestInfo?: unknown }).guestInfo;
       }
 
       await onSave(bookingData);
@@ -250,242 +265,436 @@ export default function BookingForm({
   return (
     <Modal
       open={open}
-      title={booking ? "Chỉnh sửa đặt phòng" : "Tạo đặt phòng mới"}
+      title={
+        <Space>
+          <Avatar 
+            style={{ backgroundColor: '#1890ff' }} 
+            icon={booking ? <CalendarOutlined /> : <PlusOutlined />} 
+          />
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            {booking ? "Chỉnh sửa đặt phòng" : "Tạo đặt phòng mới"}
+          </Typography.Title>
+        </Space>
+      }
       onCancel={onCancel}
       onOk={handleSubmit}
       confirmLoading={loading}
-      width={800}
+      width={900}
       okText={booking ? "Cập nhật" : "Tạo mới"}
       cancelText="Hủy bỏ"
+      style={{ top: 20 }}
     >
       <Form
         form={form}
         layout="vertical"
-        style={{ maxHeight: "80vh", overflowY: "auto" }}
+        style={{ maxHeight: "75vh", overflowY: "auto", padding: "0 8px" }}
       >
         {/* Thông tin khách hàng */}
-        <Typography.Title level={5}>Thông tin khách hàng</Typography.Title>
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name={["guestInfo", "fullName"]}
-              label="Họ và tên"
-              rules={[{ required: isWalkIn, message: "Nhập họ và tên khách" }]}
-            >
-              <Input placeholder="Nhập họ và tên" />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name={["guestInfo", "phoneNumber"]}
-              label="Số điện thoại"
-              rules={[{ required: isWalkIn, message: "Nhập số điện thoại" }]}
-            >
-              <Input placeholder="Nhập số điện thoại" />
-            </Form.Item>
-          </Col>
-        </Row>
+        <Card 
+          title={
+            <Space>
+              <UserOutlined style={{ color: '#1890ff' }} />
+              <span>Thông tin khách hàng</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={[16, 8]}>
+            <Col span={12}>
+              <Form.Item
+                name={["guestInfo", "fullName"]}
+                label={
+                  <Space>
+                    <UserOutlined />
+                    <span>Họ và tên</span>
+                  </Space>
+                }
+                rules={[{ required: isWalkIn, message: "Nhập họ và tên khách" }]}
+              >
+                <Input 
+                  placeholder="Nhập họ và tên" 
+                  prefix={<UserOutlined style={{ color: '#bfbfbf' }} />}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name={["guestInfo", "phoneNumber"]}
+                label={
+                  <Space>
+                    <PhoneOutlined />
+                    <span>Số điện thoại</span>
+                  </Space>
+                }
+                rules={[{ required: isWalkIn, message: "Nhập số điện thoại" }]}
+              >
+                <Input 
+                  placeholder="Nhập số điện thoại" 
+                  prefix={<PhoneOutlined style={{ color: '#bfbfbf' }} />}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
 
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name={["guestInfo", "email"]}
-              label="Email"
-              rules={[{ type: "email", message: "Email không hợp lệ" }]}
-            >
-              <Input placeholder="Nhập email (nếu có)" />
-            </Form.Item>
-          </Col>
-          <Col span={6}>
-            <Form.Item
-              name={["guestInfo", "idNumber"]}
-              label="CMND/CCCD"
-              rules={[{ required: isWalkIn, message: "Nhập CMND/CCCD" }]}
-            >
-              <Input placeholder="Số CMND/CCCD" />
-            </Form.Item>
-          </Col>
-          <Col span={6}>
-            <Form.Item
-              name={["guestInfo", "age"]}
-              label="Tuổi"
-              rules={[{ type: "number", min: 0, message: "Tuổi không hợp lệ" }]}
-            >
-              <InputNumber
-                min={0}
-                style={{ width: "100%" }}
-                placeholder="Tuổi"
-              />
-            </Form.Item>
-          </Col>
-        </Row>
+          <Row gutter={[16, 8]}>
+            <Col span={12}>
+              <Form.Item
+                name={["guestInfo", "email"]}
+                label={
+                  <Space>
+                    <MailOutlined />
+                    <span>Email</span>
+                  </Space>
+                }
+                rules={[{ type: "email", message: "Email không hợp lệ" }]}
+              >
+                <Input 
+                  placeholder="Nhập email (nếu có)" 
+                  prefix={<MailOutlined style={{ color: '#bfbfbf' }} />}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item
+                name={["guestInfo", "idNumber"]}
+                label={
+                  <Space>
+                    <IdcardOutlined />
+                    <span>CMND/CCCD</span>
+                  </Space>
+                }
+                rules={[{ required: isWalkIn, message: "Nhập CMND/CCCD" }]}
+              >
+                <Input 
+                  placeholder="Số CMND/CCCD" 
+                  prefix={<IdcardOutlined style={{ color: '#bfbfbf' }} />}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item
+                name={["guestInfo", "age"]}
+                label={
+                  <Space>
+                    <UserOutlined />
+                    <span>Tuổi</span>
+                  </Space>
+                }
+                rules={[{ type: "number", min: 0, message: "Tuổi không hợp lệ" }]}
+              >
+                <InputNumber
+                  min={0}
+                  style={{ width: "100%" }}
+                  placeholder="Tuổi"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Card>
 
         {/* Thông tin booking */}
-        <Typography.Title level={5}>Thông tin đặt phòng</Typography.Title>
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="checkIn"
-              label="Ngày nhận phòng"
-              rules={[{ required: true }]}
-            >
-              <DatePicker
-                style={{ width: "100%" }}
-                format="DD/MM/YYYY"
-                onChange={setCheckIn}
-              />
-            </Form.Item>
-          </Col>
-          <Col span={12}>
-            <Form.Item
-              name="checkOut"
-              label="Ngày trả phòng"
-              rules={[{ required: true }]}
-            >
-              <DatePicker
-                style={{ width: "100%" }}
-                format="DD/MM/YYYY"
-                onChange={setCheckOut}
-              />
-            </Form.Item>
-          </Col>
-        </Row>
-
-        <Row gutter={16}>
-          <Col span={12}>
-            <Form.Item
-              name="roomId"
-              label="Chọn phòng"
-              rules={[{ required: true }]}
-            >
-              <Select
-                placeholder="Chọn phòng"
-                disabled={!checkIn || !checkOut}
-                options={availableRooms.map((r) => ({
-                  label: `${r.roomNumber} - ${r.typeId?.name}`,
-                  value: r._id,
-                }))}
-                onChange={(v) =>
-                  setSelectedRoom(
-                    availableRooms.find((r) => r._id === v) || null
-                  )
+        <Card 
+          title={
+            <Space>
+              <CalendarOutlined style={{ color: '#52c41a' }} />
+              <span>Thông tin đặt phòng</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={[16, 8]}>
+            <Col span={12}>
+              <Form.Item
+                name="checkIn"
+                label={
+                  <Space>
+                    <CalendarOutlined />
+                    <span>Ngày nhận phòng</span>
+                  </Space>
                 }
-              />
-            </Form.Item>
-          </Col>
-          <Col span={6}>
-            <Form.Item
-              name="guests"
-              label="Số khách"
-              rules={[{ required: true }]}
-            >
-              <InputNumber min={1} style={{ width: "100%" }} />
-            </Form.Item>
-          </Col>
-          <Col span={6}>
-            <Form.Item
-              name="extraHours"
-              label={`Thêm giờ (Max ${maxExtraHours}h)`}
-            >
-              <InputNumber
-                min={0}
-                max={maxExtraHours}
-                style={{ width: "100%" }}
-                value={extraHours}
-                onChange={(v) => setExtraHours(v || 0)}
-              />
-            </Form.Item>
-          </Col>
-        </Row>
+                rules={[{ required: true }]}
+              >
+                <DatePicker
+                  style={{ width: "100%" }}
+                  format="DD/MM/YYYY"
+                  onChange={setCheckIn}
+                  placeholder="Chọn ngày nhận phòng"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="checkOut"
+                label={
+                  <Space>
+                    <CalendarOutlined />
+                    <span>Ngày trả phòng</span>
+                  </Space>
+                }
+                rules={[{ required: true }]}
+              >
+                <DatePicker
+                  style={{ width: "100%" }}
+                  format="DD/MM/YYYY"
+                  onChange={setCheckOut}
+                  placeholder="Chọn ngày trả phòng"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={[16, 8]}>
+            <Col span={12}>
+              <Form.Item
+                name="roomId"
+                label={
+                  <Space>
+                    <HomeOutlined />
+                    <span>Chọn phòng</span>
+                    {availableRooms.length > 0 && (
+                      <Tag color="green">{availableRooms.length} phòng trống</Tag>
+                    )}
+                  </Space>
+                }
+                rules={[{ required: true }]}
+              >
+                <Select
+                  placeholder={availableRooms.length === 0 ? "Không có phòng trống" : "Chọn phòng"}
+                  disabled={!checkIn || !checkOut}
+                  options={availableRooms.map((r) => ({
+                    label: `${r.roomNumber} - ${r.typeId?.name}`,
+                    value: r._id,
+                  }))}
+                  onChange={(v) =>
+                    setSelectedRoom(
+                      availableRooms.find((r) => r._id === v) || null
+                    )
+                  }
+                />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item
+                name="guests"
+                label={
+                  <Space>
+                    <UserOutlined />
+                    <span>Số khách</span>
+                  </Space>
+                }
+                rules={[{ required: true }]}
+              >
+                <InputNumber 
+                  min={1} 
+                  style={{ width: "100%" }} 
+                  placeholder="Số khách"
+                />
+              </Form.Item>
+            </Col>
+            <Col span={6}>
+              <Form.Item
+                name="extraHours"
+                label={
+                  <Space>
+                    <ClockCircleOutlined />
+                    <span>Thêm giờ</span>
+                    <Tag color="blue">Max {maxExtraHours}h</Tag>
+                  </Space>
+                }
+              >
+                <InputNumber
+                  min={0}
+                  max={maxExtraHours}
+                  style={{ width: "100%" }}
+                  value={extraHours}
+                  onChange={(v) => setExtraHours(v || 0)}
+                  placeholder="Giờ thêm"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Card>
 
         {/* Dịch vụ */}
-        <Typography.Title level={5}>Dịch vụ đi kèm</Typography.Title>
-        <Select
-          style={{ width: "100%", marginBottom: 12 }}
-          placeholder="Chọn dịch vụ"
-          onChange={handleAddService}
-          value={null}
+        <Card 
+          title={
+            <Space>
+              <PlusOutlined style={{ color: '#fa8c16' }} />
+              <span>Dịch vụ đi kèm</span>
+              {selectedServices.length > 0 && (
+                <Tag color="orange">{selectedServices.length} dịch vụ</Tag>
+              )}
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
         >
-          {services
-            .filter(
-              (s) => !selectedServices.some((sel) => sel.serviceId === s._id)
-            )
-            .map((s) => (
-              <Select.Option key={s._id} value={s._id}>
-                {s.name} - {formatPrice(s.basePrice)}
-              </Select.Option>
-            ))}
-        </Select>
-        {selectedServices.map((s) => (
-          <Row
-            key={s.serviceId}
-            gutter={8}
-            align="middle"
-            style={{ marginBottom: 4 }}
+          <Select
+            style={{ width: "100%", marginBottom: 12 }}
+            placeholder="Chọn dịch vụ"
+            onChange={handleAddService}
+            value={null}
           >
-            <Col flex="auto">{s.name}</Col>
-            <Col>
-              <Button
-                icon={<MinusOutlined />}
-                size="small"
-                onClick={() => handleRemoveService(s.serviceId)}
-              />
-              <span style={{ margin: "0 8px" }}>{s.quantity}</span>
-              <Button
-                icon={<PlusOutlined />}
-                size="small"
-                onClick={() => handleAddService(s.serviceId)}
-              />
-            </Col>
-            <Col>{formatPrice(s.price * s.quantity)}</Col>
-          </Row>
-        ))}
+            {services
+              .filter(
+                (s) => !selectedServices.some((sel) => sel.serviceId === s._id)
+              )
+              .map((s) => (
+                <Select.Option key={s._id} value={s._id}>
+                  {s.name} - {formatPrice(s.basePrice)}
+                </Select.Option>
+              ))}
+          </Select>
+          {selectedServices.map((s) => (
+            <Card 
+              key={s.serviceId}
+              size="small" 
+              style={{ marginBottom: 8 }}
+              bodyStyle={{ padding: '8px 12px' }}
+            >
+              <Row gutter={8} align="middle">
+                <Col flex="auto">
+                  <Space>
+                    <span style={{ fontWeight: 500 }}>{s.name}</span>
+                    <Tag color="blue">{formatPrice(s.price)}</Tag>
+                  </Space>
+                </Col>
+                <Col>
+                  <Space>
+                    <Button
+                      icon={<MinusOutlined />}
+                      size="small"
+                      onClick={() => handleRemoveService(s.serviceId)}
+                    />
+                    <span style={{ margin: "0 8px", fontWeight: 500 }}>{s.quantity}</span>
+                    <Button
+                      icon={<PlusOutlined />}
+                      size="small"
+                      onClick={() => handleAddService(s.serviceId)}
+                    />
+                  </Space>
+                </Col>
+                <Col>
+                  <Typography.Text strong style={{ color: '#1890ff' }}>
+                    {formatPrice(s.price * s.quantity)}
+                  </Typography.Text>
+                </Col>
+              </Row>
+            </Card>
+          ))}
+        </Card>
 
         {/* Thanh toán */}
-        <Typography.Title level={5}>Thông tin thanh toán</Typography.Title>
-        <Divider />
-        
-        <Form.Item
-          name="paymentStatus"
-          label="Trạng thái thanh toán"
-          initialValue={booking?.paymentStatus || 'pending'}
+        <Card 
+          title={
+            <Space>
+              <DollarOutlined style={{ color: '#52c41a' }} />
+              <span>Thông tin thanh toán</span>
+            </Space>
+          }
+          size="small"
         >
-          <Select style={{ width: '100%' }}>
-            <Select.Option value="pending">Chờ thanh toán</Select.Option>
-            <Select.Option value="paid">Đã thanh toán</Select.Option>
-            <Select.Option value="failed">Thanh toán thất bại</Select.Option>
-            <Select.Option value="refunded">Đã hoàn tiền</Select.Option>
-          </Select>
-        </Form.Item>
-        <Row>
-          <Col span={12}>Tiền phòng:</Col>
-          <Col span={12} style={{ textAlign: "right" }}>
-            {formatPrice(roomPrice)}
-          </Col>
-        </Row>
-        {servicesPrice > 0 && (
-          <Row>
-            <Col span={12}>Tiền dịch vụ:</Col>
+          <Form.Item
+            name="paymentStatus"
+            label={
+              <Space>
+                <DollarOutlined />
+                <span>Trạng thái thanh toán</span>
+              </Space>
+            }
+            initialValue={booking?.paymentStatus || 'pending'}
+          >
+            <Select style={{ width: '100%' }}>
+              <Select.Option value="pending">
+                <Space>
+                  <Tag color="orange">Chờ thanh toán</Tag>
+                </Space>
+              </Select.Option>
+              <Select.Option value="paid">
+                <Space>
+                  <Tag color="green">Đã thanh toán</Tag>
+                </Space>
+              </Select.Option>
+              <Select.Option value="failed">
+                <Space>
+                  <Tag color="red">Thanh toán thất bại</Tag>
+                </Space>
+              </Select.Option>
+              <Select.Option value="refunded">
+                <Space>
+                  <Tag color="blue">Đã hoàn tiền</Tag>
+                </Space>
+              </Select.Option>
+            </Select>
+          </Form.Item>
+          
+          <Divider style={{ margin: '16px 0' }} />
+          
+          <Row style={{ marginBottom: 8 }}>
+            <Col span={12}>
+              <Space>
+                <HomeOutlined style={{ color: '#1890ff' }} />
+                <span>Tiền phòng:</span>
+              </Space>
+            </Col>
             <Col span={12} style={{ textAlign: "right" }}>
-              {formatPrice(servicesPrice)}
+              <Typography.Text strong>{formatPrice(roomPrice)}</Typography.Text>
             </Col>
           </Row>
-        )}
-        {extraHours > 0 && (
-          <Row>
-            <Col span={12}>Tiền giờ thêm:</Col>
+          
+          {servicesPrice > 0 && (
+            <Row style={{ marginBottom: 8 }}>
+              <Col span={12}>
+                <Space>
+                  <PlusOutlined style={{ color: '#fa8c16' }} />
+                  <span>Tiền dịch vụ:</span>
+                </Space>
+              </Col>
+              <Col span={12} style={{ textAlign: "right" }}>
+                <Typography.Text strong>{formatPrice(servicesPrice)}</Typography.Text>
+              </Col>
+            </Row>
+          )}
+          
+          {extraHours > 0 && (
+            <Row style={{ marginBottom: 8 }}>
+              <Col span={12}>
+                <Space>
+                  <ClockCircleOutlined style={{ color: '#722ed1' }} />
+                  <span>Tiền giờ thêm:</span>
+                </Space>
+              </Col>
+              <Col span={12} style={{ textAlign: "right" }}>
+                <Typography.Text strong>{formatPrice(extraHours * extraHourPrice)}</Typography.Text>
+              </Col>
+            </Row>
+          )}
+          
+          <Divider style={{ margin: '16px 0' }} />
+          
+          <Row style={{ 
+            fontWeight: "bold", 
+            fontSize: 18,
+            backgroundColor: '#f0f9ff',
+            padding: '12px',
+            borderRadius: '6px',
+            border: '1px solid #e6f7ff'
+          }}>
+            <Col span={12}>
+              <Space>
+                <DollarOutlined style={{ color: '#1890ff', fontSize: 20 }} />
+                <span>Tổng cộng:</span>
+              </Space>
+            </Col>
             <Col span={12} style={{ textAlign: "right" }}>
-              {formatPrice(extraHours * extraHourPrice)}
+              <Typography.Text strong style={{ color: '#1890ff', fontSize: 18 }}>
+                {formatPrice(totalPrice)}
+              </Typography.Text>
             </Col>
           </Row>
-        )}
-        <Divider />
-        <Row style={{ fontWeight: "bold", fontSize: 16 }}>
-          <Col span={12}>Tổng cộng:</Col>
-          <Col span={12} style={{ textAlign: "right", color: "#1890ff" }}>
-            {formatPrice(totalPrice)}
-          </Col>
-        </Row>
+        </Card>
       </Form>
     </Modal>
   );

@@ -1,6 +1,28 @@
 import React from "react";
-import { Form, Input, Modal, Select } from "antd";
-import type { User, UserFormProps } from "../../types/user";
+import { 
+  Form, 
+  Input, 
+  Modal, 
+  Select, 
+  Row, 
+  Col, 
+  Typography, 
+  Card, 
+  Space, 
+  Avatar 
+} from "antd";
+import { 
+  UserOutlined, 
+  MailOutlined, 
+  PhoneOutlined, 
+  CrownOutlined, 
+  TeamOutlined, 
+  EditOutlined, 
+  PlusOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined
+} from "@ant-design/icons";
+import type { UserFormProps } from "../../types/user";
 
 export default function UserForm({ open, user, onCancel, onSave }: UserFormProps) {
   const [form] = Form.useForm();
@@ -13,55 +35,183 @@ export default function UserForm({ open, user, onCancel, onSave }: UserFormProps
 
   return (
     <Modal
-      title={user ? "Chỉnh sửa người dùng" : "Tạo người dùng"}
+      title={
+        <Space>
+          <Avatar 
+            style={{ backgroundColor: user ? '#1890ff' : '#52c41a' }} 
+            icon={user ? <EditOutlined /> : <PlusOutlined />} 
+          />
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            {user ? "Chỉnh sửa người dùng" : "Tạo người dùng mới"}
+          </Typography.Title>
+        </Space>
+      }
       open={open}
       onCancel={onCancel}
       onOk={() => form.submit()}
       destroyOnHidden
+      width={800}
+      style={{ top: 20 }}
+      okText={user ? "Cập nhật" : "Tạo mới"}
+      cancelText="Hủy bỏ"
     >
       <Form 
-      form={form} 
-      layout="vertical" 
-      onFinish={onSave}
+        form={form} 
+        layout="vertical" 
+        onFinish={onSave}
+        style={{ maxHeight: '75vh', overflowY: 'auto', padding: '0 8px' }}
       >
-        <Form.Item
-          name="fullName"
-          label="Họ và tên"
-          rules={[{ required: true, message: "Nhập họ tên!" }]}
+        {/* Thông tin cơ bản */}
+        <Card 
+          title={
+            <Space>
+              <UserOutlined style={{ color: '#1890ff' }} />
+              <span>Thông tin cơ bản</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
         >
-          <Input />
-        </Form.Item>
+          <Row gutter={[16, 8]}>
+            <Col span={12}>
+              <Form.Item
+                name="fullName"
+                label={
+                  <Space>
+                    <UserOutlined />
+                    <span>Họ và tên</span>
+                  </Space>
+                }
+                rules={[{ required: true, message: "Nhập họ tên!" }]}
+              >
+                <Input 
+                  placeholder="Nhập họ và tên" 
+                  prefix={<UserOutlined style={{ color: '#bfbfbf' }} />}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="email"
+                label={
+                  <Space>
+                    <MailOutlined />
+                    <span>Email</span>
+                  </Space>
+                }
+                rules={[{ type: "email", message: "Email không hợp lệ" }]}
+              >
+                <Input 
+                  placeholder="Nhập email" 
+                  prefix={<MailOutlined style={{ color: '#bfbfbf' }} />}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+          
+          <Row gutter={[16, 8]}>
+            <Col span={12}>
+              <Form.Item 
+                name="phoneNumber" 
+                label={
+                  <Space>
+                    <PhoneOutlined />
+                    <span>Số điện thoại</span>
+                  </Space>
+                }
+              >
+                <Input 
+                  placeholder="Nhập số điện thoại" 
+                  prefix={<PhoneOutlined style={{ color: '#bfbfbf' }} />}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Card>
 
-        <Form.Item
-          name="email"
-          label="Email"
-          rules={[{ type: "email", message: "Email không hợp lệ" }]}
+        {/* Thông tin vai trò và trạng thái */}
+        <Card 
+          title={
+            <Space>
+              <CrownOutlined style={{ color: '#722ed1' }} />
+              <span>Vai trò và trạng thái</span>
+            </Space>
+          }
+          size="small"
         >
-          <Input />
-        </Form.Item>
-
-        <Form.Item name="phoneNumber" label="Số điện thoại">
-          <Input />
-        </Form.Item>
-
-        <Form.Item name="role" label="Vai trò">
-          <Select
-            options={[
-              { label: "Admin", value: "admin" },
-              { label: "User", value: "user" },
-            ]}
-          />
-        </Form.Item>
-
-        <Form.Item name="status" label="Trạng thái">
-  <Select
-    options={[
-      { label: "Đang hoạt động", value: "active" },
-      { label: "Bị khóa", value: "blocked" },
-    ]}
-  />
-</Form.Item>
-
+          <Row gutter={[16, 8]}>
+            <Col span={12}>
+              <Form.Item 
+                name="role" 
+                label={
+                  <Space>
+                    <CrownOutlined />
+                    <span>Vai trò</span>
+                  </Space>
+                }
+              >
+                <Select
+                  placeholder="Chọn vai trò"
+                  options={[
+                    { 
+                      label: (
+                        <Space>
+                          <CrownOutlined style={{ color: '#fa541c' }} />
+                          <span>Admin</span>
+                        </Space>
+                      ), 
+                      value: "admin" 
+                    },
+                    { 
+                      label: (
+                        <Space>
+                          <UserOutlined style={{ color: '#1890ff' }} />
+                          <span>User</span>
+                        </Space>
+                      ), 
+                      value: "user" 
+                    },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item 
+                name="status" 
+                label={
+                  <Space>
+                    <TeamOutlined />
+                    <span>Trạng thái</span>
+                  </Space>
+                }
+              >
+                <Select
+                  placeholder="Chọn trạng thái"
+                  options={[
+                    { 
+                      label: (
+                        <Space>
+                          <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                          <span>Đang hoạt động</span>
+                        </Space>
+                      ), 
+                      value: "active" 
+                    },
+                    { 
+                      label: (
+                        <Space>
+                          <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
+                          <span>Bị khóa</span>
+                        </Space>
+                      ), 
+                      value: "blocked" 
+                    },
+                  ]}
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Card>
       </Form>
     </Modal>
   );

@@ -7,18 +7,28 @@ import {
   Row,
   Col,
   Typography,
+  Card,
+  Space,
+  Avatar,
 } from "antd";
+import { 
+  CalendarOutlined, 
+  UserOutlined, 
+  EditOutlined, 
+  PlusOutlined,
+  ClockCircleOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined
+} from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import type {
   BookingStatusLog,
-  SimpleUser,
   SimpleBooking,
   BookingFormProps,
 } from "../../types/bookingstatus";
 
-const { Option } = Select;
-const { TextArea } = Input;
 
 export default function BookingForm({
   open,
@@ -29,24 +39,10 @@ export default function BookingForm({
 }: BookingFormProps) {
   const [form] = Form.useForm();
 
-  const [users, setUsers] = useState<SimpleUser[]>([]);
   const [bookings, setBookings] = useState<SimpleBooking[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingBookings, setLoadingBookings] = useState(false);
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        setLoadingUsers(true);
-        const res = await axios.get("http://localhost:8080/api/v1/users");
-        setUsers(res.data?.data?.users || []);
-      } catch {
-        message.error("Không tải được danh sách người dùng");
-      } finally {
-        setLoadingUsers(false);
-      }
-    };
-
     const fetchBookings = async () => {
       try {
         setLoadingBookings(true);
@@ -59,7 +55,6 @@ export default function BookingForm({
       }
     };
 
-    fetchUsers();
     fetchBookings();
   }, []);
 
@@ -119,15 +114,21 @@ export default function BookingForm({
     <Modal
       open={open}
       title={
-        booking
-          ? "Chỉnh sửa trạng thái đặt phòng"
-          : "Cập nhật trạng thái đặt phòng"
+        <Space>
+          <Avatar 
+            style={{ backgroundColor: booking ? '#1890ff' : '#52c41a' }} 
+            icon={booking ? <EditOutlined /> : <PlusOutlined />} 
+          />
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            {booking ? "Chỉnh sửa trạng thái đặt phòng" : "Cập nhật trạng thái đặt phòng"}
+          </Typography.Title>
+        </Space>
       }
       onCancel={onCancel}
       onOk={handleSubmit}
       confirmLoading={loading}
-      width={700}
-      style={{ top: 50 }}
+      width={800}
+      style={{ top: 20 }}
       okText={booking ? "Cập nhật" : "Xác nhận"}
       cancelText="Hủy bỏ"
     >
@@ -136,24 +137,25 @@ export default function BookingForm({
         layout="vertical"
         style={{ maxHeight: "70vh", overflowY: "auto", paddingRight: "8px" }}
       >
-        <div
-          style={{
-            background: "#f5f5f5",
-            padding: "12px",
-            borderRadius: "8px",
-            marginBottom: "12px",
-          }}
+        {/* Thông tin đặt phòng */}
+        <Card 
+          title={
+            <Space>
+              <CalendarOutlined style={{ color: '#1890ff' }} />
+              <span>Thông tin đặt phòng</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
         >
-          <Typography.Title
-            level={5}
-            style={{ marginBottom: "12px", fontSize: "14px" }}
-          >
-            Thông tin đặt phòng
-          </Typography.Title>
-
           <Form.Item
             name="bookingId"
-            label="Chọn đặt phòng"
+            label={
+              <Space>
+                <CalendarOutlined />
+                <span>Chọn đặt phòng</span>
+              </Space>
+            }
             rules={[{ required: true, message: "Chọn đặt phòng" }]}
           >
             <Select
@@ -172,83 +174,117 @@ export default function BookingForm({
               style={{ width: "100%" }}
             />
           </Form.Item>
-        </div>
+        </Card>
 
-        <div
-          style={{
-            background: "#f5f5f5",
-            padding: "12px",
-            borderRadius: "8px",
-            marginBottom: "12px",
-          }}
+        {/* Thông tin người thực hiện */}
+        <Card 
+          title={
+            <Space>
+              <UserOutlined style={{ color: '#52c41a' }} />
+              <span>Thông tin người thực hiện</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
         >
-          <Typography.Title
-            level={5}
-            style={{ marginBottom: "12px", fontSize: "14px" }}
-          >
-            Thông tin người thực hiện
-          </Typography.Title>
-
           <Form.Item
             name="actorId"
-            label="Người thực hiện"
+            label={
+              <Space>
+                <UserOutlined />
+                <span>Người thực hiện</span>
+              </Space>
+            }
             rules={[{ required: true, message: "Chọn người thực hiện" }]}
             initialValue="system"
           >
             <Select disabled style={{ width: "100%" }}>
-              <Select.Option value="system">Admin / Lễ tân</Select.Option>
+              <Select.Option value="system">
+                <Space>
+                  <Avatar size="small" icon={<UserOutlined />} />
+                  <span>Admin / Lễ tân</span>
+                </Space>
+              </Select.Option>
             </Select>
           </Form.Item>
-        </div>
+        </Card>
 
-        <div
-          style={{
-            background: "#f5f5f5",
-            padding: "12px",
-            borderRadius: "8px",
-            marginBottom: "12px",
-          }}
+        {/* Thông tin cập nhật */}
+        <Card 
+          title={
+            <Space>
+              <EditOutlined style={{ color: '#fa8c16' }} />
+              <span>Thông tin cập nhật</span>
+            </Space>
+          }
+          size="small"
         >
-          <Typography.Title
-            level={5}
-            style={{ marginBottom: "12px", fontSize: "14px" }}
-          >
-            Thông tin cập nhật
-          </Typography.Title>
-
-          <Row gutter={16}>
+          <Row gutter={[16, 8]}>
             <Col span={12}>
               <Form.Item
                 name="action"
-                label="Hành động"
+                label={
+                  <Space>
+                    <EditOutlined />
+                    <span>Hành động</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Chọn hành động" }]}
               >
                 <Select style={{ width: "100%" }}>
-                  {/* <Option value="check_in">Check-in</Option>
-                  <Option value="check_out">Check-out</Option> */}
-                  <Option value="cancelled">Hủy đặt phòng</Option>
-                  <Option value="extend">Gia hạn</Option>
-                  <Option value="confirmed">Xác nhận</Option>
-                  <Option value="extend_check_out">Lùi giờ trả</Option>
-                  <Option value="pending">chờ xác nhận</Option>
+                  <Select.Option value="cancelled">
+                    <Space>
+                      <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
+                      <span>Hủy đặt phòng</span>
+                    </Space>
+                  </Select.Option>
+                  <Select.Option value="extend">
+                    <Space>
+                      <ClockCircleOutlined style={{ color: '#fa8c16' }} />
+                      <span>Gia hạn</span>
+                    </Space>
+                  </Select.Option>
+                  <Select.Option value="confirmed">
+                    <Space>
+                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                      <span>Xác nhận</span>
+                    </Space>
+                  </Select.Option>
+                  <Select.Option value="extend_check_out">
+                    <Space>
+                      <ClockCircleOutlined style={{ color: '#722ed1' }} />
+                      <span>Lùi giờ trả</span>
+                    </Space>
+                  </Select.Option>
+                  <Select.Option value="pending">
+                    <Space>
+                      <ExclamationCircleOutlined style={{ color: '#faad14' }} />
+                      <span>Chờ xác nhận</span>
+                    </Space>
+                  </Select.Option>
                 </Select>
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
                 name="note"
-                label="Ghi chú"
+                label={
+                  <Space>
+                    <EditOutlined />
+                    <span>Ghi chú</span>
+                  </Space>
+                }
                 style={{ marginBottom: 0 }}
               >
-                <TextArea
-                  rows={2}
+                <Input.TextArea
+                  rows={3}
                   placeholder="Nhập ghi chú (nếu có)"
                   style={{ resize: "none" }}
                 />
               </Form.Item>
             </Col>
           </Row>
-        </div>
+        </Card>
       </Form>
     </Modal>
   );

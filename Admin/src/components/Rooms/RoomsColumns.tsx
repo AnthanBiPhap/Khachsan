@@ -1,4 +1,18 @@
-import { Tag, Space } from "antd";
+import { Tag, Space, Avatar, Typography, Button } from "antd";
+import { 
+  HomeOutlined, 
+  SettingOutlined, 
+  EditOutlined, 
+  DeleteOutlined, 
+  EyeOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined,
+  DollarOutlined,
+  UserOutlined,
+  CalendarOutlined
+} from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { Room } from "../../types/room";
 
@@ -8,76 +22,178 @@ export const roomsColumns = (
   handleDetail?: (record: Room) => void
 ): ColumnsType<Room> => [
   {
-    title: "Phòng",
+    title: (
+      <Space>
+        <HomeOutlined style={{ color: '#1890ff' }} />
+        <span>Phòng</span>
+      </Space>
+    ),
     key: "roomNumber",
     dataIndex: "roomNumber",
-    render: (value: string, record) => (
-      handleDetail ? (
-        <a onClick={() => handleDetail(record)}>{value}</a>
-      ) : (
-        <span>{value}</span>
-      )
-    ),
+    render: (value: string, record) => {
+      const content = (
+        <Space>
+          <Avatar 
+            size="small" 
+            icon={<HomeOutlined />} 
+            style={{ backgroundColor: '#1890ff' }}
+          />
+          <Typography.Text strong>{value}</Typography.Text>
+        </Space>
+      );
+      return handleDetail ? (
+        <Button 
+          type="link" 
+          onClick={() => handleDetail(record)}
+          style={{ padding: 0, height: 'auto' }}
+        >
+          {content}
+        </Button>
+      ) : content;
+    },
   },
   {
-    title: "Loại phòng",
+    title: (
+      <Space>
+        <SettingOutlined style={{ color: '#52c41a' }} />
+        <span>Loại phòng</span>
+      </Space>
+    ),
     key: "typeId",
     render: (_, record) => (
-      <div>
-        <div>{record.typeId?.name || "-"}</div>
-        {record.typeId ? (
-          <div style={{ color: "#888", fontSize: 12 }}>
-            {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(record.typeId.pricePerNight)}
-            {" · "}Tối đa {record.typeId.capacity} khách
-          </div>
-        ) : null}
-      </div>
-    ),
-  },
-  {
-    title: "Tiện nghi",
-    key: "amenities",
-    render: (_, record) => (
-      <Space wrap>
-        {(record.amenities || []).map((a) => (
-          <Tag key={a}>{a}</Tag>
-        ))}
+      <Space direction="vertical" size={0}>
+        <Space>
+          <SettingOutlined style={{ color: '#52c41a' }} />
+          <Typography.Text strong>{record.typeId?.name || "-"}</Typography.Text>
+        </Space>
+        {record.typeId && (
+          <Space direction="vertical" size={0}>
+            <Space size={4}>
+              <DollarOutlined style={{ color: '#52c41a', fontSize: 12 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(record.typeId.pricePerNight)}
+              </Typography.Text>
+            </Space>
+            <Space size={4}>
+              <UserOutlined style={{ color: '#1890ff', fontSize: 12 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Tối đa {record.typeId.capacity} khách
+              </Typography.Text>
+            </Space>
+          </Space>
+        )}
       </Space>
     ),
   },
   {
-    title: "Trạng thái",
-    dataIndex: "status",
-    key: "status",
-    render: (status: string) => {
-      const map: Record<string, { color: string; text: string }> = {
-        available: { color: "green", text: "Sẵn sàng" },
-        occupied: { color: "blue", text: "Đang ở" },
-        maintenance: { color: "orange", text: "Bảo trì" },
-        unavailable: { color: "red", text: "Không khả dụng" },
-      };
-      const v = map[status] || { color: "default", text: status };
-      return <Tag color={v.color}>{v.text}</Tag>;
-    },
-  },
-  {
-    title: "Tạo/Cập nhật",
-    key: "timestamps",
-    render: (_, r) => (
-      <div style={{ color: "#888", fontSize: 12 }}>
-        <div>Tạo: {r.createdAt ? new Date(r.createdAt).toLocaleString("vi-VN") : "-"}</div>
-        <div>Sửa: {r.updatedAt ? new Date(r.updatedAt).toLocaleString("vi-VN") : "-"}</div>
-      </div>
+    title: (
+      <Space>
+        <SettingOutlined style={{ color: '#fa8c16' }} />
+        <span>Tiện nghi</span>
+      </Space>
+    ),
+    key: "amenities",
+    render: (_, record) => (
+      <Space wrap>
+        {(record.amenities || []).map((a) => (
+          <Tag key={a} color="blue" icon={<SettingOutlined />}>
+            {a}
+          </Tag>
+        ))}
+        {(!record.amenities || record.amenities.length === 0) && (
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            Không có tiện nghi
+          </Typography.Text>
+        )}
+      </Space>
     ),
   },
   {
-    title: "Thao tác",
+    title: (
+      <Space>
+        <CheckCircleOutlined style={{ color: '#722ed1' }} />
+        <span>Trạng thái</span>
+      </Space>
+    ),
+    dataIndex: "status",
+    key: "status",
+    render: (status: string) => {
+      const map: Record<string, { color: string; text: string; icon: React.ReactNode }> = {
+        available: { color: "green", text: "Sẵn sàng", icon: <CheckCircleOutlined /> },
+        occupied: { color: "blue", text: "Đang ở", icon: <ExclamationCircleOutlined /> },
+        maintenance: { color: "orange", text: "Bảo trì", icon: <ClockCircleOutlined /> },
+        unavailable: { color: "red", text: "Không khả dụng", icon: <CloseCircleOutlined /> },
+      };
+      const v = map[status] || { color: "default", text: status, icon: null };
+      return (
+        <Tag color={v.color} icon={v.icon}>
+          {v.text}
+        </Tag>
+      );
+    },
+  },
+  {
+    title: (
+      <Space>
+        <CalendarOutlined style={{ color: '#13c2c2' }} />
+        <span>Tạo/Cập nhật</span>
+      </Space>
+    ),
+    key: "timestamps",
+    render: (_, r) => (
+      <Space direction="vertical" size={0}>
+        <Space size={4}>
+          <CalendarOutlined style={{ color: '#52c41a', fontSize: 12 }} />
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            Tạo: {r.createdAt ? new Date(r.createdAt).toLocaleString("vi-VN") : "-"}
+          </Typography.Text>
+        </Space>
+        <Space size={4}>
+          <CalendarOutlined style={{ color: '#1890ff', fontSize: 12 }} />
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            Sửa: {r.updatedAt ? new Date(r.updatedAt).toLocaleString("vi-VN") : "-"}
+          </Typography.Text>
+        </Space>
+      </Space>
+    ),
+  },
+  {
+    title: (
+      <Space>
+        <EditOutlined style={{ color: '#722ed1' }} />
+        <span>Thao tác</span>
+      </Space>
+    ),
     key: "actions",
     render: (_, r) => (
       <Space>
-        <a onClick={() => handleEdit(r)}>Chỉnh sửa</a>
-        <a onClick={() => handleDelete(r._id)}>Xóa</a>
-        <a onClick={() => handleDetail?.(r)}>Chi tiết</a>
+        <Button 
+          type="link" 
+          size="small" 
+          icon={<EditOutlined />}
+          onClick={() => handleEdit(r)}
+        >
+          Sửa
+        </Button>
+        <Button 
+          type="link" 
+          size="small" 
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() => handleDelete(r._id)}
+        >
+          Xóa
+        </Button>
+        {handleDetail && (
+          <Button 
+            type="link" 
+            size="small" 
+            icon={<EyeOutlined />}
+            onClick={() => handleDetail(r)}
+          >
+            Chi tiết
+          </Button>
+        )}
       </Space>
     ),
   },

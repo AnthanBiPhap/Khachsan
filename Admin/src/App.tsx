@@ -17,7 +17,7 @@ import ServiceBookingsPage from "./pages/ServiceBookingsPage/ServiceBookingsPage
 import LocationsPage from "./pages/LocationsPage/LocationsPage";
 import ReviewsPage from "./pages/ReviewsPage/ReviewsPage";
 import InvoicesPage from "./pages/InvoicesPage/InvoicesPage";
-import InvoiceItemsPage from "./pages/InvoiceItemsPage/InvoiceItemsPage";
+// import InvoiceItemsPage from "./pages/InvoiceItemsPage/InvoiceItemsPage";
 import { useAuthStore } from "./stores/authStore";
 
 function PrivateRoute({ children }) {
@@ -55,7 +55,7 @@ function App() {
           <Route path="locations" element={<LocationsPage />} />
           <Route path="reviews" element={<ReviewsPage />} />
           <Route path="invoices" element={<InvoicesPage />} />
-          <Route path="invoiceitems" element={<InvoiceItemsPage />} />
+          {/* <Route path="invoiceitems" element={<InvoiceItemsPage />} /> */}
         </Route>
 
         {/* Layout rỗng cho login */}

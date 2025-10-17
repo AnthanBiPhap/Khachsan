@@ -1,12 +1,33 @@
-import { Form, Input, Modal, Select, message, Row, Col, Typography, Image } from "antd";
+import { 
+  Form, 
+  Input, 
+  Modal, 
+  Select, 
+  message, 
+  Row, 
+  Col, 
+  Typography, 
+  Image, 
+  Card, 
+  Space, 
+  Avatar, 
+  Tag 
+} from "antd";
+import { 
+  HomeOutlined, 
+  EditOutlined, 
+  PlusOutlined, 
+  SettingOutlined, 
+  PictureOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined
+} from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import axios from "axios";
-import type { Room, RoomType } from "../../types/room";
+import type { RoomType } from "../../types/room";
 import type { RoomsFormProps } from "../../types/room";
-
-const { Title, Text } = Typography;
-
-const { Option } = Select;
 
 export default function RoomsForm({ open, room, onCancel, onSave, loading }: RoomsFormProps) {
   const [form] = Form.useForm();
@@ -75,52 +96,116 @@ export default function RoomsForm({ open, room, onCancel, onSave, loading }: Roo
   return (
     <Modal
       open={open}
-      title={room ? "Chỉnh sửa thông tin phòng" : "Thêm phòng mới"}
+      title={
+        <Space>
+          <Avatar 
+            style={{ backgroundColor: room ? '#1890ff' : '#52c41a' }} 
+            icon={room ? <EditOutlined /> : <PlusOutlined />} 
+          />
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            {room ? "Chỉnh sửa thông tin phòng" : "Thêm phòng mới"}
+          </Typography.Title>
+        </Space>
+      }
       onCancel={onCancel}
       onOk={handleSubmit}
       confirmLoading={loading}
-      width={700}
-      style={{ top: 50 }}
+      width={800}
+      style={{ top: 20 }}
       okText={room ? "Cập nhật" : "Tạo mới"}
       cancelText="Hủy bỏ"
     >
-      <Form layout="vertical" form={form} style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '8px' }}>
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Typography.Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Thông tin cơ bản</Typography.Title>
-          
-          <Row gutter={16}>
+      <Form layout="vertical" form={form} style={{ maxHeight: '75vh', overflowY: 'auto', padding: '0 8px' }}>
+        {/* Thông tin cơ bản */}
+        <Card 
+          title={
+            <Space>
+              <HomeOutlined style={{ color: '#1890ff' }} />
+              <span>Thông tin cơ bản</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={[16, 8]}>
             <Col span={12}>
               <Form.Item 
                 name="roomNumber" 
-                label="Số phòng" 
+                label={
+                  <Space>
+                    <HomeOutlined />
+                    <span>Số phòng</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Nhập số phòng" }]}
               >
-                <Input placeholder="VD: 101A" />
+                <Input 
+                  placeholder="VD: 101A" 
+                  prefix={<HomeOutlined style={{ color: '#bfbfbf' }} />}
+                />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item 
                 name="status" 
-                label="Trạng thái" 
+                label={
+                  <Space>
+                    <SettingOutlined />
+                    <span>Trạng thái</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Chọn trạng thái" }]}
               >
                 <Select placeholder="Chọn trạng thái" style={{ width: '100%' }}>
-                  <Option value="available">Sẵn sàng</Option>
-                  <Option value="occupied">Đang ở</Option>
-                  <Option value="maintenance">Bảo trì</Option>
-                  <Option value="unavailable">Không khả dụng</Option>
+                  <Select.Option value="available">
+                    <Space>
+                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                      <span>Sẵn sàng</span>
+                    </Space>
+                  </Select.Option>
+                  <Select.Option value="occupied">
+                    <Space>
+                      <ExclamationCircleOutlined style={{ color: '#faad14' }} />
+                      <span>Đang ở</span>
+                    </Space>
+                  </Select.Option>
+                  <Select.Option value="maintenance">
+                    <Space>
+                      <ClockCircleOutlined style={{ color: '#fa8c16' }} />
+                      <span>Bảo trì</span>
+                    </Space>
+                  </Select.Option>
+                  <Select.Option value="unavailable">
+                    <Space>
+                      <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
+                      <span>Không khả dụng</span>
+                    </Space>
+                  </Select.Option>
                 </Select>
               </Form.Item>
             </Col>
           </Row>
-        </div>
+        </Card>
 
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Typography.Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Thông tin loại phòng</Typography.Title>
-          
+        {/* Thông tin loại phòng */}
+        <Card 
+          title={
+            <Space>
+              <SettingOutlined style={{ color: '#52c41a' }} />
+              <span>Thông tin loại phòng</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
           <Form.Item 
             name="typeId" 
-            label="Chọn loại phòng"
+            label={
+              <Space>
+                <SettingOutlined />
+                <span>Chọn loại phòng</span>
+              </Space>
+            }
             rules={[{ required: true, message: "Chọn loại phòng" }]}
           >
             <Select
@@ -141,14 +226,28 @@ export default function RoomsForm({ open, room, onCancel, onSave, loading }: Roo
               }))}
             />
           </Form.Item>
-        </div>
+        </Card>
 
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Typography.Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Tiện nghi phòng</Typography.Title>
-          
+        {/* Tiện nghi phòng */}
+        <Card 
+          title={
+            <Space>
+              <SettingOutlined style={{ color: '#fa8c16' }} />
+              <span>Tiện nghi phòng</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
           <Form.Item 
             name="amenities" 
-            label="Thêm tiện nghi"
+            label={
+              <Space>
+                <SettingOutlined />
+                <span>Thêm tiện nghi</span>
+                <Tag color="blue">Nhập từng tiện nghi và nhấn Enter</Tag>
+              </Space>
+            }
             help="Nhập từng tiện nghi và nhấn Enter"
           >
             <Select 
@@ -158,14 +257,27 @@ export default function RoomsForm({ open, room, onCancel, onSave, loading }: Roo
               style={{ width: '100%' }}
             />
           </Form.Item>
-        </div>
+        </Card>
 
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Hình ảnh phòng</Title>
-          
+        {/* Hình ảnh phòng */}
+        <Card 
+          title={
+            <Space>
+              <PictureOutlined style={{ color: '#722ed1' }} />
+              <span>Hình ảnh phòng</span>
+            </Space>
+          }
+          size="small"
+        >
           <Form.Item 
             name="images" 
-            label="Nhập URL hình ảnh"
+            label={
+              <Space>
+                <PictureOutlined />
+                <span>Nhập URL hình ảnh</span>
+                <Tag color="purple">Dán URL và nhấn Enter</Tag>
+              </Space>
+            }
             rules={[{ required: true, message: 'Vui lòng nhập ít nhất 1 URL hình ảnh' }]}
           >
             <Select
@@ -179,15 +291,33 @@ export default function RoomsForm({ open, room, onCancel, onSave, loading }: Roo
           
           {imageUrls.length > 0 && (
             <div style={{ marginTop: '16px' }}>
-              <Text type="secondary">Xem trước hình ảnh:</Text>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+              <Space style={{ marginBottom: '8px' }}>
+                <PictureOutlined style={{ color: '#722ed1' }} />
+                <Typography.Text type="secondary">Xem trước hình ảnh:</Typography.Text>
+                <Tag color="green">{imageUrls.length} hình</Tag>
+              </Space>
+              <div style={{ 
+                display: 'flex', 
+                flexWrap: 'wrap', 
+                gap: '8px', 
+                marginTop: '8px',
+                padding: '12px',
+                backgroundColor: '#fafafa',
+                borderRadius: '6px',
+                border: '1px dashed #d9d9d9'
+              }}>
                 {imageUrls.map((url, index) => (
                   <Image
                     key={index}
                     src={url}
                     width={100}
                     height={100}
-                    style={{ objectFit: 'cover', borderRadius: '4px' }}
+                    style={{ 
+                      objectFit: 'cover', 
+                      borderRadius: '6px',
+                      border: '2px solid #fff',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                    }}
                     preview={{ src: url }}
                     fallback="https://via.placeholder.com/100"
                   />
@@ -195,7 +325,7 @@ export default function RoomsForm({ open, room, onCancel, onSave, loading }: Roo
               </div>
             </div>
           )}
-        </div>
+        </Card>
       </Form>
     </Modal>
   );

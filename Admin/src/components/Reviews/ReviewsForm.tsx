@@ -1,11 +1,32 @@
-import { Form, Input, Modal, Select, Row, Col, Typography, Tag } from "antd";
+import { 
+  Form, 
+  Input, 
+  Modal, 
+  Select, 
+  Row, 
+  Col, 
+  Typography, 
+  Tag, 
+  Card, 
+  Space, 
+  Avatar 
+} from "antd";
+import { 
+  PlusOutlined, 
+  EditOutlined, 
+  UserOutlined, 
+  StarOutlined, 
+  SettingOutlined, 
+  CommentOutlined, 
+  CheckCircleOutlined, 
+  EyeInvisibleOutlined, 
+  DeleteOutlined,
+  StarFilled 
+} from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import type { ReviewStatus, ReviewTargetType, SimpleRef, ReviewsFormProps } from "../../types/review";
 import axios from "axios";
-import { StarFilled } from "@ant-design/icons";
 
-const { TextArea } = Input;
-const { Title } = Typography;
 
 export default function ReviewsForm({ open, item, onCancel, onSave, loading }: ReviewsFormProps) {
   const [form] = Form.useForm();
@@ -16,16 +37,37 @@ export default function ReviewsForm({ open, item, onCancel, onSave, loading }: R
 
   useEffect(() => {
     const fetchRooms = async () => {
-      try { const res = await axios.get("http://localhost:8080/api/v1/rooms"); setRooms(res.data?.data?.rooms || []); } catch {}
+      try { 
+        const res = await axios.get("http://localhost:8080/api/v1/rooms"); 
+        setRooms(res.data?.data?.rooms || []); 
+      } catch (error) {
+        console.error('Error fetching rooms:', error);
+      }
     };
     const fetchServices = async () => {
-      try { const res = await axios.get("http://localhost:8080/api/v1/services"); const arr = res.data?.data?.data || res.data?.data?.services || []; setServices(arr); } catch {}
+      try { 
+        const res = await axios.get("http://localhost:8080/api/v1/services"); 
+        const arr = res.data?.data?.data || res.data?.data?.services || []; 
+        setServices(arr); 
+      } catch (error) {
+        console.error('Error fetching services:', error);
+      }
     };
     const fetchLocations = async () => {
-      try { const res = await axios.get("http://localhost:8080/api/v1/locations"); setLocations(res.data?.data?.locations || []); } catch {}
+      try { 
+        const res = await axios.get("http://localhost:8080/api/v1/locations"); 
+        setLocations(res.data?.data?.locations || []); 
+      } catch (error) {
+        console.error('Error fetching locations:', error);
+      }
     };
     const fetchUsers = async () => {
-      try { const res = await axios.get("http://localhost:8080/api/v1/users"); setUsers(res.data?.data?.users || []); } catch {}
+      try { 
+        const res = await axios.get("http://localhost:8080/api/v1/users"); 
+        setUsers(res.data?.data?.users || []); 
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
     };
 
     fetchRooms();
@@ -61,14 +103,6 @@ export default function ReviewsForm({ open, item, onCancel, onSave, loading }: R
     });
   };
 
-  const getStatusTag = (status: string) => {
-    switch (status) {
-      case 'active': return <Tag color="green">Hiện</Tag>;
-      case 'hidden': return <Tag color="orange">Ẩn</Tag>;
-      case 'deleted': return <Tag color="red">Xóa</Tag>;
-      default: return <Tag>{status}</Tag>;
-    }
-  };
 
   const getTargetTypeLabel = (type: string) => {
     const typeLabels: Record<string, string> = {
@@ -88,24 +122,47 @@ export default function ReviewsForm({ open, item, onCancel, onSave, loading }: R
   return (
     <Modal
       open={open}
-      title={item ? "Chỉnh sửa đánh giá" : "Tạo đánh giá mới"}
+      title={
+        <Space>
+          <Avatar 
+            style={{ backgroundColor: item ? '#1890ff' : '#52c41a' }} 
+            icon={item ? <EditOutlined /> : <PlusOutlined />} 
+          />
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            {item ? "Chỉnh sửa đánh giá" : "Tạo đánh giá mới"}
+          </Typography.Title>
+        </Space>
+      }
       onCancel={onCancel}
       onOk={handleSubmit}
       confirmLoading={loading}
-      width={700}
-      style={{ top: 50 }}
+      width={800}
+      style={{ top: 20 }}
       okText="Lưu"
       cancelText="Hủy"
     >
-      <Form form={form} layout="vertical" style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '8px' }}>
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Thông tin đánh giá</Title>
-          
-          <Row gutter={16}>
+      <Form form={form} layout="vertical" style={{ maxHeight: '75vh', overflowY: 'auto', padding: '0 8px' }}>
+        {/* Thông tin đánh giá */}
+        <Card 
+          title={
+            <Space>
+              <StarOutlined style={{ color: '#1890ff' }} />
+              <span>Thông tin đánh giá</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={[16, 8]}>
             <Col span={24}>
               <Form.Item 
                 name="reviewerId" 
-                label="Người đánh giá" 
+                label={
+                  <Space>
+                    <UserOutlined />
+                    <span>Người đánh giá</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Chọn người đánh giá" }]}
               >
                 <Select
@@ -125,7 +182,12 @@ export default function ReviewsForm({ open, item, onCancel, onSave, loading }: R
             <Col span={12}>
               <Form.Item 
                 name="targetType" 
-                label="Loại đối tượng" 
+                label={
+                  <Space>
+                    <SettingOutlined />
+                    <span>Loại đối tượng</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Chọn loại đối tượng" }]}
               >
                 <Select 
@@ -152,7 +214,12 @@ export default function ReviewsForm({ open, item, onCancel, onSave, loading }: R
                   return (
                     <Form.Item 
                       name="targetId" 
-                      label="Đối tượng" 
+                      label={
+                        <Space>
+                          <SettingOutlined />
+                          <span>Đối tượng</span>
+                        </Space>
+                      }
                       rules={[{ required: true, message: "Chọn đối tượng" }]}
                     > 
                       <Select 
@@ -169,56 +236,89 @@ export default function ReviewsForm({ open, item, onCancel, onSave, loading }: R
               </Form.Item>
             </Col>
 
-            <Col span={24}>
+            <Col span={12}>
               <Form.Item 
                 name="rating" 
-                label="Đánh giá" 
+                label={
+                  <Space>
+                    <StarOutlined />
+                    <span>Đánh giá</span>
+                    <Tag color="orange">1-5 sao</Tag>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Chọn số sao từ 1-5" }]}
               >
                 <Select placeholder="Chọn số sao">
                   {[1, 2, 3, 4, 5].map(num => (
                     <Select.Option key={num} value={num}>
-                      <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <Space>
                         {renderStars(num)}
-                        <span style={{ marginLeft: 8 }}>{num} sao</span>
-                      </div>
+                        <span>{num} sao</span>
+                      </Space>
                     </Select.Option>
                   ))}
                 </Select>
               </Form.Item>
             </Col>
 
-            <Col span={24}>
+            <Col span={12}>
               <Form.Item 
                 name="status" 
-                label="Trạng thái" 
+                label={
+                  <Space>
+                    <SettingOutlined />
+                    <span>Trạng thái</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Chọn trạng thái" }]}
               >
                 <Select placeholder="Chọn trạng thái">
                   <Select.Option value="active">
-                    <Tag color="green">Hiện</Tag>
+                    <Space>
+                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                      <span>Hiện</span>
+                    </Space>
                   </Select.Option>
                   <Select.Option value="hidden">
-                    <Tag color="orange">Ẩn</Tag>
+                    <Space>
+                      <EyeInvisibleOutlined style={{ color: '#faad14' }} />
+                      <span>Ẩn</span>
+                    </Space>
                   </Select.Option>
                   <Select.Option value="deleted" disabled>
-                    <Tag color="red">Xóa</Tag>
+                    <Space>
+                      <DeleteOutlined style={{ color: '#ff4d4f' }} />
+                      <span>Xóa</span>
+                    </Space>
                   </Select.Option>
                 </Select>
               </Form.Item>
             </Col>
           </Row>
-        </div>
+        </Card>
 
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Nội dung đánh giá</Title>
-          
+        {/* Nội dung đánh giá */}
+        <Card 
+          title={
+            <Space>
+              <CommentOutlined style={{ color: '#fa8c16' }} />
+              <span>Nội dung đánh giá</span>
+            </Space>
+          }
+          size="small"
+        >
           <Form.Item 
             name="comment" 
-            label="Bình luận"
+            label={
+              <Space>
+                <CommentOutlined />
+                <span>Bình luận</span>
+                <Tag color="blue">Tối đa 1000 ký tự</Tag>
+              </Space>
+            }
             rules={[{ max: 1000, message: "Bình luận không được vượt quá 1000 ký tự" }]}
           >
-            <TextArea 
+            <Input.TextArea 
               rows={4} 
               placeholder="Nhập nội dung đánh giá chi tiết..."
               style={{ resize: 'none' }}
@@ -226,7 +326,7 @@ export default function ReviewsForm({ open, item, onCancel, onSave, loading }: R
               maxLength={1000}
             />
           </Form.Item>
-        </div>
+        </Card>
       </Form>
     </Modal>
   );

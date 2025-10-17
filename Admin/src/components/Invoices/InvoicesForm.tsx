@@ -1,11 +1,35 @@
-import { Form, InputNumber, Modal, Select, DatePicker, message, Row, Col, Typography, Tag } from "antd";
+import { 
+  Form, 
+  InputNumber, 
+  Modal, 
+  Select, 
+  DatePicker, 
+  message, 
+  Row, 
+  Col, 
+  Typography, 
+  Tag, 
+  Card, 
+  Space, 
+  Avatar 
+} from "antd";
+import { 
+  PlusOutlined, 
+  EditOutlined, 
+  CalendarOutlined, 
+  UserOutlined, 
+  DollarOutlined, 
+  SettingOutlined, 
+  ClockCircleOutlined, 
+  CheckCircleOutlined, 
+  CloseCircleOutlined, 
+  UndoOutlined 
+} from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import axios from "axios";
 import type { InvoiceItem, SimpleUser, SimpleBooking, InvoicesFormProps } from "../../types/invoice";
 import dayjs from "dayjs";
 
-const { Option } = Select;
-const { Title } = Typography;
 
 export default function InvoicesForm({ open, item, onCancel, onSave, loading }: InvoicesFormProps) {
   const [form] = Form.useForm();
@@ -68,43 +92,52 @@ export default function InvoicesForm({ open, item, onCancel, onSave, loading }: 
     } as Partial<InvoiceItem>);
   };
 
-  const getStatusTag = (status: string) => {
-    switch (status) {
-      case 'pending': return <Tag color="orange">Chờ thanh toán</Tag>;
-      case 'paid': return <Tag color="green">Đã thanh toán</Tag>;
-      case 'failed': return <Tag color="red">Thất bại</Tag>;
-      case 'refunded': return <Tag color="blue">Hoàn tiền</Tag>;
-      default: return <Tag>{status}</Tag>;
-    }
-  };
 
-  const formatCurrency = (value: number | string | undefined) => {
-    if (value === undefined) return '0';
-    const num = typeof value === 'string' ? parseFloat(value) : value;
-    return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(num);
-  };
 
   return (
     <Modal
       open={open}
-      title={item ? "Chỉnh sửa hóa đơn" : "Tạo hóa đơn mới"}
+      title={
+        <Space>
+          <Avatar 
+            style={{ backgroundColor: item ? '#1890ff' : '#52c41a' }} 
+            icon={item ? <EditOutlined /> : <PlusOutlined />} 
+          />
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            {item ? "Chỉnh sửa hóa đơn" : "Tạo hóa đơn mới"}
+          </Typography.Title>
+        </Space>
+      }
       onCancel={onCancel}
       onOk={handleSubmit}
       confirmLoading={loading}
-      width={700}
-      style={{ top: 50 }}
+      width={800}
+      style={{ top: 20 }}
       okText="Lưu"
       cancelText="Hủy"
     >
-      <Form form={form} layout="vertical" style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: '8px' }}>
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Thông tin đặt phòng</Title>
-          
-          <Row gutter={16}>
+      <Form form={form} layout="vertical" style={{ maxHeight: '75vh', overflowY: 'auto', padding: '0 8px' }}>
+        {/* Thông tin đặt phòng */}
+        <Card 
+          title={
+            <Space>
+              <CalendarOutlined style={{ color: '#1890ff' }} />
+              <span>Thông tin đặt phòng</span>
+            </Space>
+          }
+          size="small"
+          style={{ marginBottom: 16 }}
+        >
+          <Row gutter={[16, 8]}>
             <Col span={24}>
               <Form.Item 
                 name="bookingId" 
-                label="Mã đặt phòng" 
+                label={
+                  <Space>
+                    <CalendarOutlined />
+                    <span>Mã đặt phòng</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Chọn mã đặt phòng" }]}
               >
                 <Select
@@ -128,7 +161,12 @@ export default function InvoicesForm({ open, item, onCancel, onSave, loading }: 
             <Col span={24}>
               <Form.Item 
                 name="customerId" 
-                label="Khách hàng"
+                label={
+                  <Space>
+                    <UserOutlined />
+                    <span>Khách hàng</span>
+                  </Space>
+                }
               >
                 <Select
                   showSearch
@@ -146,16 +184,29 @@ export default function InvoicesForm({ open, item, onCancel, onSave, loading }: 
               </Form.Item>
             </Col>
           </Row>
-        </div>
+        </Card>
 
-        <div style={{ background: '#f5f5f5', padding: '12px', borderRadius: '8px', marginBottom: '12px' }}>
-          <Title level={5} style={{ marginBottom: '12px', fontSize: '14px' }}>Thông tin thanh toán</Title>
-          
-          <Row gutter={16}>
+        {/* Thông tin thanh toán */}
+        <Card 
+          title={
+            <Space>
+              <DollarOutlined style={{ color: '#fa8c16' }} />
+              <span>Thông tin thanh toán</span>
+            </Space>
+          }
+          size="small"
+        >
+          <Row gutter={[16, 8]}>
             <Col span={12}>
               <Form.Item 
                 name="totalAmount" 
-                label="Tổng tiền" 
+                label={
+                  <Space>
+                    <DollarOutlined />
+                    <span>Tổng tiền</span>
+                    <Tag color="green">VND</Tag>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Nhập tổng tiền" }]}
               >
                 <InputNumber 
@@ -168,6 +219,7 @@ export default function InvoicesForm({ open, item, onCancel, onSave, loading }: 
                     parseInt(value?.replace(/₫\s?|(,*)/g, '') || '0', 10)
                   }
                   placeholder="0"
+                  prefix={<DollarOutlined style={{ color: '#bfbfbf' }} />}
                 />
               </Form.Item>
             </Col>
@@ -175,22 +227,39 @@ export default function InvoicesForm({ open, item, onCancel, onSave, loading }: 
             <Col span={12}>
               <Form.Item 
                 name="status" 
-                label="Trạng thái" 
+                label={
+                  <Space>
+                    <SettingOutlined />
+                    <span>Trạng thái</span>
+                  </Space>
+                }
                 rules={[{ required: true, message: "Chọn trạng thái" }]}
               >
                 <Select placeholder="Chọn trạng thái">
-                  <Option value="pending">
-                    <Tag color="orange">Chờ thanh toán</Tag>
-                  </Option>
-                  <Option value="paid">
-                    <Tag color="green">Đã thanh toán</Tag>
-                  </Option>
-                  <Option value="failed">
-                    <Tag color="red">Thất bại</Tag>
-                  </Option>
-                  <Option value="refunded">
-                    <Tag color="blue">Hoàn tiền</Tag>
-                  </Option>
+                  <Select.Option value="pending">
+                    <Space>
+                      <ClockCircleOutlined style={{ color: '#faad14' }} />
+                      <span>Chờ thanh toán</span>
+                    </Space>
+                  </Select.Option>
+                  <Select.Option value="paid">
+                    <Space>
+                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                      <span>Đã thanh toán</span>
+                    </Space>
+                  </Select.Option>
+                  <Select.Option value="failed">
+                    <Space>
+                      <CloseCircleOutlined style={{ color: '#ff4d4f' }} />
+                      <span>Thất bại</span>
+                    </Space>
+                  </Select.Option>
+                  <Select.Option value="refunded">
+                    <Space>
+                      <UndoOutlined style={{ color: '#1890ff' }} />
+                      <span>Hoàn tiền</span>
+                    </Space>
+                  </Select.Option>
                 </Select>
               </Form.Item>
             </Col>
@@ -198,7 +267,12 @@ export default function InvoicesForm({ open, item, onCancel, onSave, loading }: 
             <Col span={24}>
               <Form.Item 
                 name="issuedAt" 
-                label="Ngày phát hành"
+                label={
+                  <Space>
+                    <CalendarOutlined />
+                    <span>Ngày phát hành</span>
+                  </Space>
+                }
               >
                 <DatePicker 
                   style={{ width: '100%' }} 
@@ -209,7 +283,7 @@ export default function InvoicesForm({ open, item, onCancel, onSave, loading }: 
               </Form.Item>
             </Col>
           </Row>
-        </div>
+        </Card>
       </Form>
     </Modal>
   );
