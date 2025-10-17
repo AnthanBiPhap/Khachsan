@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Dumbbell, Clock, Heart, Flower2, Clock3, Clock4, Clock5, Clock6, Clock7, Clock8, Clock9, Clock10, Clock11, Clock12 } from "lucide-react";
+import { Dumbbell, Clock, Heart, Flower2, Clock3, Clock4, Clock5, Clock6, Clock7, Clock8, Clock9, Clock10, Clock11, Clock12, Star, ArrowRight, Sparkles, Shield, Award, Phone, MessageCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 
@@ -13,6 +13,10 @@ interface Service {
   name: string
   description: string
   basePrice: number
+  workingHours?: {
+    startTime: string
+    endTime: string
+  }
   slots: string[]
   images: string[]
   status: ServiceStatus
@@ -130,141 +134,216 @@ export function ServicesSection() {
     return clocks[index % clocks.length]
   }
 
+  const formatTimeSlot = (slot: string) => {
+    // Nếu slot đã có format "từ X giờ đến Y giờ" thì giữ nguyên
+    if (slot.includes('từ') && slot.includes('đến')) {
+      return slot;
+    }
+    
+    // Nếu slot có format "X:XX - Y:YY" hoặc "X-Y" thì convert
+    if (slot.includes('-') || slot.includes('–')) {
+      const parts = slot.split(/[-–]/).map(p => p.trim());
+      if (parts.length === 2) {
+        const startTime = parts[0].replace(/[^\d:]/g, '');
+        const endTime = parts[1].replace(/[^\d:]/g, '');
+        return `từ ${startTime} đến ${endTime}`;
+      }
+    }
+    
+    // Nếu slot chỉ có 1 thời gian, giả sử là thời gian bắt đầu
+    if (slot.match(/\d{1,2}:\d{2}/)) {
+      return `từ ${slot}`;
+    }
+    
+    // Mặc định trả về slot gốc
+    return slot;
+  }
+
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-12">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Dịch vụ đẳng cấp</h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Trải nghiệm các dịch vụ cao cấp dành riêng cho quý khách tại Miko Hotel
-          </p>
+      <section className="py-20 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full mb-6">
+              <div className="w-10 h-10 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Đang tải dịch vụ...</h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">Vui lòng chờ trong giây lát để khám phá các dịch vụ tuyệt vời</p>
+          </div>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                <Skeleton className="h-56 w-full" />
+                <div className="p-6 space-y-4">
+                  <Skeleton className="h-6 w-3/4" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <div className="flex gap-2">
+                    <Skeleton className="h-10 flex-1" />
+                    <Skeleton className="h-10 flex-1" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-[400px] rounded-xl" />
-          ))}
-        </div>
-      </div>
+      </section>
     )
   }
 
   if (error) {
     return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg max-w-2xl mx-auto">
-          <h3 className="font-bold text-lg mb-1">Đã xảy ra lỗi</h3>
-          <p>{error}</p>
-          <Button 
-            variant="outline" 
-            className="mt-4 border-red-300 text-red-700 hover:bg-red-50"
-            onClick={() => window.location.reload()}
-          >
-            Thử lại
-          </Button>
+      <section className="py-20 bg-gradient-to-br from-red-50 to-pink-50">
+        <div className="container mx-auto px-4 text-center">
+          <div className="max-w-2xl mx-auto">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-red-100 rounded-full mb-6">
+              <Shield className="h-10 w-10 text-red-500" />
+            </div>
+            <h3 className="text-2xl font-bold text-red-800 mb-4">Đã xảy ra lỗi</h3>
+            <p className="text-red-600 mb-6">{error}</p>
+            <Button 
+              variant="outline" 
+              className="border-red-300 text-red-700 hover:bg-red-50 px-6 py-3 rounded-full font-medium"
+              onClick={() => window.location.reload()}
+            >
+              <ArrowRight className="h-4 w-4 mr-2" />
+              Thử lại
+            </Button>
+          </div>
         </div>
-      </div>
+      </section>
     )
   }
 
   if (services.length === 0) {
     return (
-      <div className="container mx-auto px-4 py-12 text-center">
-        <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-8 rounded-lg max-w-2xl mx-auto">
-          <h3 className="text-xl font-bold mb-2">Hiện chưa có dịch vụ nào</h3>
-          <p className="mb-4">Vui lòng quay lại sau để xem các dịch vụ mới nhất của chúng tôi</p>
-          <Button 
-            variant="outline" 
-            className="border-blue-300 text-blue-700 hover:bg-blue-50"
-            onClick={() => window.location.reload()}
-          >
-            Tải lại trang
-          </Button>
+      <section className="py-20 bg-gradient-to-br from-blue-50 to-indigo-50">
+        <div className="container mx-auto px-4 text-center">
+          <div className="max-w-2xl mx-auto">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-blue-100 rounded-full mb-6">
+              <Sparkles className="h-10 w-10 text-blue-500" />
+            </div>
+            <h3 className="text-2xl font-bold text-blue-800 mb-4">Hiện chưa có dịch vụ nào</h3>
+            <p className="text-blue-600 mb-6">Vui lòng quay lại sau để xem các dịch vụ mới nhất của chúng tôi</p>
+            <Button 
+              variant="outline" 
+              className="border-blue-300 text-blue-700 hover:bg-blue-50 px-6 py-3 rounded-full font-medium"
+              onClick={() => window.location.reload()}
+            >
+              <ArrowRight className="h-4 w-4 mr-2" />
+              Tải lại trang
+            </Button>
+          </div>
         </div>
-      </div>
+      </section>
     )
   }
 
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-20 bg-gradient-to-br from-blue-50 via-white to-indigo-50">
       <div className="container mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">Dịch vụ đẳng cấp</h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Trải nghiệm các dịch vụ cao cấp dành riêng cho quý khách tại Miko Hotel
+        <div className="text-center mb-16">
+          <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full mb-6">
+            <Award className="h-10 w-10 text-white" />
+          </div>
+          <h2 className="text-4xl font-bold text-gray-900 mb-4">Dịch vụ đẳng cấp</h2>
+          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            Trải nghiệm các dịch vụ cao cấp dành riêng cho quý khách tại Miko Hotel với tiêu chuẩn 5 sao
           </p>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {services.map((service) => (
+          {services.map((service, index) => (
             <div 
               key={service._id}
-              className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl transition-all duration-300 border border-gray-100 flex flex-col h-full"
+              className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 border-0 flex flex-col h-full group"
             >
-              <div className="h-48 bg-gray-100 overflow-hidden relative">
+              <div className="h-56 bg-gray-100 overflow-hidden relative">
                 {service.images?.[0] ? (
                   <img
                     src={service.images[0]}
                     alt={service.name}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                   />
                 ) : (
                   <div className="w-full h-full bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
                     {getServiceIcon(service.name)}
                   </div>
                 )}
-                <div className="absolute top-3 right-3">
-                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${statusMap[service.status].color}`}>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                <div className="absolute top-4 right-4">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${statusMap[service.status].color} backdrop-blur-sm`}>
                     {statusMap[service.status].text}
                   </span>
+                </div>
+                <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm rounded-full p-2">
+                  <Star className="h-4 w-4 text-yellow-500 fill-current" />
                 </div>
               </div>
               
               <div className="p-6 flex flex-col flex-grow">
-                <div className="flex justify-between items-start mb-3">
+                <div className="flex justify-between items-start mb-4">
                   <h3 className="text-xl font-bold text-gray-900">{service.name}</h3>
-                  <div className="text-xl font-bold text-blue-600 whitespace-nowrap ml-4">
+                  <div className="text-2xl font-bold text-blue-600 whitespace-nowrap ml-4">
                     {formatPrice(service.basePrice)}
                   </div>
                 </div>
                 
-                <p className="text-gray-600 mb-4 line-clamp-3 flex-grow">
+                <p className="text-gray-600 mb-6 line-clamp-3 flex-grow leading-relaxed">
                   {service.description}
                 </p>
                 
-                {service.slots.length > 0 && (
-                  <div className="mb-4">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Khung giờ phục vụ:</h4>
+                {service.workingHours && (
+                  <div className="mb-6">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                      <Clock className="h-4 w-4 mr-2 text-blue-500" />
+                      Giờ hoạt động:
+                    </h4>
                     <div className="flex flex-wrap gap-2">
-                      {service.slots.slice(0, 4).map((slot, index) => (
-                        <span key={index} className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700">
-                          {getClockIcon(index)}
-                          <span className="ml-1">{slot}</span>
-                        </span>
-                      ))}
-                      {service.slots.length > 4 && (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
-                          +{service.slots.length - 4} khác
-                        </span>
-                      )}
+                      <span className="inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                        <Clock className="h-4 w-4 mr-1.5" />
+                        <span>từ {service.workingHours.startTime} đến {service.workingHours.endTime}</span>
+                      </span>
                     </div>
                   </div>
                 )}
                 
-                <div className="flex gap-2 mt-4">
+                <div className="flex gap-3 mt-auto pt-4 border-t border-gray-100">
                   <Button
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 rounded-full font-medium"
                     onClick={() => router.push(`/service-detail/${service._id}`)}
                   >
                     Xem chi tiết
                   </Button>
-                  <Button className="flex-1 bg-blue-600 hover:bg-blue-700">
-                    Đặt dịch vụ ngay
+                  <Button className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Đặt ngay
                   </Button>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Call to Action */}
+        <div className="text-center mt-16">
+          <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl p-8 text-white">
+            <div className="max-w-2xl mx-auto">
+              <h3 className="text-2xl font-bold mb-4">Sẵn sàng trải nghiệm?</h3>
+              <p className="text-blue-100 mb-6">Đặt ngay các dịch vụ cao cấp để có những phút giây thư giãn tuyệt vời</p>
+              <Button
+                variant="outline"
+                size="lg"
+                className="bg-white text-blue-600 hover:bg-blue-50 border-white font-medium px-8 py-3 rounded-full"
+                onClick={() => router.push('/services')}
+              >
+                <Award className="h-5 w-5 mr-2" />
+                Xem tất cả dịch vụ
+                <ArrowRight className="h-5 w-5 ml-2" />
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </section>

@@ -57,8 +57,15 @@ const create = async (payload: any) => {
     //kiểm tra xem email có tồn tại không
     const emailExist = await User.findOne({email: payload.email});
     if(emailExist) {
-        throw createError(400, 'Email already exists');
+        throw createError(400, 'Email đã được sử dụng. Vui lòng chọn email khác.');
     }
+    
+    //kiểm tra xem số điện thoại có tồn tại không
+    const phoneExist = await User.findOne({phoneNumber: payload.phoneNumber});
+    if(phoneExist) {
+        throw createError(400, 'Số điện thoại đã được sử dụng. Vui lòng chọn số điện thoại khác.');
+    }
+    
     const user = new User({
         fullName: payload.fullName,
         email: payload.email,
@@ -84,7 +91,16 @@ const updateById = async (id: string, payload: any) => {
         email: payload.email,
         _id: { $ne: id },
       });
-      if (emailExist) throw createError(400, "Email already exists");
+      if (emailExist) throw createError(400, "Email đã được sử dụng. Vui lòng chọn email khác.");
+    }
+    
+    // check trùng số điện thoại
+    if (payload.phoneNumber) {
+      const phoneExist = await User.findOne({
+        phoneNumber: payload.phoneNumber,
+        _id: { $ne: id },
+      });
+      if (phoneExist) throw createError(400, "Số điện thoại đã được sử dụng. Vui lòng chọn số điện thoại khác.");
     }
   
     // chỉ giữ field có value hợp lệ

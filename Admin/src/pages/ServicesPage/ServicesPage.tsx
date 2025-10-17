@@ -39,7 +39,7 @@ export default function ServicesPage() {
       setPagination({
         current: res.pagination?.page || 1,
         pageSize: res.pagination?.limit || 10,
-        total: res.pagination?.totalRecord || 0,
+        total: res.pagination?.total || 0,
       });
     } catch (e) {
       console.error(e);
@@ -185,12 +185,14 @@ export default function ServicesPage() {
                 currency: "VND",
               }).format(detailItem.basePrice)}
             </Descriptions.Item>
-            <Descriptions.Item label="Khung giờ">
-              <Space wrap>
-                {(detailItem.slots || []).length
-                  ? (detailItem.slots || []).map((s) => <Tag key={s}>{s}</Tag>)
-                  : "-"}
-              </Space>
+            <Descriptions.Item label="Giờ hoạt động">
+              {detailItem.workingHours ? (
+                <Tag color="green">
+                  từ {detailItem.workingHours.startTime} đến {detailItem.workingHours.endTime}
+                </Tag>
+              ) : (
+                "-"
+              )}
             </Descriptions.Item>
             <Descriptions.Item label="Ảnh">
               <Space wrap>

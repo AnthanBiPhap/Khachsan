@@ -93,39 +93,49 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <div className="text-center">
+          <div className="mx-auto h-16 w-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center mb-4">
+            <svg className="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <h2 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
             Tạo tài khoản mới
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-sm text-gray-600">
             Đã có tài khoản?{' '}
-            <Link href="/auth/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+            <Link href="/auth/login" className="font-medium text-blue-600 hover:text-blue-500 transition-colors">
               Đăng nhập ngay
             </Link>
           </p>
         </div>
         
         {error && (
-          <div className="bg-red-50 border-l-4 border-red-400 p-4">
-            <div className="flex">
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm animate-in slide-in-from-top-2 duration-300">
+            <div className="flex items-start">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 text-red-500 mt-0.5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
               </div>
               <div className="ml-3">
+                <h3 className="text-sm font-semibold text-red-800 mb-1">Đăng ký thất bại</h3>
                 <p className="text-sm text-red-700">{error}</p>
+                <p className="text-xs text-red-600 mt-2">
+                  💡 Vui lòng kiểm tra lại thông tin và thử lại
+                </p>
               </div>
             </div>
           </div>
         )}
 
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm space-y-4">
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <div className="space-y-5">
             <div>
-              <Label htmlFor="fullName">Họ và tên</Label>
+              <Label htmlFor="fullName" className="text-sm font-semibold text-gray-700">Họ và tên</Label>
               <Input
                 id="fullName"
                 name="fullName"
@@ -133,12 +143,13 @@ export default function RegisterPage() {
                 required
                 value={formData.fullName}
                 onChange={handleChange}
-                className="mt-1"
+                className="mt-2 h-12 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder="Nhập họ và tên của bạn"
               />
             </div>
 
             <div>
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-sm font-semibold text-gray-700">Email</Label>
               <Input
                 id="email"
                 name="email"
@@ -146,12 +157,13 @@ export default function RegisterPage() {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="mt-1"
+                className="mt-2 h-12 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder="Nhập email của bạn"
               />
             </div>
 
             <div>
-              <Label htmlFor="phoneNumber">Số điện thoại</Label>
+              <Label htmlFor="phoneNumber" className="text-sm font-semibold text-gray-700">Số điện thoại</Label>
               <Input
                 id="phoneNumber"
                 name="phoneNumber"
@@ -159,12 +171,13 @@ export default function RegisterPage() {
                 required
                 value={formData.phoneNumber}
                 onChange={handleChange}
-                className="mt-1"
+                className="mt-2 h-12 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder="Nhập số điện thoại"
               />
             </div>
 
             <div>
-              <Label htmlFor="password">Mật khẩu</Label>
+              <Label htmlFor="password" className="text-sm font-semibold text-gray-700">Mật khẩu</Label>
               <Input
                 id="password"
                 name="password"
@@ -173,13 +186,14 @@ export default function RegisterPage() {
                 minLength={6}
                 value={formData.password}
                 onChange={handleChange}
-                className="mt-1"
+                className="mt-2 h-12 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder="Nhập mật khẩu"
               />
-              <p className="text-xs text-muted-foreground mt-1">Mật khẩu phải có ít nhất 6 ký tự</p>
+              <p className="text-xs text-gray-500 mt-1">Mật khẩu phải có ít nhất 6 ký tự</p>
             </div>
 
             <div>
-              <Label htmlFor="confirmPassword">Xác nhận mật khẩu</Label>
+              <Label htmlFor="confirmPassword" className="text-sm font-semibold text-gray-700">Xác nhận mật khẩu</Label>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -187,47 +201,62 @@ export default function RegisterPage() {
                 required
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="mt-1"
+                className="mt-2 h-12 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                placeholder="Nhập lại mật khẩu"
               />
             </div>
 
-            <div className="space-y-2 pt-2">
-              <Label>Sở thích của bạn</Label>
-              <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-3 pt-4 border-t border-gray-200">
+              <Label className="text-sm font-semibold text-gray-700">Sở thích của bạn</Label>
+              <div className="grid grid-cols-2 gap-3">
                 {DEFAULT_PREFERENCES.map((pref) => (
-                  <div key={pref} className="flex items-center space-x-2">
+                  <div key={pref} className="flex items-center space-x-3 p-3 rounded-xl border border-gray-200 hover:border-blue-300 hover:bg-blue-50 transition-all duration-200">
                     <Checkbox 
                       id={`pref-${pref}`}
                       checked={formData.preferences.includes(pref)}
                       onCheckedChange={(checked: boolean) => 
                         handlePreferenceChange(pref, checked)
                       }
+                      className="data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600"
                     />
                     <label
                       htmlFor={`pref-${pref}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                      className="text-sm font-medium text-gray-700 cursor-pointer flex-1"
                     >
                       {pref.charAt(0).toUpperCase() + pref.slice(1)}
                     </label>
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Chọn ít nhất 3 sở thích để chúng tôi có thể đề xuất phòng phù hợp
+              <p className="text-xs text-gray-500 bg-blue-50 p-3 rounded-xl">
+                💡 Chọn ít nhất 3 sở thích để chúng tôi có thể đề xuất phòng phù hợp
               </p>
             </div>
           </div>
 
-          <div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
-            >
-              {isLoading ? 'Đang tạo tài khoản...' : 'Đăng ký'}
-            </button>
-          </div>
-        </form>
+            <div className="pt-6">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={`group relative w-full flex justify-center items-center py-4 px-6 border border-transparent text-base font-semibold rounded-xl text-white bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 shadow-lg hover:shadow-xl transition-all duration-200 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+              >
+                {isLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                    <span>Đang tạo tài khoản...</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                    </svg>
+                    <span>Đăng ký</span>
+                  </div>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
       </div>
     </div>
   );

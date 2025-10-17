@@ -111,7 +111,7 @@ export default function BookingPage() {
         <Typography.Title level={4}>
           <CalendarOutlined /> Nhật ký trạng thái đặt phòng
         </Typography.Title>
-        <Button
+        {/* <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => {
@@ -120,7 +120,7 @@ export default function BookingPage() {
           }}
         >
           Thêm log
-        </Button>
+        </Button> */}
       </div>
 
       <Table

@@ -1,7 +1,7 @@
 import app from "./app";
 import { env } from "./helpers/env.helper";
 import mongoose from "mongoose";
-import seedAdmin from "./seeder";
+import seedAdmin, { seedServices } from "./seeder";
 
 /// Start the server
 const mongooseDbOptions = {
@@ -17,6 +17,7 @@ mongoose
   .then(async () => {
     console.log("Connected to MongoDB successfully");
     await seedAdmin();
+    await seedServices();
     // Start the server after successful MongoDB connection
     app.listen(env.port, () => {
       console.log(`Server is running on port http://localhost:${env.port}`);

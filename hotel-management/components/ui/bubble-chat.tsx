@@ -10,9 +10,9 @@ import {
   MessageInput,
   Window,
 } from "stream-chat-react";
-import { motion, AnimatePresence } from "framer-motion";
 import "stream-chat-react/dist/css/v2/index.css";
 import { User } from "@/services/authService";
+import { MessageCircle } from "lucide-react";
 
 export default function ChatBubble() {
   const [isOpen, setIsOpen] = useState(false);
@@ -102,36 +102,33 @@ export default function ChatBubble() {
     <div>
       {/* Nút bong bóng chat */}
       <button
+        data-chat-bubble
         onClick={() => setIsOpen(!isOpen)}
-        style={{ zIndex: 1000, bottom: "120px" }}
-        className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-lg"
+        className="fixed bottom-6 right-6 w-16 h-16 rounded-lg bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 hover:rotate-12 z-[1000] group"
       >
-        💬
+        <MessageCircle className="h-7 w-7 group-hover:scale-110 transition-transform duration-200" />
+        {!isOpen && (
+          <div className="absolute -top-1 -right-1 w-4 h-4  rounded-full animate-pulse"></div>
+        )}
       </button>
 
       {/* Cửa sổ chat */}
-      <AnimatePresence>
-        {isOpen && !loading && client && channel && (
-          <motion.div
-            ref={chatRef}
-            initial={{ opacity: 0, y: 50 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 50 }}
-            transition={{ duration: 0.3 }}
-            className="fixed bottom-20 right-6 w-96 h-[500px] bg-white shadow-2xl rounded-2xl overflow-hidden flex flex-col z-[1001]"
-          >
-            <Chat client={client}>
-              <Channel channel={channel}>
-                <Window>
-                  <ChannelHeader />
-                  <MessageList />
-                  <MessageInput />
-                </Window>
-              </Channel>
-            </Chat>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {isOpen && !loading && client && channel && (
+        <div
+          ref={chatRef}
+          className="fixed bottom-24 right-6 w-96 h-[500px] bg-white shadow-2xl rounded-2xl overflow-hidden flex flex-col z-[1001] animate-in slide-in-from-bottom-4 fade-in duration-300 border border-gray-200"
+        >
+          <Chat client={client}>
+            <Channel channel={channel}>
+              <Window>
+                <ChannelHeader />
+                <MessageList />
+                <MessageInput />
+              </Window>
+            </Channel>
+          </Chat>
+        </div>
+      )}
     </div>
   );
 }

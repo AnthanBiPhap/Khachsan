@@ -24,6 +24,7 @@ const validateSchemaYup = (schema: AnySchema) => async (req: Request, res: Respo
         message: err.errors, // err.errors chứa tất cả các thông điệp lỗi
         typeError: 'validateSchema'
       });
+      return; // Thêm return để không gửi response 500
     }
 
     res.status(500).json({

@@ -23,6 +23,9 @@ import {
   Dumbbell,
   ParkingCircle,
   Snowflake,
+  Phone,
+  MessageCircle,
+  Clock,
 } from "lucide-react";
 import {
   Card,
@@ -58,6 +61,66 @@ export function RoomSearch() {
   return (
     <div className="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto mt-8 relative z-10">
       <h2 className="text-2xl font-bold text-center mb-6">Tìm kiếm phòng</h2>
+      
+      {/* Liên hệ đặt phòng ngay */}
+      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 mb-6 border border-blue-200">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="bg-blue-100 p-2 rounded-full">
+              <Phone className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Cần hỗ trợ đặt phòng?</h3>
+              <p className="text-sm text-gray-600">Liên hệ trực tiếp để được tư vấn miễn phí</p>
+            </div>
+          </div>
+          <div className="flex space-x-2">
+            <Button
+              variant="outline"
+              className="border-blue-300 text-blue-700 hover:bg-blue-50"
+              onClick={() => window.open('tel:1900123456')}
+            >
+              <Phone className="h-4 w-4 mr-2" />
+              Gọi ngay
+            </Button>
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => {
+                // Tìm và click vào chat bubble với retry logic
+                const tryOpenChat = (attempts = 0) => {
+                  const chatBubble = document.querySelector('[data-chat-bubble]') as HTMLElement;
+                  if (chatBubble) {
+                    chatBubble.click();
+                    console.log('Chat bubble clicked successfully');
+                  } else if (attempts < 3) {
+                    // Retry sau 500ms nếu không tìm thấy
+                    setTimeout(() => tryOpenChat(attempts + 1), 500);
+                  } else {
+                    // Fallback: tìm button chat khác
+                    const chatButton = document.querySelector('button[class*="chat"], [class*="chat-bubble"]') as HTMLElement;
+                    if (chatButton) {
+                      chatButton.click();
+                    } else {
+                      // Nếu không tìm thấy, thông báo cho user
+                      alert('Chat đang được khởi tạo, vui lòng thử lại sau vài giây...');
+                    }
+                  }
+                };
+                
+                tryOpenChat();
+              }}
+            >
+              <MessageCircle className="h-4 w-4 mr-2" />
+              Chat ngay
+            </Button>
+          </div>
+        </div>
+        <div className="mt-3 flex items-center text-sm text-gray-600">
+          <Clock className="h-4 w-4 mr-1" />
+          <span>Hỗ trợ 24/7 - Phản hồi trong 5 phút</span>
+        </div>
+      </div>
+      
       <form onSubmit={handleSearch}>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="space-y-2">

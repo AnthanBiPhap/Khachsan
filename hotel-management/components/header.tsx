@@ -56,8 +56,8 @@ export function Header() {
             <Link href="/my-bookings" className="text-muted-foreground hover:text-foreground font-medium">
               Đặt phòng của tôi
             </Link>
-            <Link href="/explore" className="text-muted-foreground hover:text-foreground font-medium">
-              Khám phá xung quanh
+            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground font-medium">
+              Địa điểm gợi ý
             </Link>
           </nav>
 
@@ -66,11 +66,6 @@ export function Header() {
             {user ? (
               <div className="flex items-center space-x-4">
                 <span className="text-sm font-medium">Xin chào, {user.fullName || user.email}</span>
-                <Link href="/dashboard">
-                  <Button variant="ghost" size="sm" className="text-foreground">
-                    Dashboard
-                  </Button>
-                </Link>
                 <Button 
                   variant="outline" 
                   size="sm" 

@@ -66,6 +66,7 @@ const create = async (payload: any) => {
     name: payload.name,
     description: payload.description,
     basePrice: payload.basePrice,
+    workingHours: payload.workingHours,
     slots: payload.slots || [],
     images: payload.images || [],
     status: payload.status || 'active',

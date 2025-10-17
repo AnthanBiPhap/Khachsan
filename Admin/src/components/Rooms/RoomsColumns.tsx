@@ -1,4 +1,4 @@
-import { Tag, Space, Avatar, Typography, Button } from "antd";
+import { Tag, Space, Avatar, Typography, Button, Tooltip } from "antd";
 import { 
   HomeOutlined, 
   SettingOutlined, 
@@ -93,20 +93,34 @@ export const roomsColumns = (
       </Space>
     ),
     key: "amenities",
-    render: (_, record) => (
-      <Space wrap>
-        {(record.amenities || []).map((a) => (
-          <Tag key={a} color="blue" icon={<SettingOutlined />}>
-            {a}
-          </Tag>
-        ))}
-        {(!record.amenities || record.amenities.length === 0) && (
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Không có tiện nghi
-          </Typography.Text>
-        )}
-      </Space>
-    ),
+    render: (_, record) => {
+      const amenities = record.amenities || [];
+      const maxDisplay = 3; // Chỉ hiển thị tối đa 3 tiện nghi
+      const displayAmenities = amenities.slice(0, maxDisplay);
+      const remainingCount = amenities.length - maxDisplay;
+      
+      return (
+        <Space wrap>
+          {displayAmenities.map((a) => (
+            <Tag key={a} color="blue" icon={<SettingOutlined />}>
+              {a}
+            </Tag>
+          ))}
+          {remainingCount > 0 && (
+            <Tooltip title={`${amenities.slice(maxDisplay).join(', ')}`} placement="topLeft">
+              <Tag color="default" style={{ cursor: 'pointer' }}>
+                +{remainingCount} khác
+              </Tag>
+            </Tooltip>
+          )}
+          {amenities.length === 0 && (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Không có tiện nghi
+            </Typography.Text>
+          )}
+        </Space>
+      );
+    },
   },
   {
     title: (

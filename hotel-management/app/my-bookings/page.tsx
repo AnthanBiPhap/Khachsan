@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { message } from 'antd';
 import {
   Calendar,
   Clock,
@@ -384,16 +385,37 @@ export default function MyBookingsPage() {
                       onClick={async () => {
                         try {
                           setActionLoadingId(booking._id);
-                          await bookingService.updateBooking(booking._id, {
+                          console.log('🔄 Bắt đầu yêu cầu hoàn tiền cho booking:', booking._id);
+                          
+                          const response = await bookingService.updateBooking(booking._id, {
                             paymentStatus: 'refund_requested',
                             note: 'Khách hàng yêu cầu hoàn tiền',
                           });
+                          
+                          console.log('✅ Yêu cầu hoàn tiền thành công:', response);
+                          
+                          // Refresh danh sách bookings
                           const res = await fetch(`http://localhost:8080/api/v1/bookings?customerId=${user?._id}`);
+                          if (!res.ok) {
+                            throw new Error(`HTTP error! status: ${res.status}`);
+                          }
                           const data = await res.json();
                           setBookings((data.data.bookings || []).filter((b: any) => b.customerId?._id === user?._id));
-                        } catch (e) {
-                          console.error(e);
-                          alert('Yêu cầu hoàn tiền thất bại');
+                          
+                          // Thông báo thành công
+                          message.success('Yêu cầu hoàn tiền đã được gửi thành công!', 5);
+                          
+                        } catch (e: any) {
+                          console.error('❌ Lỗi yêu cầu hoàn tiền:', e);
+                          console.error('Error details:', {
+                            message: e.message,
+                            status: e.status,
+                            response: e.response
+                          });
+                          
+                          // Hiển thị lỗi cụ thể hơn
+                          const errorMessage = e.message || 'Yêu cầu hoàn tiền thất bại';
+                          alert(`Lỗi: ${errorMessage}`);
                         } finally {
                           setActionLoadingId(null);
                         }

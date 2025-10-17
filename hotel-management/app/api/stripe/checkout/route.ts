@@ -26,37 +26,31 @@ export async function POST(request: NextRequest) {
     // Tạo mô tả sản phẩm
     const description = createProductDescription(roomName, nights, guests);
 
-    // Tạo danh sách line items cho Stripe
+    // Tạo mô tả chi tiết bao gồm dịch vụ
+    let detailedDescription = description;
+    if (services && services.length > 0) {
+      detailedDescription += '\n\nDich vu bo sung:';
+      services.forEach((service: any) => {
+        const serviceName = service.name || 'Dich vu';
+        const totalPrice = service.price * service.quantity;
+        detailedDescription += `\n- ${serviceName} (x${service.quantity}): ${totalPrice.toLocaleString()} VND`;
+      });
+    }
+
+    // Tạo 1 line item duy nhất với tổng tiền
     const lineItems = [
       {
         price_data: {
           currency: 'vnd', // Sử dụng VNĐ
           product_data: {
-            name: `Đặt phòng ${roomName}`,
-            description: description,
+            name: `Dat phong ${roomName}`,
+            description: detailedDescription,
           },
           unit_amount: formatPriceForStripe(totalPrice),
         },
         quantity: 1,
       },
     ];
-
-    // Thêm dịch vụ nếu có
-    if (services && services.length > 0) {
-      services.forEach((service: any) => {
-        lineItems.push({
-          price_data: {
-            currency: 'vnd',
-            product_data: {
-              name: service.name,
-              description: `Dịch vụ bổ sung - Số lượng: ${service.quantity}`,
-            },
-            unit_amount: formatPriceForStripe(service.price * service.quantity),
-          },
-          quantity: 1,
-        });
-      });
-    }
 
     // Tạo Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({

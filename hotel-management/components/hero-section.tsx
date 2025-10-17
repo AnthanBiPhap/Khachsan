@@ -64,7 +64,7 @@ export function HeroSection() {
             <div className="relative overflow-hidden rounded-2xl shadow-xl bg-white">
               <img
                 src="https://decoxdesign.com/upload/images/hotel-caitilin-1952m2-phong-ngu-04-decox-design.jpg "
-                alt="Phòng Deluxe"
+                alt="Phòng Deluxe Hướng Biển"
                 className="w-full h-[320px] object-cover"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
@@ -75,7 +75,7 @@ export function HeroSection() {
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h3 className="text-2xl font-bold text-gray-900">Phòng Deluxe</h3>
+                    <h3 className="text-2xl font-bold text-gray-900">Phòng Deluxe Hướng Biển</h3>
                     <p className="text-gray-600 flex items-center mt-1">
                       <Users className="h-4 w-4 mr-1" />
                       Tối đa 3 người

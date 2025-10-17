@@ -122,7 +122,7 @@ export default function ServiceBookingsPage() {
         <Typography.Title level={4}>
           <ShoppingCartOutlined /> Quản lý lịch dịch vụ
         </Typography.Title>
-        <Button
+        {/* <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => {
@@ -131,7 +131,7 @@ export default function ServiceBookingsPage() {
           }}
         >
           Thêm lịch
-        </Button>
+        </Button> */}
       </div>
 
       <Table

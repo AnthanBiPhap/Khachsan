@@ -7,6 +7,7 @@ export async function GET() {
     const response = await fetch(`${API_BASE_URL}/api/v1/services`, {
       headers: {
         "Content-Type": "application/json",
+        "Cache-Control": "no-cache",
       },
     });
 
@@ -15,9 +16,13 @@ export async function GET() {
     }
 
     const data = await response.json();
-    return NextResponse.json(data?.data);
+    
+    // Trả về data.data.data (nested structure từ backend)
+    const servicesData = data?.data?.data || data?.data || data || [];
+    
+    return NextResponse.json(servicesData);
   } catch (error) {
-    console.error("Error fetching services:", error);
+    console.error("❌ Error fetching services:", error);
     return NextResponse.json(
       { error: "Failed to fetch services" },
       { status: 500 }

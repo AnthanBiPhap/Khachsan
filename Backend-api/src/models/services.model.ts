@@ -18,6 +18,18 @@ const serviceSchema = new Schema(
             required: [true, 'Giá cơ bản là bắt buộc'],
             min: 0,
         },
+        workingHours: {
+            startTime: {
+                type: String,
+                required: [true, 'Giờ bắt đầu là bắt buộc'],
+                match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Định dạng giờ không hợp lệ (HH:MM)']
+            },
+            endTime: {
+                type: String,
+                required: [true, 'Giờ kết thúc là bắt buộc'],
+                match: [/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Định dạng giờ không hợp lệ (HH:MM)']
+            }
+        },
         slots: {
             type: Array,
             default: []

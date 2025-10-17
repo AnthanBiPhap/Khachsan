@@ -279,8 +279,28 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
           <Button
             className="bg-blue-600 hover:bg-blue-700"
             onClick={() => {
-              // Có thể thêm logic đặt dịch vụ ở đây
-              alert('Chức năng đặt dịch vụ sẽ được triển khai tiếp!');
+              // Tìm và click vào chat bubble với retry logic
+              const tryOpenChat = (attempts = 0) => {
+                const chatBubble = document.querySelector('[data-chat-bubble]') as HTMLElement;
+                if (chatBubble) {
+                  chatBubble.click();
+                  console.log('Chat bubble clicked successfully from service detail');
+                } else if (attempts < 3) {
+                  // Retry sau 500ms nếu không tìm thấy
+                  setTimeout(() => tryOpenChat(attempts + 1), 500);
+                } else {
+                  // Fallback: tìm button chat khác
+                  const chatButton = document.querySelector('button[class*="chat"], [class*="chat-bubble"]') as HTMLElement;
+                  if (chatButton) {
+                    chatButton.click();
+                  } else {
+                    // Nếu không tìm thấy, thông báo cho user
+                    alert('Chat đang được khởi tạo, vui lòng thử lại sau vài giây...');
+                  }
+                }
+              };
+              
+              tryOpenChat();
             }}
           >
             Liên hệ đặt dịch vụ

@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useEffect, useState } from "react"
-import { Card, Row, Col, Statistic, Table, Tag, Space } from "antd"
+import { Card, Row, Col, Statistic, Table, Tag, Space, Spin, Alert, Empty } from "antd"
 import {
   DollarOutlined,
   HomeOutlined,
@@ -100,6 +100,7 @@ interface Invoice {
 
 const Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [stats, setStats] = useState({
     totalRevenue: 0,
     totalBookings: 0,
@@ -114,9 +115,10 @@ const Dashboard: React.FC = () => {
   const [bookingStatusData, setBookingStatusData] = useState<{ name: string; value: number }[]>([])
   const [roomStatusData, setRoomStatusData] = useState<{ status: string; count: number }[]>([])
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const fetchData = async () => {
       try {
+        setError(null)
+        setLoading(true)
         const [
           { data: bookingsData },
           { data: roomsData },
@@ -235,6 +237,7 @@ const Dashboard: React.FC = () => {
           pending: "Chờ thanh toán",
           cancelled: "Đã hủy",
           refunded: "Đã hoàn tiền",
+          refund_requested: "Yêu cầu hoàn tiền",
         }
 
         const bookingStatusChartData = Object.entries(statusCounts).map(([status, value]) => ({
@@ -310,11 +313,27 @@ const Dashboard: React.FC = () => {
         setRoomStatusData(roomStatusChartData)
       } catch (error) {
         console.error("Error fetching dashboard data:", error)
+        setError("Không thể tải dữ liệu dashboard. Vui lòng thử lại sau.")
       } finally {
         setLoading(false)
       }
-    }
+  };
 
+  useEffect(() => {
+    // Lắng nghe event booking được update để refresh dashboard
+    const handleBookingUpdate = () => {
+      console.log('🔄 Booking updated, refreshing dashboard...');
+      fetchData(); // Gọi lại fetchData để refresh
+    };
+    
+    window.addEventListener('bookingUpdated', handleBookingUpdate);
+    
+    return () => {
+      window.removeEventListener('bookingUpdated', handleBookingUpdate);
+    };
+  }, []);
+
+  useEffect(() => {
     fetchData()
   }, [])
 
@@ -360,92 +379,155 @@ const Dashboard: React.FC = () => {
 
   const COLORS = ["#1890ff", "#52c41a", "#faad14", "#f5222d", "#722ed1"]
 
+  if (error) {
+    return (
+      <div className="p-6">
+        <Alert
+          message="Lỗi tải dữ liệu"
+          description={error}
+          type="error"
+          showIcon
+          action={
+            <button 
+              onClick={() => window.location.reload()} 
+              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            >
+              Thử lại
+            </button>
+          }
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold mb-6">Tổng quan</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-bold text-gray-800">Tổng quan hệ thống</h1>
+        {loading && (
+          <div className="flex items-center space-x-2">
+            <Spin size="small" />
+            <span className="text-sm text-gray-500">Đang tải dữ liệu...</span>
+          </div>
+        )}
+      </div>
 
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={8} xl={4}>
-          <Card>
+          <Card hoverable className="shadow-md">
             <Statistic
               title="Doanh thu"
               value={stats.totalRevenue}
               prefix={<DollarOutlined />}
               valueStyle={{ color: "#3f8600" }}
               formatter={(value: any) => `${Number(value).toLocaleString("vi-VN")} VND`}
+              loading={loading}
             />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={8} xl={4}>
-          <Card>
-            <Statistic title="Tổng đơn đặt phòng" value={stats.totalBookings} prefix={<CalendarOutlined />} />
+          <Card hoverable className="shadow-md">
+            <Statistic 
+              title="Tổng đơn đặt phòng" 
+              value={stats.totalBookings} 
+              prefix={<CalendarOutlined />}
+              loading={loading}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={8} xl={4}>
-          <Card>
-            <Statistic title="Phòng trống" value={stats.availableRooms} prefix={<HomeOutlined />} />
+          <Card hoverable className="shadow-md">
+            <Statistic 
+              title="Phòng trống" 
+              value={stats.availableRooms} 
+              prefix={<HomeOutlined />}
+              loading={loading}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={8} xl={4}>
-          <Card>
-            <Statistic title="Dịch vụ" value={stats.totalServices} prefix={<ShoppingCartOutlined />} />
+          <Card hoverable className="shadow-md">
+            <Statistic 
+              title="Dịch vụ" 
+              value={stats.totalServices} 
+              prefix={<ShoppingCartOutlined />}
+              loading={loading}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={8} xl={4}>
-          <Card>
-            <Statistic title="Check-in sắp tới (7 ngày)" value={stats.upcomingCheckIns} prefix={<UserOutlined />} />
+          <Card hoverable className="shadow-md">
+            <Statistic 
+              title="Check-in sắp tới (7 ngày)" 
+              value={stats.upcomingCheckIns} 
+              prefix={<UserOutlined />}
+              loading={loading}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={8} xl={4}>
-          <Card>
-            <Statistic title="Hóa đơn chờ" value={stats.pendingInvoices} prefix={<DollarOutlined />} />
+          <Card hoverable className="shadow-md">
+            <Statistic 
+              title="Hóa đơn chờ" 
+              value={stats.pendingInvoices} 
+              prefix={<DollarOutlined />}
+              loading={loading}
+            />
           </Card>
         </Col>
       </Row>
 
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} lg={12}>
-          <Card title="Xu hướng doanh thu" loading={loading}>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip formatter={(value: any) => `${Number(value).toLocaleString("vi-VN")} VND`} />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#1890ff"
-                  strokeWidth={2}
-                  name="Doanh thu"
-                  dot={{ fill: "#1890ff" }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+          <Card title="Xu hướng doanh thu" loading={loading} className="shadow-md">
+            {!loading && revenueData.length === 0 ? (
+              <Empty description="Chưa có dữ liệu doanh thu" />
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={revenueData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip formatter={(value: any) => `${Number(value).toLocaleString("vi-VN")} VND`} />
+                  <Legend />
+                  <Line
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#1890ff"
+                    strokeWidth={2}
+                    name="Doanh thu"
+                    dot={{ fill: "#1890ff" }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="Phân bổ trạng thái đơn đặt" loading={loading}>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={bookingStatusData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={100}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {bookingStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+          <Card title="Phân bổ trạng thái đơn đặt" loading={loading} className="shadow-md">
+            {!loading && bookingStatusData.length === 0 ? (
+              <Empty description="Chưa có dữ liệu đơn đặt" />
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <PieChart>
+                  <Pie
+                    data={bookingStatusData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {bookingStatusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </Card>
         </Col>
       </Row>
@@ -491,28 +573,39 @@ const Dashboard: React.FC = () => {
 
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} xl={16}>
-          <Card title="Đơn đặt phòng gần đây" loading={loading}>
-            <Table columns={columns} dataSource={recentBookings} rowKey="_id" pagination={false} />
+          <Card title="Đơn đặt phòng gần đây" loading={loading} className="shadow-md">
+            {!loading && recentBookings.length === 0 ? (
+              <Empty description="Chưa có đơn đặt phòng nào" />
+            ) : (
+              <Table 
+                columns={columns} 
+                dataSource={recentBookings} 
+                rowKey="_id" 
+                pagination={false}
+                size="small"
+              />
+            )}
           </Card>
         </Col>
         <Col xs={24} xl={8}>
-          <Card title="Dịch vụ phổ biến" loading={loading}>
-            <div className="space-y-4">
-              {popularServices.map((service, index) => (
-                <div key={index} className="flex justify-between items-center">
-                  <span className="truncate mr-2">{service.name}</span>
-                  <Tag color="blue">
-                    <Space>
-                      <StarOutlined />
-                      {service.count} lượt
-                    </Space>
-                  </Tag>
-                </div>
-              ))}
-              {!loading && popularServices.length === 0 && (
-                <div className="text-center text-gray-500">Chưa có dữ liệu</div>
-              )}
-            </div>
+          <Card title="Dịch vụ phổ biến" loading={loading} className="shadow-md">
+            {!loading && popularServices.length === 0 ? (
+              <Empty description="Chưa có dữ liệu dịch vụ" />
+            ) : (
+              <div className="space-y-4">
+                {popularServices.map((service, index) => (
+                  <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
+                    <span className="truncate mr-2 font-medium">{service.name}</span>
+                    <Tag color="blue">
+                      <Space>
+                        <StarOutlined />
+                        {service.count} lượt
+                      </Space>
+                    </Tag>
+                  </div>
+                ))}
+              </div>
+            )}
           </Card>
         </Col>
       </Row>

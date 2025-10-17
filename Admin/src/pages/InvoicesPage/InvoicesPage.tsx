@@ -50,7 +50,19 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     load();
-  }, []);
+    
+    // Lắng nghe event booking được update để refresh invoice
+    const handleBookingUpdate = () => {
+      console.log('🔄 Booking updated, refreshing invoices...');
+      load(pagination.current, pagination.pageSize);
+    };
+    
+    window.addEventListener('bookingUpdated', handleBookingUpdate);
+    
+    return () => {
+      window.removeEventListener('bookingUpdated', handleBookingUpdate);
+    };
+  }, [pagination.current, pagination.pageSize]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -106,7 +118,7 @@ export default function InvoicesPage() {
         <Typography.Title level={4}>
           <FileTextOutlined /> Quản lý hóa đơn
         </Typography.Title>
-        <Button
+        {/* <Button
           type="primary"
           icon={<PlusOutlined />}
           onClick={() => {
@@ -115,7 +127,7 @@ export default function InvoicesPage() {
           }}
         >
           Thêm hóa đơn
-        </Button>
+        </Button> */}
       </div>
 
       <Table

@@ -46,7 +46,7 @@ export default function DashboardPage() {
         let allLocations = data.data?.locations || data.locations || [];
 
         // Lọc theo sở thích user
-        if (user?.preferences?.length > 0) {
+        if (user?.preferences && user.preferences.length > 0) {
           // Map từ tiếng Việt sang dạng enum trong location model
           const preferenceMap: { [key: string]: string } = {
             'tham quan': 'tham_quan',
@@ -114,20 +114,21 @@ export default function DashboardPage() {
           <h1 className="text-4xl font-bold text-gray-900 mb-4">
             Địa điểm gợi ý cho bạn
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto mb-6">
             Dựa trên sở thích của bạn:{" "}
-            {user?.preferences?.join(", ") ||
-              "Chưa có sở thích nào được chọn"}
+            <span className="font-semibold text-indigo-600">
+              {user?.preferences?.join(", ") || "Chưa có sở thích nào được chọn"}
+            </span>
           </p>
 
-          {user?.preferences?.length > 0 && (
-            <div className="flex flex-wrap justify-center gap-2 mt-4">
+          {user?.preferences && user.preferences.length > 0 && (
+            <div className="flex flex-wrap justify-center gap-3 mt-6">
               {user.preferences.map((pref) => (
                 <span
                   key={pref}
-                  className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-indigo-100 text-indigo-800"
+                  className="inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-gradient-to-r from-indigo-100 to-purple-100 text-indigo-800 border border-indigo-200 shadow-sm"
                 >
-                  <Heart className="h-4 w-4 mr-1" />
+                  <Heart className="h-4 w-4 mr-2 text-indigo-600" />
                   {pref.charAt(0).toUpperCase() + pref.slice(1)}
                 </span>
               ))}
@@ -136,70 +137,77 @@ export default function DashboardPage() {
         </div>
 
         {locations.length === 0 ? (
-          <div className="text-center py-12">
-            <MapPin className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Chưa có địa điểm phù hợp với sở thích của bạn
-            </h3>
-            <p className="text-gray-600 mb-6">
-              Chúng tôi sẽ cập nhật thêm địa điểm mới phù hợp với bạn.
-            </p>
-            <button
-              onClick={() => (window.location.href = "/explore")}
-              className="px-6 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              Khám phá tất cả địa điểm
-            </button>
+          <div className="text-center py-16">
+            <div className="bg-white rounded-2xl shadow-lg p-8 max-w-md mx-auto">
+              <MapPin className="h-20 w-20 mx-auto text-indigo-400 mb-6" />
+              <h3 className="text-2xl font-semibold text-gray-900 mb-4">
+                Chưa có địa điểm phù hợp
+              </h3>
+              <p className="text-gray-600 mb-8 leading-relaxed">
+                Chúng tôi sẽ cập nhật thêm địa điểm mới phù hợp với sở thích của bạn.
+              </p>
+              <button
+                onClick={() => (window.location.href = "/")}
+                className="px-8 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-lg hover:from-indigo-700 hover:to-purple-700 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1"
+              >
+                Khám phá tất cả địa điểm
+              </button>
+            </div>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {locations.map((location) => (
-              <Card
-                key={location._id}
-                className="overflow-hidden hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
-              >
-                <div className="relative h-48 w-full">
-                  <Image
-                    src={location.images[0] || "/placeholder-location.jpg"}
-                    alt={location.name}
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="absolute top-4 right-4">
-                    <span className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-white/90 text-gray-800">
-                      {location.type}
-                    </span>
+          <div className="mb-8">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+                Tìm thấy {locations.length} địa điểm phù hợp
+              </h2>
+              <p className="text-gray-600">
+                Dựa trên sở thích của bạn, đây là những địa điểm chúng tôi gợi ý
+              </p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {locations.map((location) => (
+                <Card
+                  key={location._id}
+                  className="overflow-hidden hover:shadow-xl transition-all duration-300 hover:-translate-y-2 bg-white border-0 shadow-lg"
+                >
+                  <div className="relative h-56 w-full">
+                    <Image
+                      src={location.images[0] || "/placeholder-location.jpg"}
+                      alt={location.name}
+                      fill
+                      className="object-cover"
+                    />
+                    <div className="absolute top-4 right-4">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-white/95 text-gray-800 shadow-sm border">
+                        {location.type}
+                      </span>
+                    </div>
+                    <div className="absolute bottom-4 left-4">
+                      <div className="flex items-center bg-white/95 rounded-full px-3 py-1 shadow-sm">
+                        <Star className="h-4 w-4 text-yellow-400 fill-yellow-400 mr-1" />
+                        <span className="text-sm font-medium text-gray-800">
+                          {location.ratingAvg.toFixed(1)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-                <CardHeader>
-                  <CardTitle className="text-xl">{location.name}</CardTitle>
-                  <div className="flex items-center text-sm text-gray-500">
-                    <MapPin className="h-4 w-4 mr-1" />
-                    {location.address}
-                  </div>
-                  <div className="flex items-center">
-                    {[...Array(5)].map((_, i) => (
-                      <Star
-                        key={i}
-                        className={`h-4 w-4 ${
-                          i < Math.floor(location.ratingAvg)
-                            ? "text-yellow-400 fill-yellow-400"
-                            : "text-gray-300"
-                        }`}
-                      />
-                    ))}
-                    <span className="ml-2 text-sm text-gray-500">
-                      ({location.ratingAvg.toFixed(1)})
-                    </span>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-gray-600 line-clamp-3">
-                    {location.description}
-                  </p>
-                </CardContent>
-              </Card>
-            ))}
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-xl font-semibold text-gray-900 line-clamp-1">
+                      {location.name}
+                    </CardTitle>
+                    <div className="flex items-center text-sm text-gray-500">
+                      <MapPin className="h-4 w-4 mr-2 text-indigo-500" />
+                      <span className="line-clamp-1">{location.address}</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-gray-600 line-clamp-3 leading-relaxed">
+                      {location.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         )}
       </div>

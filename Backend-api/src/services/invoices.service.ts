@@ -5,6 +5,7 @@ import path from "path";
 import PDFDocument from "pdfkit";
 import moment from "moment";
 import serviceBookingsService from "./serviceBookings.service";
+import fs from "fs";
 
 const getAll = async (query: any) => {
   const page = Number(query.page) || 1;
@@ -103,8 +104,10 @@ const printInvoice = async (invoiceId: string) => {
   const chunks: Uint8Array[] = [];
   doc.on("data", (chunk) => chunks.push(chunk));
 
-  // Font Unicode (Google Noto Sans)
-  doc.font("Helvetica");
+  // Sử dụng font Noto Sans hỗ trợ tiếng Việt
+  const fontPath = path.join(__dirname, "../../font/NotoSans-Regular.ttf");
+  doc.registerFont("NotoSans", fontPath);
+  doc.font("NotoSans");
 
   const customer = invoice.customerId as { fullName?: string; email?: string; phoneNumber?: string };
   const booking = invoice.bookingId as any;
@@ -112,13 +115,13 @@ const printInvoice = async (invoiceId: string) => {
   // --- Header ---
   doc
     .fontSize(20)
-    .text("Invoice", { align: "center", underline: true })
+    .text("HÓA ĐƠN THANH TOÁN", { align: "center", underline: true })
     .moveDown(1);
 
   // --- Invoice info ---
-  doc.fontSize(12).text(`Invoice ID: ${invoice._id}`);
+  doc.fontSize(12).text(`Mã hóa đơn: ${invoice._id}`);
   doc.text(
-    `Issued At: ${
+    `Ngày xuất: ${
       invoice.issuedAt
         ? moment(invoice.issuedAt).format("DD/MM/YYYY HH:mm")
         : "-"
@@ -127,38 +130,38 @@ const printInvoice = async (invoiceId: string) => {
   doc.moveDown(0.5);
 
   // --- Customer info ---
-  doc.font("Helvetica-Bold").text("Customer Information", { underline: true });
-  doc
-    .font("Helvetica")
-    .text(`Name: ${customer?.fullName || booking?.guestInfo?.fullName || "-"}`);
-  doc.text(
-    `Email: ${
-      customer?.email ||
-      booking?.guestInfo?.email ||
-      "-"
-    }`
-  );
-  doc.text(
-    `Phone: ${
-      customer?.phoneNumber ||
-      booking?.guestInfo?.phoneNumber ||
-      "-"
-    }`
-  );
+  doc.fontSize(14).text("THÔNG TIN KHÁCH HÀNG", { underline: true });
+  
+  // Phân biệt khách online vs walk-in
+  if (customer?.fullName) {
+    // Khách online (có tài khoản)
+    doc.fontSize(12).text(`Tên: ${customer.fullName}`);
+    doc.text(`Email: ${customer.email || "-"}`);
+    doc.text(`Điện thoại: ${customer.phoneNumber || "-"}`);
+  } else if (booking?.guestInfo) {
+    // Khách walk-in (đặt tại quầy)
+    doc.fontSize(12).text(`Tên: ${booking.guestInfo.fullName || "-"}`);
+    doc.text(`Số CMND/CCCD: ${booking.guestInfo.idNumber || "-"}`);
+    doc.text(`Tuổi: ${booking.guestInfo.age || "-"}`);
+    doc.text(`Điện thoại: ${booking.guestInfo.phoneNumber || "-"}`);
+  } else {
+    // Không có thông tin
+    doc.fontSize(12).text("Không có thông tin khách hàng");
+  }
   doc.moveDown(0.5);
 
   // --- Booking info ---
-  doc.font("Helvetica-Bold").text("Booking Information", { underline: true });
-  doc.font("Helvetica").text(`Room: ${booking?.roomId?.roomNumber || "-"}`);
+  doc.fontSize(14).text("THÔNG TIN ĐẶT PHÒNG", { underline: true });
+  doc.fontSize(12).text(`Phòng: ${booking?.roomId?.roomNumber || "-"}`);
   doc.text(
-    `Check-in: ${
+    `Ngày nhận phòng: ${
       booking?.checkIn
         ? moment(booking.checkIn).format("DD/MM/YYYY HH:mm")
         : "-"
     }`
   );
   doc.text(
-    `Check-out: ${
+    `Ngày trả phòng: ${
       booking?.checkOut
         ? moment(booking.checkOut).format("DD/MM/YYYY HH:mm")
         : "-"
@@ -167,29 +170,26 @@ const printInvoice = async (invoiceId: string) => {
   doc.moveDown(0.5);
 
   // --- Services ---
-  doc.font("Helvetica-Bold").text("Services", { underline: true });
+  doc.fontSize(14).text("DỊCH VỤ", { underline: true });
   console.log(booking?.services);
-  const services = (booking.services || []).map((s: any) => ({
-    name: s.serviceId?.name || "Unknown",
-    unit: s.serviceId?.unit || "",
-    price: s.serviceId?.price || 0,
-    quantity: s.quantity || 1,
-  }));
-  if (booking?.services.length > 0) {
-    booking?.services?.forEach((s: any, idx: number) => {
+  
+  if (booking?.services && booking.services.length > 0) {
+    booking.services.forEach((s: any, idx: number) => {
       const name = s?.name || "Unknown";
-      const unit = s?.quantity || "";
       const price = s?.price || 0;
-      const quantity = s.quantity || 1;
+      const quantity = s?.quantity || 1;
+      const totalPrice = price * quantity;
+      
       const priceFormatted = new Intl.NumberFormat("vi-VN").format(price);
-      doc
-        .font("Helvetica")
+      const totalFormatted = new Intl.NumberFormat("vi-VN").format(totalPrice);
+      
+      doc.fontSize(12)
         .text(
-          `${idx + 1}. ${name} x ${quantity} ${unit}: ${priceFormatted} VND`
+          `${idx + 1}. ${name} x ${quantity}: ${priceFormatted} VND = ${totalFormatted} VND`
         );
     });
   } else {
-    doc.font("Helvetica").text("No services");
+    doc.fontSize(12).text("Không có dịch vụ");
   }
   doc.moveDown(0.5);
 
@@ -198,9 +198,8 @@ const printInvoice = async (invoiceId: string) => {
     invoice.totalAmount
   );
   doc
-    .font("Helvetica-Bold")
-    .fontSize(14)
-    .text(`Total Amount: ${totalFormatted} VND`, { align: "right" });
+    .fontSize(16)
+    .text(`TỔNG CỘNG: ${totalFormatted} VND`, { align: "right" });
 
   doc.end();
 

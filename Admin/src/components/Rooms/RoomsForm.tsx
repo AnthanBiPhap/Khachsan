@@ -73,6 +73,16 @@ export default function RoomsForm({ open, room, onCancel, onSave, loading }: Roo
     }
   }, [room, form]);
 
+  // Hàm xử lý khi thay đổi loại phòng
+  const handleRoomTypeChange = (typeId: string) => {
+    const selectedType = types.find(t => t._id === typeId);
+    if (selectedType && selectedType.amenities) {
+      form.setFieldsValue({
+        amenities: selectedType.amenities
+      });
+    }
+  };
+
   const handleImageChange = (urls: string[]) => {
     setImageUrls(urls);
   };
@@ -214,6 +224,7 @@ export default function RoomsForm({ open, room, onCancel, onSave, loading }: Roo
               placeholder="Chọn loại phòng"
               loading={loadingTypes}
               style={{ width: '100%' }}
+              onChange={handleRoomTypeChange}
               filterOption={(input, option) => 
                 ((option?.label as string) ?? "").toLowerCase().includes(input.toLowerCase())
               }
@@ -234,6 +245,7 @@ export default function RoomsForm({ open, room, onCancel, onSave, loading }: Roo
             <Space>
               <SettingOutlined style={{ color: '#fa8c16' }} />
               <span>Tiện nghi phòng</span>
+              <Tag color="green">Tự động từ loại phòng</Tag>
             </Space>
           }
           size="small"
@@ -244,16 +256,16 @@ export default function RoomsForm({ open, room, onCancel, onSave, loading }: Roo
             label={
               <Space>
                 <SettingOutlined />
-                <span>Thêm tiện nghi</span>
-                <Tag color="blue">Nhập từng tiện nghi và nhấn Enter</Tag>
+                <span>Tiện nghi (có thể chỉnh sửa)</span>
+                <Tag color="blue">Tự động lấy từ loại phòng, có thể thêm/bớt</Tag>
               </Space>
             }
-            help="Nhập từng tiện nghi và nhấn Enter"
+            help="Tiện nghi sẽ tự động lấy từ loại phòng đã chọn, bạn có thể thêm hoặc bớt"
           >
             <Select 
               mode="tags" 
               tokenSeparators={[","]} 
-              placeholder="VD: Tủ lạnh, Điều hòa, Wifi..."
+              placeholder="Tiện nghi sẽ tự động hiển thị khi chọn loại phòng..."
               style={{ width: '100%' }}
             />
           </Form.Item>

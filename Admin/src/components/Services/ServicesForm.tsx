@@ -36,7 +36,7 @@ export default function ServicesForm({ open, service, onCancel, onSave, loading 
         name: service.name,
         description: service.description,
         basePrice: service.basePrice,
-        slots: service.slots || [],
+        workingHours: service.workingHours,
         images: service.images || [],
         status: service.status,
       });
@@ -51,7 +51,7 @@ export default function ServicesForm({ open, service, onCancel, onSave, loading 
       name: values.name,
       description: values.description,
       basePrice: values.basePrice,
-      slots: values.slots,
+      workingHours: values.workingHours,
       images: values.images,
       status: values.status,
     });
@@ -202,25 +202,48 @@ export default function ServicesForm({ open, service, onCancel, onSave, loading 
               </Form.Item>
             </Col>
 
-            <Col span={24}>
+            <Col span={12}>
               <Form.Item 
-                name="slots" 
+                name={['workingHours', 'startTime']} 
                 label={
                   <Space>
                     <ClockCircleOutlined />
-                    <span>Khung giờ</span>
-                    <Tag color="blue">Nhập từng khung giờ và nhấn Enter</Tag>
+                    <span>Giờ bắt đầu</span>
                   </Space>
                 }
+                rules={[
+                  { required: true, message: "Nhập giờ bắt đầu" },
+                  { pattern: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, message: "Định dạng giờ không hợp lệ (HH:MM)" }
+                ]}
               >
-                <Select 
-                  mode="tags" 
-                  tokenSeparators={[","]} 
-                  placeholder="Nhập khung giờ, ví dụ: 09:00, 11:00, 14:00"
-                  style={{ width: '100%' }}
+                <Input 
+                  placeholder="08:00" 
+                  prefix={<ClockCircleOutlined style={{ color: '#bfbfbf' }} />}
                 />
               </Form.Item>
             </Col>
+
+            <Col span={12}>
+              <Form.Item 
+                name={['workingHours', 'endTime']} 
+                label={
+                  <Space>
+                    <ClockCircleOutlined />
+                    <span>Giờ kết thúc</span>
+                  </Space>
+                }
+                rules={[
+                  { required: true, message: "Nhập giờ kết thúc" },
+                  { pattern: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, message: "Định dạng giờ không hợp lệ (HH:MM)" }
+                ]}
+              >
+                <Input 
+                  placeholder="22:00" 
+                  prefix={<ClockCircleOutlined style={{ color: '#bfbfbf' }} />}
+                />
+              </Form.Item>
+            </Col>
+
           </Row>
         </Card>
 

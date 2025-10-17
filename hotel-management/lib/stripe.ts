@@ -14,5 +14,5 @@ export const formatPriceForStripe = (amountInVND: number): number => {
 
 // Tạo mô tả sản phẩm cho Stripe
 export const createProductDescription = (roomName: string, nights: number, guests: number): string => {
-  return `Đặt phòng ${roomName} - ${nights} đêm cho ${guests} khách`;
+  return `Dat phong ${roomName} - ${nights} dem cho ${guests} khach`;
 };

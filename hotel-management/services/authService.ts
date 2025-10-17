@@ -67,7 +67,19 @@ const authService = {
         response: error.response?.data,
         status: error.response?.status,
       });
-      throw error;
+      
+      // Xử lý error message từ backend
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      } else if (error.response?.data?.errors) {
+        // Xử lý validation errors từ yup
+        const errorMessages = Array.isArray(error.response.data.errors) 
+          ? error.response.data.errors.join(', ')
+          : error.response.data.errors;
+        throw new Error(errorMessages);
+      } else {
+        throw new Error('Đăng ký thất bại. Vui lòng thử lại sau.');
+      }
     }
   },
 

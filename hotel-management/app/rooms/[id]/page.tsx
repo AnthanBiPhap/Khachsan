@@ -31,7 +31,15 @@ interface Service {
   name: string;
   description: string;
   basePrice: number;
+  workingHours?: {
+    startTime: string;
+    endTime: string;
+  };
   slots: string[];
+  images: string[];
+  status: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 interface Room {
@@ -80,11 +88,18 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
   }, [roomId]);
 
   useEffect(() => {
-    fetch("/api/services")
+    fetch("/api/services", {
+      headers: {
+        "Cache-Control": "no-cache",
+      },
+    })
       .then((res) => res.json())
       .then((data) => {
-        console.log("then((data)", data);
-        setServices(data?.data);
+        setServices(data || []);
+      })
+      .catch((error) => {
+        console.error("❌ Error fetching services:", error);
+        setServices([]);
       });
   }, []);
   const getNights = () => {
@@ -214,118 +229,224 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
     return <div className="p-6 text-red-500">Không tìm thấy phòng</div>;
 
   return (
-    <div className="max-w-3xl mx-auto mt-8 p-6 bg-white shadow rounded-lg space-y-4">
-      <Button onClick={() => router.back()}>← Quay lại</Button>
-      <h2 className="text-2xl font-bold">
-        Phòng {room.roomNumber} - {room.typeId.name}
-      </h2>
-      <p className="text-gray-600">
-        Giá: {room.typeId.pricePerNight.toLocaleString()} VNĐ/đêm
-      </p>
-      <p className="text-gray-600">Sức chứa: {room.typeId.capacity} người</p>
-      <p className="text-gray-600">
-        Trạng thái:{" "}
-        <Badge
-          variant={room.status === "available" ? "default" : "destructive"}
-        >
-          {room.status === "available" ? "Có sẵn" : "Đang bận"}
-        </Badge>
-      </p>
-
-      <div>
-        <span className="font-medium">Tiện ích:</span>
-        <div className="flex flex-wrap gap-2 mt-1">
-          {room.amenities.map((amenity, idx) => (
-            <Badge key={idx}>{amenity}</Badge>
-          ))}
-        </div>
-      </div>
-
-      {/* Booking inputs */}
-      <div className="space-y-3 mt-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-sm font-medium">Ngày nhận phòng</label>
-            <Input
-              type="date"
-              value={checkIn}
-              onChange={(e) => setCheckIn(e.target.value)}
-              className="w-full"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Ngày trả phòng</label>
-            <Input
-              type="date"
-              value={checkOut}
-              onChange={(e) => setCheckOut(e.target.value)}
-              className="w-full"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium">Số khách</label>
-            <Select
-              value={guests.toString()}
-              onValueChange={(v) => setGuests(parseInt(v))}
+    <div className="min-h-screen bg-gray-50">
+      {/* Main content */}
+      <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left column - Room info and booking form */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Back button */}
+            <Button 
+              onClick={() => router.back()}
+              variant="outline"
+              className="mb-4"
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Chọn số khách" />
-              </SelectTrigger>
-              <SelectContent>
-                {[1, 2, 3, 4, 5].map((n) => (
-                  <SelectItem key={n} value={n.toString()}>
-                    {n} khách
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        {room?.typeId?.maxExtendHours && room?.typeId?.maxExtendHours > 0 && (
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Thêm giờ (tối đa {room.typeId.maxExtendHours}h) (
-              {room.typeId.extraHourPrice?.toLocaleString()} VNĐ/h)
-            </label>
-            <Select
-              value={extraHours.toString()}
-              onValueChange={(v) => setExtraHours(parseInt(v))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from(
-                  { length: room?.typeId?.maxExtendHours ?? 0 + 1 },
-                  (_, i) => (
-                    <SelectItem key={i} value={i.toString()}>
-                      {i} giờ
-                    </SelectItem>
-                  )
+              ← Quay lại
+            </Button>
+
+            {/* Room information */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h1 className="text-2xl font-bold text-gray-800 mb-2">
+                    Phòng {room.roomNumber}
+                  </h1>
+                  <h2 className="text-xl text-blue-600 font-semibold">
+                    {room.typeId.name}
+                  </h2>
+                </div>
+                <Badge
+                  variant={room.status === "available" ? "default" : "destructive"}
+                  className="text-sm px-3 py-1"
+                >
+                  {room.status === "available" ? "Có sẵn" : "Đang bận"}
+                </Badge>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="flex items-center space-x-2">
+                  <span className="text-gray-500">💰</span>
+                  <span className="text-gray-600">Giá:</span>
+                  <span className="font-semibold text-blue-600">
+                    {room.typeId.pricePerNight.toLocaleString()} VNĐ/đêm
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-gray-500">👥</span>
+                  <span className="text-gray-600">Sức chứa:</span>
+                  <span className="font-semibold">{room.typeId.capacity} người</span>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold text-gray-800 mb-3">Tiện ích có sẵn</h3>
+                <div className="flex flex-wrap gap-2">
+                  {room.amenities.map((amenity, idx) => (
+                    <Badge key={idx} variant="secondary" className="px-3 py-1">
+                      {amenity}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Booking form */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">📅 Thông tin đặt phòng</h3>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ngày nhận phòng
+                    </label>
+                    <Input
+                      type="date"
+                      value={checkIn}
+                      onChange={(e) => setCheckIn(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Ngày trả phòng
+                    </label>
+                    <Input
+                      type="date"
+                      value={checkOut}
+                      onChange={(e) => setCheckOut(e.target.value)}
+                      className="w-full"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Số khách
+                    </label>
+                    <Select
+                      value={guests.toString()}
+                      onValueChange={(v) => setGuests(parseInt(v))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Chọn số khách" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <SelectItem key={n} value={n.toString()}>
+                            {n} khách
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {room?.typeId?.maxExtendHours && room?.typeId?.maxExtendHours > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      ⏰ Thêm giờ (tối đa {room.typeId.maxExtendHours}h)
+                    </label>
+                    <div className="text-sm text-gray-500 mb-2">
+                      {room.typeId.extraHourPrice?.toLocaleString()} VNĐ/giờ
+                    </div>
+                    <Select
+                      value={extraHours.toString()}
+                      onValueChange={(v) => setExtraHours(parseInt(v))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from(
+                          { length: room?.typeId?.maxExtendHours ?? 0 + 1 },
+                          (_, i) => (
+                            <SelectItem key={i} value={i.toString()}>
+                              {i} giờ
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 )}
-              </SelectContent>
-            </Select>
+              </div>
+            </div>
+
+            {/* Services section */}
+            <BookingServices services={services} onChange={setSelectedServices} />
           </div>
-        )}
-        {/* Services */}
-        <BookingServices services={services} onChange={setSelectedServices} />
+
+          {/* Right column - Booking summary */}
+          <div className="lg:col-span-1">
+          <div className="fixed top-24 right- w-[350px]">
+
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                <h3 className="text-lg font-bold text-gray-800 mb-4">💳 Tóm tắt đặt phòng</h3>
+                
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Phòng {room.roomNumber}</span>
+                    <span className="font-medium">
+                      {getNights()} đêm × {room.typeId.pricePerNight.toLocaleString()} VNĐ
+                    </span>
+                  </div>
+                  
+                  {extraHours > 0 && (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Thêm giờ</span>
+                      <span className="font-medium">
+                        {extraHours}h × {room.typeId.extraHourPrice?.toLocaleString()} VNĐ
+                      </span>
+                    </div>
+                  )}
+
+                  {selectedServices.length > 0 && (
+                    <div className="border-t pt-3">
+                      <div className="text-sm font-medium text-gray-700 mb-2">Dịch vụ bổ sung:</div>
+                      {selectedServices.map((service) => {
+                        const srv = services.find(s => s._id === service.serviceId);
+                        return (
+                          <div key={service.serviceId} className="flex justify-between text-sm mb-1">
+                            <span className="text-gray-600">
+                              {srv?.name} × {service.quantity}
+                            </span>
+                            <span className="font-medium">
+                              {(srv?.basePrice || 0) * service.quantity} VNĐ
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div className="border-t pt-4">
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="text-lg font-bold text-gray-800">Tổng cộng:</span>
+                    <span className="text-xl font-bold text-blue-600">
+                      {totalPrice.toLocaleString()} VNĐ
+                    </span>
+                  </div>
+                  
+                  <Button
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3"
+                    onClick={handleConfirmBooking}
+                    disabled={!checkIn || !checkOut}
+                  >
+                    🚀 Xác nhận & Thanh toán
+                  </Button>
+                  
+                  {(!checkIn || !checkOut) && (
+                    <p className="text-xs text-gray-500 text-center mt-2">
+                      Vui lòng chọn ngày nhận và trả phòng
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* Sticky booking summary */}
-      <div className="border-t-2 border-b-blue-50 fixed bottom-0 left-0 w-full bg-white p-4 shadow-t flex justify-between items-center z-50">
-        <div>
-          <span className="font-medium">Tổng tiền:</span>{" "}
-          <span className="text-lg font-bold">
-            {totalPrice.toLocaleString()} VNĐ
-          </span>
-        </div>
-        <Button
-          className="bg-blue-600 hover:bg-blue-700"
-          onClick={handleConfirmBooking}
-        >
-          Xác nhận
-        </Button>
-      </div>
       <Modal
         title="Xác nhận đặt phòng và thanh toán"
         open={isModalOpen}
@@ -334,8 +455,19 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         okText="Thanh toán với Stripe"
         cancelText="Hủy"
       >
-        <p>Tổng tiền cần thanh toán: {totalPrice.toLocaleString()} VNĐ</p>
-        <p>Bạn sẽ được chuyển đến trang thanh toán an toàn của Stripe.</p>
+        <div className="space-y-3">
+          <p className="text-lg font-semibold">
+            Tổng tiền cần thanh toán: {totalPrice.toLocaleString()} VNĐ
+          </p>
+          <p className="text-gray-600">
+            Bạn sẽ được chuyển đến trang thanh toán an toàn của Stripe.
+          </p>
+          <div className="bg-blue-50 p-3 rounded-lg">
+            <p className="text-sm text-blue-700">
+              💡 Sau khi thanh toán thành công, bạn sẽ nhận được email xác nhận đặt phòng.
+            </p>
+          </div>
+        </div>
       </Modal>
     </div>
   );

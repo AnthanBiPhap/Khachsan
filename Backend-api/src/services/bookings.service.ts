@@ -123,16 +123,17 @@ const create = async (payload: any) => {
       action: "pending", // trạng thái mặc định khi tạo booking
       note: "Khách hàng đã tạo booking",
     });
-    // Tạo invoice nếu đã thanh toán
+    // Tạo invoice (luôn tạo cho admin, hoặc khi đã thanh toán)
     let invoice = null;
-    if (savedBooking.paymentStatus === "paid") {
+    if (savedBooking.paymentStatus === "paid" || payload.source === "walk_in") {
       invoice = await invoicesService.create({
         bookingId: savedBooking._id,
         customerId: savedBooking.customerId?._id,
         totalAmount: savedBooking.totalPrice,
-        status: "paid",
+        status: savedBooking.paymentStatus === "paid" ? "paid" : "pending",
         issuedAt: new Date(),
       });
+      console.log(`✅ Đã tạo invoice mới cho booking ${savedBooking._id}: totalAmount=${savedBooking.totalPrice}`);
     }
 
     await savedBooking.populate("customerId", "fullName email phoneNumber");
@@ -202,32 +203,61 @@ const updateById = async (id: string, payload: any) => {
   );
 
   const previousPaymentStatus = (booking as any).paymentStatus;
+  const previousTotalPrice = (booking as any).totalPrice;
+  
+  console.log(`🔄 Updating booking ${booking._id}:`, {
+    previousPaymentStatus,
+    newPaymentStatus: cleanUpdates.paymentStatus,
+    previousTotalPrice,
+    newTotalPrice: cleanUpdates.totalPrice,
+    cleanUpdates
+  });
+  
   Object.assign(booking, cleanUpdates);
   const updatedBooking = await booking.save();
 
-  await updatedBooking.populate("customerId", "fullName email phoneNumber");
-  await updatedBooking.populate("roomId", "roomNumber typeId");
+  try {
+    await updatedBooking.populate("customerId", "fullName email phoneNumber");
+    await updatedBooking.populate("roomId", "roomNumber typeId");
+  } catch (populateError) {
+    console.error('❌ Lỗi populate booking:', populateError);
+    // Không throw error ở đây, chỉ log để không làm crash API
+  }
 
-  // Auto-create invoice when payment marked as paid (only on transition)
-  if (updatedBooking.paymentStatus === "paid" && previousPaymentStatus !== "paid") {
-    const existingInvoice = await Invoice.findOne({ bookingId: updatedBooking._id });
-    if (!existingInvoice) {
-      await invoicesService.create({
-        bookingId: updatedBooking._id,
-        customerId: (updatedBooking as any).customerId?._id,
-        totalAmount: updatedBooking.totalPrice,
-        status: "paid",
-        issuedAt: new Date(),
+  // Đồng bộ invoice với booking khi có thay đổi
+  const totalPriceChanged = updatedBooking.totalPrice !== previousTotalPrice;
+  if (updatedBooking.paymentStatus !== previousPaymentStatus || totalPriceChanged) {
+    try {
+      console.log(`🔄 Booking ${updatedBooking._id} thay đổi:`, {
+        paymentStatus: `${previousPaymentStatus} → ${updatedBooking.paymentStatus}`,
+        totalPrice: `${previousTotalPrice} → ${updatedBooking.totalPrice}`,
+        totalPriceChanged
       });
+      
+      const existingInvoice = await Invoice.findOne({ bookingId: updatedBooking._id });
+      
+      if (existingInvoice) {
+        // Cập nhật invoice theo booking (cả status và totalAmount)
+        await invoicesService.updateById(existingInvoice._id.toString(), { 
+          status: updatedBooking.paymentStatus,
+          totalAmount: updatedBooking.totalPrice
+        });
+        console.log(`✅ Đã cập nhật invoice ${existingInvoice._id}: status=${updatedBooking.paymentStatus}, totalAmount=${updatedBooking.totalPrice}`);
+      } else if (updatedBooking.paymentStatus === "paid") {
+        // Tạo invoice mới nếu booking = paid và chưa có invoice
+        await invoicesService.create({
+          bookingId: updatedBooking._id,
+          customerId: (updatedBooking as any).customerId?._id,
+          totalAmount: updatedBooking.totalPrice,
+          status: "paid",
+          issuedAt: new Date(),
+        });
+        console.log(`✅ Đã tạo invoice mới cho booking ${updatedBooking._id}: totalAmount=${updatedBooking.totalPrice}`);
+      }
+    } catch (invoiceError) {
+      console.error('❌ Lỗi đồng bộ invoice:', invoiceError);
+      // Không throw error ở đây để không làm crash API
     }
-    // Log booking status transition to paid
-    await bookingStatusService.create({
-      bookingId: updatedBooking._id.toString(),
-      actorId: payload.customerId || booking.customerId || undefined,
-      actorName: payload.customerId ? payload.guestInfo?.fullName : undefined,
-      action: "paid",
-      note: payload.note || "Đánh dấu đã thanh toán",
-    });
   }
 
   // Log refund transition
@@ -243,13 +273,19 @@ const updateById = async (id: string, payload: any) => {
 
   // Log refund requested transition (khách gửi yêu cầu)
   if (updatedBooking.paymentStatus === "refund_requested" && previousPaymentStatus !== "refund_requested") {
-    await bookingStatusService.create({
-      bookingId: updatedBooking._id.toString(),
-      actorId: payload.customerId || booking.customerId || undefined,
-      actorName: payload.customerId ? payload.guestInfo?.fullName : undefined,
-      action: "refund_requested",
-      note: payload.note || "Khách hàng yêu cầu hoàn tiền",
-    });
+    try {
+      await bookingStatusService.create({
+        bookingId: updatedBooking._id.toString(),
+        actorId: payload.customerId || booking.customerId || undefined,
+        actorName: payload.customerId ? payload.guestInfo?.fullName : undefined,
+        action: "refund_requested",
+        note: payload.note || "Khách hàng yêu cầu hoàn tiền",
+      });
+      console.log(`✅ Đã tạo booking status log cho refund_requested: ${updatedBooking._id}`);
+    } catch (statusError) {
+      console.error('❌ Lỗi tạo booking status log:', statusError);
+      // Không throw error ở đây để không làm crash API
+    }
   }
 
   // Log failed payment transition

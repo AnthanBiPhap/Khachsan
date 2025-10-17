@@ -87,6 +87,11 @@ export default function BookingPage() {
       );
       setOpenForm(false);
       loadBookings(pagination.current, pagination.pageSize);
+      
+      // Thông báo cho các trang khác refresh dữ liệu
+      window.dispatchEvent(new CustomEvent('bookingUpdated', { 
+        detail: { bookingId: editingBooking?._id } 
+      }));
     } catch (error: any) {
       console.error("Error saving booking:", error);
       message.error(error.message || "Có lỗi xảy ra khi lưu đặt phòng");

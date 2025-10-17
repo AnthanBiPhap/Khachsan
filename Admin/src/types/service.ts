@@ -3,6 +3,10 @@ export interface ServiceItem {
   name: string;
   description?: string;
   basePrice: number;
+  workingHours?: {
+    startTime: string;
+    endTime: string;
+  };
   slots?: string[];
   images?: string[];
   status: "active" | "hidden" | "deleted" | string;

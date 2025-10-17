@@ -1,4 +1,4 @@
-import { Space, Tag, Image, Avatar, Typography, Button } from "antd";
+import { Space, Tag, Image, Avatar, Typography, Button, Tooltip } from "antd";
 import { 
   SettingOutlined, 
   DollarOutlined, 
@@ -38,9 +38,13 @@ export const servicesColumns = (
           <div>
             <Typography.Text strong>{r.name}</Typography.Text>
             <br />
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {r.description}
-            </Typography.Text>
+            <Tooltip title={r.description} placement="topLeft">
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {r.description && r.description.length > 50 
+                  ? `${r.description.substring(0, 50)}...` 
+                  : r.description}
+              </Typography.Text>
+            </Tooltip>
           </div>
         </Space>
       );
@@ -76,20 +80,19 @@ export const servicesColumns = (
     title: (
       <Space>
         <ClockCircleOutlined style={{ color: '#fa8c16' }} />
-        <span>Khung giờ</span>
+        <span>Giờ hoạt động</span>
       </Space>
     ),
-    key: "slots",
+    key: "workingHours",
     render: (_, r) => (
       <Space wrap>
-        {(r.slots || []).map((s) => (
-          <Tag key={s} color="blue" icon={<ClockCircleOutlined />}>
-            {s}
+        {r.workingHours ? (
+          <Tag color="green" icon={<ClockCircleOutlined />}>
+            từ {r.workingHours.startTime} đến {r.workingHours.endTime}
           </Tag>
-        ))}
-        {(!r.slots || r.slots.length === 0) && (
+        ) : (
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Không có khung giờ
+            Chưa cập nhật
           </Typography.Text>
         )}
       </Space>
