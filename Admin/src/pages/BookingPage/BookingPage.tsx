@@ -6,9 +6,10 @@ import {
   Drawer,
   Descriptions,
   Tag,
+  Alert
 } from "antd";
+import { CalendarOutlined, PlusOutlined, IdcardOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
-import { CalendarOutlined, PlusOutlined } from "@ant-design/icons";
 import BookingForm from "../../components/Booking/BookingForm";
 import type { Booking } from "../../types/booking";
 import { fetchBookings, deleteBooking } from "../../services/booking.service";
@@ -104,12 +105,31 @@ export default function BookingPage() {
         style={{
           display: "flex",
           justifyContent: "space-between",
+          alignItems: "center",
           marginBottom: 16,
         }}
       >
-        <Typography.Title level={4}>
-          <CalendarOutlined /> Quản lý đặt phòng
-        </Typography.Title>
+        <div>
+          <Typography.Title level={4}>
+            <CalendarOutlined /> Quản lý đặt phòng
+          </Typography.Title>
+          <Alert
+            message={
+              <span>
+                <IdcardOutlined style={{ marginRight: 8 }} />
+                Quy định check-in: Khi khách check-in phải cung cấp giấy tờ tùy thân (CMND/CCCD) để xác minh danh tính, đồng thời cung cấp đầy đủ họ tên, số điện thoại và tuổi.
+              </span>
+
+            }
+            type="info"
+            showIcon
+            style={{
+              marginTop: 8,
+              fontSize: 12,
+              padding: '8px 12px'
+            }}
+          />
+        </div>
         <Button
           type="primary"
           icon={<PlusOutlined />}

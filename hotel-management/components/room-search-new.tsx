@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import {
@@ -53,8 +54,11 @@ export function RoomSearch() {
     searchRooms,
   } = useRoomSearch();
 
+  const [hasSearched, setHasSearched] = useState(false);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setHasSearched(true);
     searchRooms();
   };
 
@@ -259,7 +263,7 @@ export function RoomSearch() {
                           <Button
                             onClick={() =>
                               router.push(
-                                `/room-detail/${room._id}`
+                                `/room-detail/${room._id}` 
                               )
                             }
                             variant="outline"
@@ -270,7 +274,7 @@ export function RoomSearch() {
                           <Button
                             onClick={() =>
                               router.push(
-                                `/rooms/${room._id}?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}`
+                                `/rooms/${room._id}?checkIn=${checkIn}&checkOut=${checkOut}&guests=${guests}` 
                               )
                             }
                             className="bg-blue-600 hover:bg-blue-700 whitespace-nowrap"
@@ -283,6 +287,15 @@ export function RoomSearch() {
                   </div>
                 </div>
               ))}
+          </div>
+        </div>
+      )}
+
+      {hasSearched && availableRooms.length === 0 && !loading && (
+        <div className="mt-8 text-center">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+            <h3 className="text-lg font-semibold text-yellow-800 mb-2">Đã hết phòng trong khoảng thời gian này</h3>
+            <p className="text-yellow-700">Vui lòng chọn ngày khác hoặc liên hệ chúng tôi để được hỗ trợ.</p>
           </div>
         </div>
       )}

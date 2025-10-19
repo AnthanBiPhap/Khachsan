@@ -16,17 +16,18 @@ import {
   Tag,
   Avatar,
 } from "antd";
-import { 
-  PlusOutlined, 
-  MinusOutlined, 
-  UserOutlined, 
-  CalendarOutlined, 
-  HomeOutlined, 
+import {
+  PlusOutlined,
+  MinusOutlined,
+  UserOutlined,
+  CalendarOutlined,
+  HomeOutlined,
   DollarOutlined,
   ClockCircleOutlined,
   PhoneOutlined,
   MailOutlined,
-  IdcardOutlined
+  IdcardOutlined,
+  InfoCircleOutlined
 } from "@ant-design/icons";
 import { useEffect, useState, useMemo } from "react";
 import dayjs, { Dayjs } from "dayjs";
@@ -212,6 +213,12 @@ export default function BookingForm({
       if (!selectedRoom || !checkIn || !checkOut)
         return message.error("Vui lòng chọn phòng");
 
+      // Quy định check-in sớm:
+      // - Nếu đặt phòng 14h mà khách tới sớm hơn 4h (tức là trước 10h) thì cho vào miễn phí nếu có phòng trống.
+      // - Nếu khách tới sớm hơn hơn 2h (tức là trước 12h) thì có thể tính luôn vào trước 1 ngày (tùy quyết định của lễ tân).
+      // - Extra hours chỉ áp dụng cho việc gia hạn check-out, không áp dụng cho check-in sớm.
+      // Lưu ý: Quy định này cần được kiểm tra và áp dụng thủ công bởi lễ tân dựa trên tình trạng phòng và yêu cầu khách hàng.
+
       // tính checkOut thực tế với giờ thêm
       const adjustedCheckOut = checkOut
         .hour(12)
@@ -391,6 +398,34 @@ export default function BookingForm({
               </Form.Item>
             </Col>
           </Row>
+        </Card>
+
+        {/* Quy định check-in sớm */}
+        <Card
+          size="small"
+          style={{
+            marginBottom: 16,
+            backgroundColor: '#fff7e6',
+            border: '1px solid #ffd591'
+          }}
+        >
+          <Space direction="vertical" style={{ width: '100%' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 8 }}>
+              <InfoCircleOutlined style={{ color: '#fa8c16', fontSize: 16, marginRight: 8 }} />
+              <Typography.Text strong style={{ color: '#d46b08' }}>
+                Quy định check-in sớm
+              </Typography.Text>
+            </div>
+            <div style={{ fontSize: 12, color: '#d46b08', lineHeight: 1.5 }}>
+              <div>• Đặt phòng 14h, tới sớm trước 10h (trước 4h): Cho vào miễn phí nếu có phòng trống</div>
+              <div>• Tới sớm từ 10h đến trước 14h: Tính thêm 1 ngày (tùy quyết định lễ tân)</div>
+              <div>• Extra hours chỉ áp dụng cho gia hạn check-out, không áp dụng check-in sớm</div>
+              <div style={{ marginTop: 4, fontStyle: 'italic' }}>
+                Lưu ý: Quy định này cần được kiểm tra và áp dụng thủ công bởi lễ tân dựa trên tình trạng phòng và yêu cầu khách hàng.
+              </div>
+            </div>
+
+          </Space>
         </Card>
 
         {/* Thông tin booking */}

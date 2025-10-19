@@ -1,9 +1,10 @@
 'use client';
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { MapPin, Star, Heart } from "lucide-react";
+import { MapPin, Star, Heart, Eye } from "lucide-react";
 import Image from "next/image";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -15,6 +16,7 @@ type Location = {
   address: string;
   images: string[];
   ratingAvg: number;
+  status: string;
 };
 
 export default function DashboardPage() {
@@ -22,6 +24,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     // nếu useAuth chưa load user (undefined), thì không fetch vội
@@ -63,7 +66,7 @@ export default function DashboardPage() {
 
           const userTypes = (user as any).preferences.map((pref: string) => preferenceMap[pref]).filter(Boolean);
           allLocations = allLocations.filter((loc: Location) =>
-            userTypes.includes(loc.type)
+            userTypes.includes(loc.type) && loc.status === "active"
           );
         }
 
@@ -204,6 +207,21 @@ export default function DashboardPage() {
                     <p className="text-gray-600 line-clamp-3 leading-relaxed">
                       {location.description}
                     </p>
+                    <div className="mt-4 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${location.status === "active" ? "bg-green-500" : "bg-red-500"}`}></div>
+                        <span className="text-xs font-medium text-gray-600">
+                          {location.status === "active" ? "Đang hoạt động" : "Tạm đóng"}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => router.push(`/location-detail/${location._id}`)}
+                        className="inline-flex items-center px-4 py-2 bg-white text-blue-600 text-sm font-medium rounded-lg border border-blue-200 hover:bg-blue-50 transition-colors"
+                      >
+                        <Eye className="h-4 w-4 mr-2" />
+                        Xem chi tiết
+                      </button>
+                    </div>
                   </CardContent>
                 </Card>
               ))}

@@ -1,10 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dumbbell, Heart, Flower2, Clock, Clock3, Clock4, Clock5, Clock6, Clock7, Clock8, Clock9, Clock10, Clock11, Clock12 } from "lucide-react";
+import { Dumbbell, Heart, Flower2, Clock, Clock3, Clock4, Clock5, Clock6, Clock7, Clock8, Clock9, Clock10, Clock11, Clock12, Bot, X } from "lucide-react";
+import AIChatBubble from "@/components/ui/ai-chat-bubble";
 
 type ServiceStatus = 'active' | 'hidden' | 'deleted';
 
@@ -33,6 +34,11 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [showChatGptModal, setShowChatGptModal] = useState(false);
+  const [messages, setMessages] = useState<Array<{id: string, text: string, isUser: boolean, timestamp: Date}>>([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoadingAI, setIsLoadingAI] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Load service
   useEffect(() => {
@@ -103,6 +109,84 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
       <Clock12 key="12" className="h-4 w-4" />
     ];
     return clocks[index % clocks.length];
+  };
+
+  // Auto scroll to bottom when new message
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  // Function to open ChatGPT modal
+  const openChatGptModal = () => {
+    setShowChatGptModal(true);
+    // Thêm tin nhắn chào mừng
+    if (messages.length === 0) {
+      const welcomeMessage = {
+        id: 'welcome',
+        text: `Xin chào! Tôi là AI hướng dẫn viên du lịch. Tôi có thể giúp bạn tìm hiểu về ${service?.name}. Bạn muốn biết gì về dịch vụ này?`,
+        isUser: false,
+        timestamp: new Date()
+      };
+      setMessages([welcomeMessage]);
+    }
+  };
+
+  // Function to send message to AI
+  const sendMessage = async () => {
+    if (!inputMessage.trim() || !service) return;
+
+    const userMessage = {
+      id: Date.now().toString(),
+      text: inputMessage,
+      isUser: true,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setInputMessage('');
+    setIsLoadingAI(true);
+
+    try {
+      const response = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: inputMessage,
+          locationInfo: {
+            name: service.name,
+            address: 'Đà Nẵng, Việt Nam',
+            type: 'dịch vụ khách sạn'
+          }
+        })
+      });
+
+      const data = await response.json();
+      const aiResponse = data.response || 'Xin lỗi, tôi không thể trả lời câu hỏi này.';
+
+      const aiMessage = {
+        id: (Date.now() + 1).toString(),
+        text: aiResponse,
+        isUser: false,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, aiMessage]);
+    } catch (error) {
+      console.error('Error calling AI:', error);
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        text: 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.',
+        isUser: false,
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoadingAI(false);
+    }
   };
 
   if (loading) {
@@ -264,6 +348,26 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
         </div>
       )}
 
+      {/* ChatGPT Web Section */}
+      <div className="border-t pt-6">
+        <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg p-6">
+          <div className="flex items-center mb-4">
+            <Bot className="h-6 w-6 text-purple-600 mr-2" />
+            <h3 className="text-lg font-semibold text-gray-800">Hỏi AI về dịch vụ này</h3>
+          </div>
+          <p className="text-gray-700 mb-4">
+            Nhận thông tin chi tiết và gợi ý từ AI về dịch vụ này
+          </p>
+          <Button
+            onClick={openChatGptModal}
+            className="bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white"
+          >
+            <Bot className="h-4 w-4 mr-2" />
+            Nói chuyện với AI
+          </Button>
+        </div>
+      </div>
+
       {/* Action Buttons */}
       <div className="border-t pt-4 flex justify-between items-center">
         <div className="text-sm text-gray-500">
@@ -307,6 +411,128 @@ export default function ServiceDetailPage({ params }: { params: { id: string } }
           </Button>
         </div>
       </div>
+      <AIChatBubble />
+
+      {/* ChatGPT Modal */}
+      {showChatGptModal && (
+        <div className="fixed inset-0 bg-purple-200 bg-opacity-30 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between p-4 border-b">
+              <div className="flex items-center">
+                <Bot className="h-6 w-6 text-purple-600 mr-2" />
+                <h3 className="text-lg font-semibold">Hỏi AI về {service?.name}</h3>
+              </div>
+              <Button
+                onClick={() => setShowChatGptModal(false)}
+                variant="ghost"
+                size="sm"
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 flex flex-col">
+              {/* Chat Messages */}
+              <div className="flex-1 p-4 overflow-y-auto bg-gradient-to-br from-gray-50 to-purple-50 max-h-96">
+                <div className="space-y-4">
+                  {messages.map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${message.isUser ? 'justify-end' : 'justify-start'}`}
+                    >
+                      <div
+                        className={`max-w-xs lg:max-w-lg xl:max-w-xl px-4 py-3 rounded-2xl shadow-sm ${
+                          message.isUser
+                            ? 'bg-gradient-to-r from-purple-600 to-purple-700 text-white'
+                            : 'bg-white text-gray-800 border border-gray-200'
+                        }`}
+                      >
+                        <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{message.text}</p>
+                        <p className="text-xs opacity-70 mt-2">
+                          {message.timestamp.toLocaleTimeString()}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                  {isLoadingAI && (
+                    <div className="flex justify-start">
+                      <div className="bg-white text-gray-800 border border-gray-200 px-4 py-3 rounded-2xl shadow-sm">
+                        <div className="flex items-center space-x-3">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-purple-600 border-t-transparent"></div>
+                          <span className="text-sm font-medium">AI đang suy nghĩ...</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  <div ref={chatEndRef} />
+                </div>
+              </div>
+
+              {/* Chat Input */}
+              <div className="p-4 border-t bg-gradient-to-r from-white to-purple-50">
+                <div className="flex space-x-3">
+                  <input
+                    type="text"
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                    placeholder="Nhập câu hỏi của bạn..."
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                    disabled={isLoadingAI}
+                  />
+                  <Button
+                    onClick={sendMessage}
+                    disabled={!inputMessage.trim() || isLoadingAI}
+                    className="bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white px-6 py-3 rounded-2xl font-medium shadow-lg hover:shadow-xl transition-all duration-200"
+                  >
+                    {isLoadingAI ? (
+                      <div className="flex items-center space-x-2">
+                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                        <span>Đang gửi...</span>
+                      </div>
+                    ) : (
+                      'Gửi'
+                    )}
+                  </Button>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 border-t bg-gradient-to-r from-gray-50 to-purple-50">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-gray-600 font-medium">
+                    💡 Gợi ý: Hỏi về giá cả, khung giờ, lợi ích dịch vụ
+                  </p>
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => {
+                        setMessages([]);
+                        setInputMessage('');
+                      }}
+                      variant="outline"
+                      size="sm"
+                      className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl"
+                    >
+                      Xóa chat
+                    </Button>
+                    <Button
+                      onClick={() => setShowChatGptModal(false)}
+                      variant="outline"
+                      size="sm"
+                      className="border-gray-300 text-gray-700 hover:bg-gray-50 rounded-xl"
+                    >
+                      Đóng
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

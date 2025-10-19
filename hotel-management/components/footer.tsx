@@ -40,12 +40,12 @@ export function Footer() {
               </li>
               <li>
                 <a href="#" className="hover:text-white">
-                  Vé máy bay
+                  Tour du lịch
                 </a>
               </li>
               <li>
                 <a href="#" className="hover:text-white">
-                  Tour du lịch
+                  Ăn uống
                 </a>
               </li>
               <li>

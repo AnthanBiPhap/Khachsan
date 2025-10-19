@@ -16,6 +16,7 @@ import BookingServices from "@/components/booking-services";
 import { message, Modal } from "antd";
 import Loading from "@/app/loading";
 import { User } from "@/services/authService";
+import { RefreshCw } from "lucide-react";
 
 interface RoomType {
   _id: string;
@@ -91,6 +92,7 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
     fetch("/api/services", {
       headers: {
         "Cache-Control": "no-cache",
+        "Pragma": "no-cache",
       },
     })
       .then((res) => res.json())
@@ -102,6 +104,59 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         setServices([]);
       });
   }, []);
+
+  // Tự động cập nhật dữ liệu dịch vụ mỗi 2 phút (thay vì 5 phút để test nhanh hơn)
+  useEffect(() => {
+    console.log("🔄 Starting polling for services updates...");
+    const interval = setInterval(() => {
+      console.log("🔄 Polling: Checking for services updates...");
+      refreshServices();
+    }, 2 * 60 * 1000); // 2 phút để dễ test
+
+    return () => {
+      console.log("🛑 Clearing polling interval");
+      clearInterval(interval);
+    };
+  }, []);
+
+  // Refresh dữ liệu khi user quay lại tab hoặc reload trang
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        console.log("👀 User returned to tab, refreshing services...");
+        refreshServices();
+      }
+    };
+
+    const handleFocus = () => {
+      console.log("🎯 Window focused, refreshing services...");
+      refreshServices();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, []);
+
+  const refreshServices = async () => {
+    try {
+      const response = await fetch(`/api/services?_t=${Date.now()}`, {
+        headers: {
+          "Cache-Control": "no-cache",
+          "Pragma": "no-cache",
+        },
+      });
+      const data = await response.json();
+      setServices(data || []);
+      console.log("✅ Dữ liệu dịch vụ đã được cập nhật tự động!");
+    } catch (error) {
+      console.error("❌ Error refreshing services:", error);
+    }
+  };
   const getNights = () => {
     if (!checkIn || !checkOut) return 1; // mặc định 1 đêm nếu thiếu
     const start = new Date(checkIn);
@@ -372,7 +427,10 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
             </div>
 
             {/* Services section */}
-            <BookingServices services={services} onChange={setSelectedServices} />
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">🛠️ Dịch vụ bổ sung</h3>
+              <BookingServices services={services} onChange={setSelectedServices} />
+            </div>
           </div>
 
           {/* Right column - Booking summary */}

@@ -287,7 +287,7 @@ export default function AIChatBubble() {
             <div className="p-3 border-t bg-gradient-to-r from-purple-50 to-pink-50">
               <p className="text-xs text-gray-600 font-medium mb-2">💡 Gợi ý nhanh dựa trên sở thích của bạn:</p>
               <div className="flex flex-wrap gap-2">
-                {user.preferences.slice(0, 3).map((pref, index) => (
+                {user.preferences.map((pref, index) => (
                   <button
                     key={index}
                     onClick={() => {
