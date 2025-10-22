@@ -17,7 +17,7 @@ import ServiceBookingsPage from "./pages/ServiceBookingsPage/ServiceBookingsPage
 import LocationsPage from "./pages/LocationsPage/LocationsPage";
 import ReviewsPage from "./pages/ReviewsPage/ReviewsPage";
 import InvoicesPage from "./pages/InvoicesPage/InvoicesPage";
-import PaymentsPage from "./pages/PaymentsPage";
+import PaymentsPage from "./pages/PaymentPage/PaymentsPage";
 import { useAuthStore } from "./stores/authStore";
 
 function PrivateRoute({ children }) {

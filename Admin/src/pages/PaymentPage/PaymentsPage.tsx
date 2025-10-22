@@ -1,7 +1,7 @@
 import React from 'react';
 import { Typography, Space } from 'antd';
 import { CreditCardOutlined } from '@ant-design/icons';
-import PaymentsList from '../components/Payments/PaymentsList';
+import PaymentsList from '../../components/Payments/PaymentsList';
 
 const { Title } = Typography;
 
