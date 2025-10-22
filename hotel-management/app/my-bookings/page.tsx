@@ -325,6 +325,94 @@ export default function MyBookingsPage() {
                           <span>{formatCurrency(booking.totalPrice)}</span>
                         </div>
                       </div>
+
+                      {/* Thẻ thông tin hoàn tiền */}
+                      <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                        <div className="flex items-start space-x-3">
+                          <div className="flex-shrink-0">
+                            <CreditCard className="h-6 w-6 text-blue-600" />
+                          </div>
+                          <div className="flex-1">
+                            <h4 className="text-sm font-semibold text-blue-900 mb-2">
+                              Thông tin hoàn tiền
+                            </h4>
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-blue-700">Trạng thái hoàn tiền:</span>
+                                {booking.paymentStatus === 'refunded' ? (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Đã hoàn tiền
+                                  </span>
+                                ) : booking.paymentStatus === 'refund_requested' ? (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    <ClockIcon className="h-3 w-3 mr-1" />
+                                    Đang xử lý hoàn tiền
+                                  </span>
+                                ) : booking.paymentStatus === 'paid' ? (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    <CheckCircle className="h-3 w-3 mr-1" />
+                                    Đã thanh toán
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    <ClockIcon className="h-3 w-3 mr-1" />
+                                    Chưa hoàn tiền
+                                  </span>
+                                )}
+                              </div>
+                              
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-blue-700">Số tiền hoàn:</span>
+                                <span className="text-sm font-medium text-blue-900">
+                                  {booking.paymentStatus === 'refunded' 
+                                    ? formatCurrency(booking.totalPrice)
+                                    : '0 VND'
+                                  }
+                                </span>
+                              </div>
+                              
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-blue-700">Phương thức hoàn:</span>
+                                <span className="text-sm font-medium text-blue-900">
+                                  {booking.paymentStatus === 'refunded' 
+                                    ? 'Stripe / Thẻ tín dụng'
+                                    : 'Chưa áp dụng'
+                                  }
+                                </span>
+                              </div>
+                              
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-blue-700">Thời gian hoàn:</span>
+                                <span className="text-sm font-medium text-blue-900">
+                                  {booking.paymentStatus === 'refunded' 
+                                    ? formatDate(booking.updatedAt)
+                                    : 'Chưa có'
+                                  }
+                                </span>
+                              </div>
+                            </div>
+                            
+                            {booking.paymentStatus === 'refunded' && (
+                              <div className="mt-3 p-2 bg-green-50 rounded-md border border-green-200">
+                                <p className="text-xs text-green-700">
+                                  ✅ Tiền đã được hoàn về thẻ tín dụng của bạn. 
+                                  Thời gian xử lý từ 3-7 ngày làm việc.
+                                </p>
+                              </div>
+                            )}
+                            
+                            {booking.paymentStatus === 'refund_requested' && (
+                              <div className="mt-3 p-2 bg-yellow-50 rounded-md border border-yellow-200">
+                                <p className="text-xs text-yellow-700">
+                                  ⏳ Yêu cầu hoàn tiền đang được xử lý. 
+                                  Chúng tôi sẽ thông báo khi hoàn tất.
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
