@@ -1,7 +1,6 @@
-import { Space, Tag, Avatar, Typography, Button } from "antd";
+import { Space, Tag, Typography, Button } from "antd";
 import { 
   CalendarOutlined, 
-  UserOutlined, 
   DollarOutlined, 
   EditOutlined, 
   DeleteOutlined, 
@@ -21,35 +20,30 @@ export const invoicesColumns = (
   handleDetail?: (record: InvoiceItem) => void
 ): ColumnsType<InvoiceItem> => [
   {
-    title: (
-      <Space>
-        <CalendarOutlined style={{ color: '#1890ff' }} />
-        <span>Booking</span>
-      </Space>
-    ),
+    title: "Booking",
     key: "booking",
     render: (_, r) => {
       const content = (
-        <Space>
-          <Avatar 
-            size="small" 
-            icon={<CalendarOutlined />} 
-            style={{ backgroundColor: '#1890ff' }}
-          />
-          <div>
-            <Typography.Text strong>
-              Mã: {r.bookingId?._id?.slice(0,8)}...
-            </Typography.Text>
-            <br />
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              Nhận: {r.bookingId?.checkIn ? new Date(r.bookingId.checkIn).toLocaleString('vi-VN') : '-'}
-            </Typography.Text>
-            <br />
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              Trả: {r.bookingId?.checkOut ? new Date(r.bookingId.checkOut).toLocaleString('vi-VN') : '-'}
-            </Typography.Text>
-          </div>
-        </Space>
+        <div>
+          <Typography.Text strong>
+            Mã: {r.bookingId?._id?.slice(0,8)}...
+          </Typography.Text>
+          <br />
+          <Space direction="vertical" size={0} style={{ alignItems: 'flex-start' }}>
+            <Space size={4} style={{ alignItems: 'center' }}>
+              <CalendarOutlined style={{ color: '#52c41a', fontSize: 12, width: 12 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Nhận: {r.bookingId?.checkIn ? new Date(r.bookingId.checkIn).toLocaleString('vi-VN') : '-'}
+              </Typography.Text>
+            </Space>
+            <Space size={4} style={{ alignItems: 'center' }}>
+              <CalendarOutlined style={{ color: '#ff4d4f', fontSize: 12, width: 12 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Trả: {r.bookingId?.checkOut ? new Date(r.bookingId.checkOut).toLocaleString('vi-VN') : '-'}
+              </Typography.Text>
+            </Space>
+          </Space>
+        </div>
       );
       return handleDetail ? (
         <Button 
@@ -63,35 +57,23 @@ export const invoicesColumns = (
     }
   },
   {
-    title: (
-      <Space>
-        <UserOutlined style={{ color: '#52c41a' }} />
-        <span>Khách hàng</span>
-      </Space>
-    ),
+    title: "Khách hàng",
     key: "customer",
     render: (_, r) => {
       const name = r.customerId?.fullName || r.bookingId?.guestInfo?.fullName || '-';
       const email = r.customerId?.email || r.bookingId?.guestInfo?.email || '';
       return (
-        <Space>
-          <Avatar 
-            size="small" 
-            icon={<UserOutlined />} 
-            style={{ backgroundColor: '#52c41a' }}
-          />
-          <div>
-            <Typography.Text strong>{name}</Typography.Text>
-            {email && (
-              <>
-                <br />
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {email}
-                </Typography.Text>
-              </>
-            )}
-          </div>
-        </Space>
+        <div>
+          <Typography.Text strong>{name}</Typography.Text>
+          {email && (
+            <>
+              <br />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {email}
+              </Typography.Text>
+            </>
+          )}
+        </div>
       );
     }
   },

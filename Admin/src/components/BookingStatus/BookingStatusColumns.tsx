@@ -1,7 +1,6 @@
-import { Tag, Space, Avatar, Typography, Button } from "antd";
+import { Tag, Space, Typography, Button } from "antd";
 import { 
   CalendarOutlined, 
-  UserOutlined, 
   EditOutlined, 
   DeleteOutlined, 
   EyeOutlined,
@@ -10,8 +9,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ClockCircleOutlined,
-  ExclamationCircleOutlined,
-  HomeOutlined
+  ExclamationCircleOutlined
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { BookingStatusLog } from "../../types/bookingstatus";
@@ -22,12 +20,7 @@ export const bookingStatusColumns = (
   handleDetail?: (record: BookingStatusLog) => void
 ): ColumnsType<BookingStatusLog> => [
   {
-    title: (
-      <Space>
-        <CalendarOutlined style={{ color: '#1890ff' }} />
-        <span>Booking</span>
-      </Space>
-    ),
+    title: "Booking",
     key: "booking",
     render: (_, record) => {
       const customerName =
@@ -36,35 +29,28 @@ export const bookingStatusColumns = (
         "Khách walk-in";
 
       const content = (
-        <Space>
-          <Avatar 
-            size="small" 
-            icon={<HomeOutlined />} 
-            style={{ backgroundColor: '#1890ff' }}
-          />
-          <div>
-            <Typography.Text strong>{customerName}</Typography.Text>
-            <br />
-            <Space direction="vertical" size={0}>
-              <Space size={4}>
-                <CalendarOutlined style={{ color: '#52c41a', fontSize: 12 }} />
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  Nhận: {record.bookingId?.checkIn
-                    ? new Date(record.bookingId.checkIn).toLocaleString("vi-VN")
-                    : "-"}
-                </Typography.Text>
-              </Space>
-              <Space size={4}>
-                <CalendarOutlined style={{ color: '#ff4d4f', fontSize: 12 }} />
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  Trả: {record.bookingId?.checkOut
-                    ? new Date(record.bookingId.checkOut).toLocaleString("vi-VN")
-                    : "-"}
-                </Typography.Text>
-              </Space>
+        <div>
+          <Typography.Text strong>{customerName}</Typography.Text>
+          <br />
+          <Space direction="vertical" size={0} style={{ alignItems: 'flex-start' }}>
+            <Space size={4} style={{ alignItems: 'center' }}>
+              <CalendarOutlined style={{ color: '#52c41a', fontSize: 12, width: 12 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Nhận: {record.bookingId?.checkIn
+                  ? new Date(record.bookingId.checkIn).toLocaleString("vi-VN")
+                  : "-"}
+              </Typography.Text>
             </Space>
-          </div>
-        </Space>
+            <Space size={4} style={{ alignItems: 'center' }}>
+              <CalendarOutlined style={{ color: '#ff4d4f', fontSize: 12, width: 12 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Trả: {record.bookingId?.checkOut
+                  ? new Date(record.bookingId.checkOut).toLocaleString("vi-VN")
+                  : "-"}
+              </Typography.Text>
+            </Space>
+          </Space>
+        </div>
       );
 
       return handleDetail ? (
@@ -100,30 +86,18 @@ export const bookingStatusColumns = (
     },
   },
   {
-    title: (
-      <Space>
-        <UserOutlined style={{ color: '#fa8c16' }} />
-        <span>Người thao tác</span>
-      </Space>
-    ),
+    title: "Người thao tác",
     key: "actor",
     render: (_, record) => (
-      <Space>
-        <Avatar 
-          size="small" 
-          icon={<UserOutlined />} 
-          style={{ backgroundColor: record.actorId ? '#1890ff' : '#52c41a' }}
-        />
-        <div>
-          <Typography.Text strong>
-            {record.actorId?.fullName || "Admin / Lễ tân"}
-          </Typography.Text>
-          <br />
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {record.actorId?.email || "-"}
-          </Typography.Text>
-        </div>
-      </Space>
+      <div>
+        <Typography.Text strong>
+          {record.actorId?.fullName || "Admin / Lễ tân"}
+        </Typography.Text>
+        <br />
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          {record.actorId?.email || "-"}
+        </Typography.Text>
+      </div>
     ),
   },
   {

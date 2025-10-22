@@ -18,7 +18,6 @@ import LocationsPage from "./pages/LocationsPage/LocationsPage";
 import ReviewsPage from "./pages/ReviewsPage/ReviewsPage";
 import InvoicesPage from "./pages/InvoicesPage/InvoicesPage";
 import PaymentsPage from "./pages/PaymentsPage";
-// import InvoiceItemsPage from "./pages/InvoiceItemsPage/InvoiceItemsPage";
 import { useAuthStore } from "./stores/authStore";
 
 function PrivateRoute({ children }) {
@@ -57,7 +56,6 @@ function App() {
           <Route path="reviews" element={<ReviewsPage />} />
           <Route path="invoices" element={<InvoicesPage />} />
           <Route path="payments" element={<PaymentsPage />} />
-          {/* <Route path="invoiceitems" element={<InvoiceItemsPage />} /> */}
         </Route>
 
         {/* Layout rỗng cho login */}

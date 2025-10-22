@@ -1,6 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, Button, Space, Modal, message, Tooltip, Card, Statistic, Row, Col } from 'antd';
-import { EyeOutlined, EditOutlined, DeleteOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Table, Tag, Button, Space, Modal, message, Tooltip, Card, Statistic, Row, Col, Typography } from 'antd';
+import { 
+  EyeOutlined, 
+  EditOutlined, 
+  ReloadOutlined,
+  HomeOutlined,
+  DollarOutlined,
+  CreditCardOutlined,
+  CalendarOutlined,
+  CheckCircleOutlined,
+  ClockCircleOutlined,
+  CloseCircleOutlined,
+  RollbackOutlined
+} from '@ant-design/icons';
 import { paymentService } from '../../services/payment.service';
 import PaymentDetails from './PaymentDetails';
 
@@ -56,12 +68,12 @@ const PaymentsList: React.FC = () => {
     pageSize: 10,
     total: 0,
   });
-  const [stats, setStats] = useState({
-    totalPayments: 0,
-    totalAmount: 0,
-    averageAmount: 0,
-    byStatus: [] as any[],
-  });
+  // const [stats, setStats] = useState({
+  //   totalPayments: 0,
+  //   totalAmount: 0,
+  //   averageAmount: 0,
+  //   byStatus: [] as unknown[],
+  // });
 
   const fetchPayments = async (page = 1, pageSize = 10) => {
     setLoading(true);
@@ -88,14 +100,14 @@ const PaymentsList: React.FC = () => {
     }
   };
 
-  const fetchStats = async () => {
-    try {
-      const response = await paymentService.getStats();
-      setStats(response);
-    } catch (error) {
-      console.error('Error fetching stats:', error);
-    }
-  };
+  // const fetchStats = async () => {
+  //   try {
+  //     const response = await paymentService.getStats();
+  //     setStats(response);
+  //   } catch (error) {
+  //     console.error('Error fetching stats:', error);
+  //   }
+  // };
 
   const getStatsData = () => {
     const totalPayments = payments.length;
@@ -115,15 +127,16 @@ const PaymentsList: React.FC = () => {
 
   useEffect(() => {
     fetchPayments();
-    fetchStats();
+    // fetchStats();
   }, []);
 
   useEffect(() => {
     console.log('Payments state updated:', payments);
   }, [payments]);
 
-  const handleTableChange = (pagination: any) => {
-    fetchPayments(pagination.current, pagination.pageSize);
+  const handleTableChange = (pagination: unknown) => {
+    const paginationObj = pagination as { current: number; pageSize: number };
+    fetchPayments(paginationObj.current, paginationObj.pageSize);
   };
 
   const handleViewDetails = (payment: Payment) => {
@@ -131,12 +144,12 @@ const PaymentsList: React.FC = () => {
     setDetailsVisible(true);
   };
 
-  const handleUpdateStatus = async (paymentId: string, status: string) => {
+  const handleUpdateStatus = async (paymentId: string, status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'refunded') => {
     try {
       await paymentService.updateStatus(paymentId, { status });
       message.success('Cập nhật trạng thái thành công');
       fetchPayments(pagination.current, pagination.pageSize);
-      fetchStats();
+      // fetchStats();
     } catch (error) {
       message.error('Không thể cập nhật trạng thái');
       console.error('Error updating status:', error);
@@ -165,6 +178,17 @@ const PaymentsList: React.FC = () => {
     return texts[status] || status;
   };
 
+  const getStatusIcon = (status: string) => {
+    const icons: Record<string, React.ReactNode> = {
+      pending: <ClockCircleOutlined />,
+      completed: <CheckCircleOutlined />,
+      failed: <CloseCircleOutlined />,
+      cancelled: <CloseCircleOutlined />,
+      refunded: <RollbackOutlined />,
+    };
+    return icons[status] || null;
+  };
+
   const getPaymentMethodText = (method: string) => {
     const texts: Record<string, string> = {
       stripe: 'Stripe',
@@ -177,78 +201,137 @@ const PaymentsList: React.FC = () => {
 
   const columns = [
     {
-      title: 'ID',
+      title: (
+        <Space>
+          <CreditCardOutlined style={{ color: '#1890ff' }} />
+          <span>ID</span>
+        </Space>
+      ),
       dataIndex: '_id',
       key: '_id',
       width: 100,
-      render: (id: string) => id.substring(0, 8) + '...',
-    },
-    {
-      title: 'Khách hàng',
-      key: 'customer',
-      render: (record: Payment) => {
-        console.log('Customer render - record:', record);
-        console.log('Customer render - customerId:', record.customerId);
-        console.log('Customer render - customer:', record.customer);
-        return (
-          <div>
-            <div>{record.customerId?.fullName || record.customer?.fullName || 'Guest'}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>
-              {record.customerId?.email || record.customer?.email || 'guest@example.com'}
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      title: 'Phòng',
-      key: 'room',
-      render: (record: Payment) => {
-        console.log('Room render - record:', record);
-        console.log('Room render - bookingId:', record.bookingId);
-        console.log('Room render - booking:', record.booking);
-        return (
-          <div>
-            <div>{record.bookingId?.roomId?.roomNumber || record.booking?.roomId?.roomNumber || 'N/A'}</div>
-            <div style={{ fontSize: '12px', color: '#666' }}>
-              {record.bookingId?.roomId?.typeId?.name || record.booking?.roomId?.typeId?.name || 'N/A'}
-            </div>
-          </div>
-        );
-      },
-    },
-    {
-      title: 'Số tiền',
-      dataIndex: 'amount',
-      key: 'amount',
-      render: (amount: number, record: Payment) => (
-        <span>{amount.toLocaleString()} {record.currency}</span>
+      render: (id: string) => (
+        <Space>
+          <CreditCardOutlined style={{ color: '#1890ff', fontSize: 12 }} />
+          <Typography.Text code>{id.substring(0, 8)}...</Typography.Text>
+        </Space>
       ),
     },
     {
-      title: 'Phương thức',
-      dataIndex: 'paymentMethod',
-      key: 'paymentMethod',
-      render: (method: string) => getPaymentMethodText(method),
+      title: "Khách hàng",
+      key: 'customer',
+      render: (record: Payment) => {
+        const name = record.customerId?.fullName || record.customer?.fullName || 'Guest';
+        const email = record.customerId?.email || record.customer?.email || 'guest@example.com';
+        return (
+          <div>
+            <Typography.Text strong>{name}</Typography.Text>
+            <br />
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {email}
+            </Typography.Text>
+          </div>
+        );
+      },
     },
     {
-      title: 'Trạng thái',
+      title: (
+        <Space>
+          <HomeOutlined style={{ color: '#fa8c16' }} />
+          <span>Phòng</span>
+        </Space>
+      ),
+      key: 'room',
+      render: (record: Payment) => {
+        const roomNumber = record.bookingId?.roomId?.roomNumber || record.booking?.roomId?.roomNumber || 'N/A';
+        const roomType = record.bookingId?.roomId?.typeId?.name || record.booking?.roomId?.typeId?.name || 'N/A';
+        return (
+          <Space>
+            <HomeOutlined style={{ color: '#fa8c16', fontSize: 12 }} />
+            <div>
+              <Typography.Text strong>{roomNumber}</Typography.Text>
+              <br />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {roomType}
+              </Typography.Text>
+            </div>
+          </Space>
+        );
+      },
+    },
+    {
+      title: (
+        <Space>
+          <DollarOutlined style={{ color: '#52c41a' }} />
+          <span>Số tiền</span>
+        </Space>
+      ),
+      dataIndex: 'amount',
+      key: 'amount',
+      render: (amount: number, record: Payment) => (
+        <Space>
+          <DollarOutlined style={{ color: '#52c41a' }} />
+          <Typography.Text strong style={{ color: '#52c41a' }}>
+            {amount.toLocaleString()} {record.currency}
+          </Typography.Text>
+        </Space>
+      ),
+    },
+    {
+      title: (
+        <Space>
+          <CreditCardOutlined style={{ color: '#722ed1' }} />
+          <span>Phương thức</span>
+        </Space>
+      ),
+      dataIndex: 'paymentMethod',
+      key: 'paymentMethod',
+      render: (method: string) => (
+        <Tag color="purple" icon={<CreditCardOutlined />}>
+          {getPaymentMethodText(method)}
+        </Tag>
+      ),
+    },
+    {
+      title: (
+        <Space>
+          <CheckCircleOutlined style={{ color: '#722ed1' }} />
+          <span>Trạng thái</span>
+        </Space>
+      ),
       dataIndex: 'status',
       key: 'status',
       render: (status: string) => (
-        <Tag color={getStatusColor(status)}>
+        <Tag color={getStatusColor(status)} icon={getStatusIcon(status)}>
           {getStatusText(status)}
         </Tag>
       ),
     },
     {
-      title: 'Ngày thanh toán',
+      title: (
+        <Space>
+          <CalendarOutlined style={{ color: '#13c2c2' }} />
+          <span>Ngày thanh toán</span>
+        </Space>
+      ),
       dataIndex: 'paidAt',
       key: 'paidAt',
-      render: (paidAt: string) => paidAt ? new Date(paidAt).toLocaleDateString('vi-VN') : 'N/A',
+      render: (paidAt: string) => (
+        <Space>
+          <CalendarOutlined style={{ color: '#13c2c2', fontSize: 12 }} />
+          <Typography.Text type="secondary">
+            {paidAt ? new Date(paidAt).toLocaleDateString('vi-VN') : 'N/A'}
+          </Typography.Text>
+        </Space>
+      ),
     },
     {
-      title: 'Thao tác',
+      title: (
+        <Space>
+          <EditOutlined style={{ color: '#722ed1' }} />
+          <span>Thao tác</span>
+        </Space>
+      ),
       key: 'actions',
       width: 120,
       render: (record: Payment) => (
@@ -316,7 +399,12 @@ const PaymentsList: React.FC = () => {
       </Row>
 
       <Card
-        title="Danh sách thanh toán"
+        title={
+          <Space>
+            <CreditCardOutlined style={{ color: '#1890ff' }} />
+            <span>Danh sách thanh toán</span>
+          </Space>
+        }
         extra={
           <Button
             icon={<ReloadOutlined />}

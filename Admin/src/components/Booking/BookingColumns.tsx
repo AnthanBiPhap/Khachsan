@@ -1,4 +1,4 @@
-import { Space, Tag, Avatar, Typography, Button } from "antd";
+import { Space, Tag, Typography, Button } from "antd";
 import { 
   UserOutlined, 
   CalendarOutlined, 
@@ -20,31 +20,20 @@ export const bookingColumns = (
   handleDetail?: (record: Booking) => void
 ): ColumnsType<Booking> => [
   {
-    title: (
-      <Space>
-        <UserOutlined style={{ color: '#1890ff' }} />
-        <span>Khách hàng</span>
-      </Space>
-    ),
+    title: "Khách hàng",
     key: "customer",
+    align: 'center',
     render: (_, r) => {
       const fullName = r.customerId?.fullName || r.guestInfo?.fullName || '-';
       const emailOrPhone = r.customerId?.email || r.guestInfo?.phoneNumber || '';
       const content = (
-        <Space>
-          <Avatar 
-            size="small" 
-            icon={<UserOutlined />} 
-            style={{ backgroundColor: r.customerId ? '#1890ff' : '#52c41a' }}
-          />
-          <div>
-            <Typography.Text strong>{fullName}</Typography.Text>
-            <br />
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {emailOrPhone}
-            </Typography.Text>
-          </div>
-        </Space>
+        <div style={{ textAlign: 'center' }}>
+          <Typography.Text strong>{fullName}</Typography.Text>
+          <br />
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {emailOrPhone}
+          </Typography.Text>
+        </div>
       );
       return handleDetail ? (
         <Button 

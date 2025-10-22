@@ -36,15 +36,19 @@ export const servicesColumns = (
             style={{ backgroundColor: '#1890ff' }}
           />
           <div>
-            <Typography.Text strong>{r.name}</Typography.Text>
-            <br />
-            <Tooltip title={r.description} placement="topLeft">
+            <Space>
+              <Typography.Text strong>{r.name}</Typography.Text>
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {r.description && r.description.length > 50 
-                  ? `${r.description.substring(0, 50)}...` 
-                  : r.description}
+                -
               </Typography.Text>
-            </Tooltip>
+              <Tooltip title={r.description} placement="topLeft">
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {r.description && r.description.length > 30 
+                    ? `${r.description.substring(0, 30)}...` 
+                    : r.description}
+                </Typography.Text>
+              </Tooltip>
+            </Space>
           </div>
         </Space>
       );
