@@ -11,6 +11,7 @@ import {
   EnvironmentOutlined,
   StarOutlined,
   FileDoneOutlined,
+  CreditCardOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Layout, Menu, theme } from 'antd';
@@ -51,6 +52,7 @@ const menuItems = [
   createMenuItem('Locations', '/locations', <EnvironmentOutlined />),
   createMenuItem('Reviews', '/reviews', <StarOutlined />),
   createMenuItem('Invoices', '/invoices', <FileTextOutlined />),
+  createMenuItem('Payments', '/payments', <CreditCardOutlined />),
   // createMenuItem('Invoice Items', '/invoiceitems', <FileTextOutlined />),
 ];
 

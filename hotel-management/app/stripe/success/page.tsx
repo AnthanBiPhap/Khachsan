@@ -74,6 +74,45 @@ export default function StripeSuccessPage() {
       const data = await res.json();
       const { booking, invoice } = data?.data;
 
+      // Tạo payment record trong database
+      if (booking?._id) {
+        try {
+          const paymentPayload = {
+            bookingId: booking._id,
+            customerId: bookingInfo.customerId,
+            paymentMethod: 'stripe',
+            amount: bookingInfo.totalPrice,
+            currency: 'VND',
+            stripeSessionId: sessionId,
+            status: 'completed',
+            paidAt: new Date().toISOString(),
+            metadata: {
+              roomName: bookingInfo.roomName,
+              checkIn: bookingInfo.checkIn,
+              checkOut: bookingInfo.checkOut,
+              guests: bookingInfo.guests,
+              services: bookingInfo.services || [],
+            },
+            notes: 'Thanh toán qua Stripe Checkout',
+          };
+
+          const paymentRes = await fetch('/api/payments', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(paymentPayload),
+          });
+
+          if (paymentRes.ok) {
+            console.log('✅ Payment record created successfully');
+          } else {
+            console.warn('⚠️ Failed to create payment record, but booking was created');
+          }
+        } catch (paymentError) {
+          console.warn('⚠️ Error creating payment record:', paymentError);
+          // Không throw error vì booking đã được tạo thành công
+        }
+      }
+
       setInvoiceId(invoice?._id || null);
       message.success('Thanh toán & đặt phòng thành công!', 5);
       setIsProcessing(false);

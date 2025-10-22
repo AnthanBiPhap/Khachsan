@@ -260,6 +260,18 @@ const updateById = async (id: string, payload: any) => {
     }
   }
 
+  // Đồng bộ payment với booking khi paymentStatus thay đổi
+  if (updatedBooking.paymentStatus !== previousPaymentStatus) {
+    try {
+      const paymentService = require('./payments.service').default;
+      await paymentService.syncPaymentWithBooking(updatedBooking._id.toString(), updatedBooking.paymentStatus);
+      console.log(`✅ Đồng bộ payment cho booking ${updatedBooking._id}: ${previousPaymentStatus} → ${updatedBooking.paymentStatus}`);
+    } catch (error) {
+      console.error(`❌ Lỗi đồng bộ payment cho booking ${updatedBooking._id}:`, error);
+      // Không throw error để không làm crash API
+    }
+  }
+
   // Log refund transition
   if (updatedBooking.paymentStatus === "refunded" && previousPaymentStatus !== "refunded") {
     await bookingStatusService.create({
