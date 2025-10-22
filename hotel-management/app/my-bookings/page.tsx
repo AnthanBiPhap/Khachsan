@@ -110,6 +110,21 @@ export default function MyBookingsPage() {
     }).format(amount);
   };
 
+  // Kiểm tra có thể hoàn tiền hay không dựa trên thời gian hủy
+  const canRefund = (checkInDate: string) => {
+    const checkIn = new Date(checkInDate);
+    const now = new Date();
+    const daysUntilCheckIn = Math.ceil((checkIn.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    return daysUntilCheckIn >= 7;
+  };
+
+  // Tính số ngày còn lại đến ngày check-in
+  const getDaysUntilCheckIn = (checkInDate: string) => {
+    const checkIn = new Date(checkInDate);
+    const now = new Date();
+    return Math.ceil((checkIn.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'paid':
@@ -363,6 +378,20 @@ export default function MyBookingsPage() {
                               </div>
                               
                               <div className="flex justify-between items-center">
+                                <span className="text-sm text-blue-700">Có thể hoàn tiền:</span>
+                                <span className={`text-sm font-medium ${canRefund(booking.checkIn) ? 'text-green-600' : 'text-red-600'}`}>
+                                  {canRefund(booking.checkIn) ? '✅ Có thể hoàn tiền' : '❌ Không thể hoàn tiền'}
+                                </span>
+                              </div>
+                              
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-blue-700">Thời gian còn lại:</span>
+                                <span className="text-sm font-medium text-blue-900">
+                                  {getDaysUntilCheckIn(booking.checkIn)} ngày
+                                </span>
+                              </div>
+                              
+                              <div className="flex justify-between items-center">
                                 <span className="text-sm text-blue-700">Số tiền hoàn:</span>
                                 <span className="text-sm font-medium text-blue-900">
                                   {booking.paymentStatus === 'refunded' 
@@ -393,6 +422,13 @@ export default function MyBookingsPage() {
                               </div>
                             </div>
                             
+                            {/* Thông báo chính sách hoàn tiền */}
+                            <div className="mt-3 p-2 bg-blue-50 rounded-md border border-blue-200">
+                              <p className="text-xs text-blue-700">
+                                📋 <strong>Chính sách hoàn tiền:</strong> Chỉ hoàn tiền khi hủy trước 7 ngày check-in
+                              </p>
+                            </div>
+                            
                             {booking.paymentStatus === 'refunded' && (
                               <div className="mt-3 p-2 bg-green-50 rounded-md border border-green-200">
                                 <p className="text-xs text-green-700">
@@ -407,6 +443,14 @@ export default function MyBookingsPage() {
                                 <p className="text-xs text-yellow-700">
                                   ⏳ Yêu cầu hoàn tiền đang được xử lý. 
                                   Chúng tôi sẽ thông báo khi hoàn tất.
+                                </p>
+                              </div>
+                            )}
+                            
+                            {booking.paymentStatus === 'paid' && !canRefund(booking.checkIn) && (
+                              <div className="mt-3 p-2 bg-red-50 rounded-md border border-red-200">
+                                <p className="text-xs text-red-700">
+                                  ⚠️ Không thể hoàn tiền vì còn ít hơn 7 ngày đến ngày check-in
                                 </p>
                               </div>
                             )}
@@ -465,7 +509,7 @@ export default function MyBookingsPage() {
                       {actionLoadingId === booking._id ? 'Đang hủy...' : 'Hủy đặt phòng'}
                     </Button>
                   )}
-                  {booking.paymentStatus === 'paid' && (
+                  {booking.paymentStatus === 'paid' && canRefund(booking.checkIn) && (
                     <Button
                       variant="outline"
                       className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto"
@@ -510,6 +554,16 @@ export default function MyBookingsPage() {
                       }}
                     >
                       {actionLoadingId === booking._id ? 'Đang gửi yêu cầu...' : 'Yêu cầu hoàn tiền'}
+                    </Button>
+                  )}
+                  
+                  {booking.paymentStatus === 'paid' && !canRefund(booking.checkIn) && (
+                    <Button
+                      variant="outline"
+                      className="text-gray-400 border-gray-200 cursor-not-allowed w-full sm:w-auto"
+                      disabled={true}
+                    >
+                      Không thể hoàn tiền (còn {getDaysUntilCheckIn(booking.checkIn)} ngày)
                     </Button>
                   )}
                 </div>
