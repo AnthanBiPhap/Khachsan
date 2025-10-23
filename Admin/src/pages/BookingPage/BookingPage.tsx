@@ -120,9 +120,9 @@ export default function BookingPage() {
           </Typography.Title>
           <Alert
             message={
-              <span>
-                <IdcardOutlined style={{ marginRight: 8 }} />
-                Quy định check-in: Khi khách check-in phải cung cấp giấy tờ tùy thân (CMND/CCCD) để xác minh danh tính, đồng thời cung cấp đầy đủ họ tên, số điện thoại và tuổi.
+              <span style={{ fontSize: '13px', lineHeight: '1.6' }}>
+                <IdcardOutlined style={{ marginRight: 12, fontSize: '12px' }} />
+                <strong>Quy định check-in:</strong> Khi khách check-in phải cung cấp giấy tờ tùy thân (CMND/CCCD) để xác minh danh tính, đồng thời cung cấp đầy đủ họ tên, số điện thoại và tuổi.
               </span>
 
             }

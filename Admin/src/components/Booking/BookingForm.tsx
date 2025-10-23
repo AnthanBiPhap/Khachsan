@@ -371,7 +371,7 @@ export default function BookingForm({
               style={{ marginBottom: 12 }}
               title={
                 <Space>
-                  <span>{guest.isMainGuest ? "👑 Khách chính" : `Khách ${index + 1}`}</span>
+                  <span>{guest.isMainGuest ? "Khách chính" : `Khách ${index + 1}`}</span>
                   {index === 0 && <Tag color="green">Người đặt phòng</Tag>}
                 </Space>
               }
@@ -675,49 +675,41 @@ export default function BookingForm({
           ))}
         </Card>
 
-        {/* Thanh toán */}
-        <Card 
-          title={
-            <Space>
-              <DollarOutlined style={{ color: '#52c41a' }} />
-              <span>Thông tin thanh toán</span>
-            </Space>
-          }
-          size="small"
-        >
-          <Form.Item
-            name="paymentStatus"
-            label={
+          {/* Thanh toán */}
+          <Card 
+            title={
               <Space>
-                <DollarOutlined />
-                <span>Trạng thái thanh toán</span>
+                <DollarOutlined style={{ color: '#52c41a' }} />
+                <span>Thông tin thanh toán</span>
               </Space>
             }
-            initialValue={booking?.paymentStatus || 'pending'}
+            size="small"
           >
+            <Form.Item
+              name="paymentStatus"
+              label={
+                <Space>
+                  <DollarOutlined />
+                  <span>Trạng thái thanh toán</span>
+                </Space>
+              }
+              initialValue={booking?.paymentStatus || 'pending'}
+            >
             <Select style={{ width: '100%' }}>
               <Select.Option value="pending">
-                <Space>
-                  <Tag color="orange">Chờ thanh toán</Tag>
-                </Space>
+                <Tag color="orange" style={{ display: 'flex', justifyContent: 'center' }}>Chờ thanh toán</Tag>
               </Select.Option>
               <Select.Option value="paid">
-                <Space>
-                  <Tag color="green">Đã thanh toán</Tag>
-                </Space>
+                <Tag color="green" style={{ display: 'flex', justifyContent: 'center' }}>Đã thanh toán</Tag>
               </Select.Option>
               <Select.Option value="failed">
-                <Space>
-                  <Tag color="red">Thanh toán thất bại</Tag>
-                </Space>
+                <Tag color="red" style={{ display: 'flex', justifyContent: 'center' }}>Thanh toán thất bại</Tag>
               </Select.Option>
               <Select.Option value="refunded">
-                <Space>
-                  <Tag color="blue">Đã hoàn tiền</Tag>
-                </Space>
+                <Tag color="blue" style={{ display: 'flex', justifyContent: 'center' }}>Đã hoàn tiền</Tag>
               </Select.Option>
             </Select>
-          </Form.Item>
+            </Form.Item>
           
           <Divider style={{ margin: '16px 0' }} />
           
@@ -773,8 +765,8 @@ export default function BookingForm({
           }}>
             <Col span={12}>
               <Space>
-                <DollarOutlined style={{ color: '#1890ff', fontSize: 20 }} />
-                <span>Tổng cộng:</span>
+                <DollarOutlined style={{ color: '#1890ff', fontSize: 16, marginTop: 6 }} />
+                <span style={{ fontSize: 16 }}>Tổng cộng:</span>
               </Space>
             </Col>
             <Col span={12} style={{ textAlign: "right" }}>
