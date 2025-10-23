@@ -2,13 +2,12 @@ import {
   Table,
   Typography,
   message,
-  Button,
   Drawer,
   Descriptions,
   Tag,
 } from "antd";
 import { useEffect, useState } from "react";
-import { CalendarOutlined, PlusOutlined } from "@ant-design/icons";
+import { CalendarOutlined } from "@ant-design/icons";
 import BookingForm from "../../components/BookingStatus/BookingStatusForm";
 import type { BookingStatusLog } from "../../types/bookingstatus";
 import {
@@ -57,6 +56,25 @@ export default function BookingPage() {
   useEffect(() => {
     loadBookings();
   }, []);
+
+  // Lắng nghe event từ trang Booking để refresh dữ liệu
+  useEffect(() => {
+    const handleBookingUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      console.log('🔄 BookingStatusPage received bookingUpdated event:', customEvent.detail);
+      // Delay một chút để đảm bảo backend đã xử lý xong
+      setTimeout(() => {
+        console.log('🔄 Refreshing booking status data...');
+        loadBookings(pagination.current, pagination.pageSize);
+      }, 1000); // Tăng delay để đảm bảo backend đã xử lý xong
+    };
+
+    window.addEventListener('bookingUpdated', handleBookingUpdated);
+    
+    return () => {
+      window.removeEventListener('bookingUpdated', handleBookingUpdated);
+    };
+  }, [pagination.current, pagination.pageSize]); // Thêm dependency để tránh stale closure
 
   const handleDelete = async (id: string) => {
     try {

@@ -7,32 +7,45 @@ const bookingSchema = new Schema(
       ref: "User",
       required: false,
     },
-    guestInfo: {
-      fullName: {
-        type: String,
-        required: function (this: any) {
-          return !this.customerId;
+    guests: [
+      {
+        fullName: {
+          type: String,
+          required: [true, "Tên khách hàng là bắt buộc"],
+        },
+        idNumber: {
+          type: String,
+          required: [true, "Số CMND/CCCD là bắt buộc"],
+        },
+        age: {
+          type: Number,
+          required: [true, "Tuổi là bắt buộc"],
+          min: [0, "Tuổi không hợp lệ"],
+        },
+        phoneNumber: {
+          type: String,
+          required: [true, "Số điện thoại là bắt buộc"],
+        },
+        email: { 
+          type: String,
+          required: false,
+        },
+        isMainGuest: {
+          type: Boolean,
+          default: false,
         },
       },
-      idNumber: {
-        type: String,
-        required: function (this: any) {
-          return !this.customerId;
+    ],
+    guestCount: {
+      type: Number,
+      required: [true, "Cần khai báo số lượng khách"],
+      min: 1,
+      validate: {
+        validator: function(this: any, value: number) {
+          return value === this.guests.length;
         },
+        message: "Số lượng khách phải khớp với danh sách khách",
       },
-      age: {
-        type: Number,
-        required: function (this: any) {
-          return !this.customerId;
-        },
-      },
-      phoneNumber: {
-        type: String,
-        required: function (this: any) {
-          return !this.customerId;
-        },
-      },
-      email: { type: String },
     },
     roomId: {
       type: Schema.Types.ObjectId,
@@ -46,11 +59,6 @@ const bookingSchema = new Schema(
     checkOut: {
       type: Date,
       required: [true, "Ngày trả phòng là bắt buộc"],
-    },
-    guests: {
-      type: Number,
-      required: [true, "Cần khai báo số lượng khách"],
-      min: 1,
     },
     services: [
       {

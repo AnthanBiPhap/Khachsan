@@ -12,7 +12,7 @@ import {
   ExclamationCircleOutlined
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
-import type { BookingStatusLog } from "../../types/bookingstatus";
+import type { BookingStatusLog, BookingStatusGuestInfo } from "../../types/bookingstatus";
 
 export const bookingStatusColumns = (
   handleEdit: (record: BookingStatusLog) => void,
@@ -23,10 +23,17 @@ export const bookingStatusColumns = (
     title: "Booking",
     key: "booking",
     render: (_, record) => {
-      const customerName =
-        record.bookingId?.customerId?.fullName ||
-        record.bookingId?.guestInfo?.fullName ||
-        "Khách walk-in";
+      // Sử dụng logic mới với mảng guests
+      let customerName = "Khách walk-in";
+      
+      if (record.bookingId?.customerId?.fullName) {
+        // Khách hàng online
+        customerName = record.bookingId.customerId.fullName;
+      } else if (record.bookingId?.guests && record.bookingId.guests.length > 0) {
+        // Khách hàng walk_in - lấy tên khách chính
+        const mainGuest = record.bookingId.guests.find((guest: BookingStatusGuestInfo) => guest.isMainGuest) || record.bookingId.guests[0];
+        customerName = mainGuest?.fullName || "Khách walk-in";
+      }
 
       const content = (
         <div>
@@ -74,7 +81,10 @@ export const bookingStatusColumns = (
     dataIndex: "bookingId",
     key: "bookingType",
     render: (_, record) => {
-      const isOnline = record?.actorName !== "Guest";
+      // Sử dụng source của booking để xác định hình thức đặt
+      const bookingSource = record?.bookingId?.source;
+      const isOnline = bookingSource === "online";
+      
       return (
         <Tag 
           color={isOnline ? "blue" : "purple"}
@@ -88,17 +98,35 @@ export const bookingStatusColumns = (
   {
     title: "Người thao tác",
     key: "actor",
-    render: (_, record) => (
-      <div>
-        <Typography.Text strong>
-          {record.actorId?.fullName || "Admin / Lễ tân"}
-        </Typography.Text>
-        <br />
-        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          {record.actorId?.email || "-"}
-        </Typography.Text>
-      </div>
-    ),
+    render: (_, record) => {
+      // Xác định tên người thao tác
+      const actorName = record.actorName || record.actorId?.fullName || "Admin / Lễ tân";
+      
+      // Xác định thông tin liên lạc
+      let contactInfo = "-";
+      if (record.actorId?.phoneNumber || record.actorId?.email) {
+        // Có actorId (admin/staff hoặc khách hàng online)
+        contactInfo = record.actorId?.phoneNumber || record.actorId?.email || "-";
+      } else if (record.actorName && record.bookingId?.guests && record.bookingId.guests.length > 0) {
+        // Khách hàng walk_in - tìm thông tin liên lạc từ mảng guests
+        const mainGuest = record.bookingId.guests.find((guest: BookingStatusGuestInfo) => 
+          guest.fullName === record.actorName
+        );
+        if (mainGuest) {
+          contactInfo = mainGuest.phoneNumber || mainGuest.email || "-";
+        }
+      }
+
+      return (
+        <div>
+          <Typography.Text strong>{actorName}</Typography.Text>
+          <br />
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {contactInfo}
+          </Typography.Text>
+        </div>
+      );
+    },
   },
   {
     title: (
@@ -122,6 +150,7 @@ export const bookingStatusColumns = (
         refunded: { color: "blue", text: "Hoàn tiền", icon: <CloseCircleOutlined /> },
         refund_requested: { color: "purple", text: "Yêu cầu hoàn tiền", icon: <EditOutlined /> },
         failed: { color: "red", text: "Thanh toán thất bại", icon: <CloseCircleOutlined /> },
+        updated: { color: "orange", text: "Cập nhật thông tin", icon: <EditOutlined /> },
       };
       const item = map[action] || { color: "default", text: action, icon: null };
       return (

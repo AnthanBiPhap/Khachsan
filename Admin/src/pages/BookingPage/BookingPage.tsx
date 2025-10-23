@@ -90,12 +90,17 @@ export default function BookingPage() {
       loadBookings(pagination.current, pagination.pageSize);
       
       // Thông báo cho các trang khác refresh dữ liệu
+      console.log('📢 Dispatching bookingUpdated event for booking:', editingBooking?._id);
       window.dispatchEvent(new CustomEvent('bookingUpdated', { 
-        detail: { bookingId: editingBooking?._id } 
+        detail: { 
+          bookingId: editingBooking?._id,
+          action: editingBooking ? 'updated' : 'created',
+          timestamp: new Date().toISOString()
+        } 
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error saving booking:", error);
-      message.error(error.message || "Có lỗi xảy ra khi lưu đặt phòng");
+      message.error((error as Error)?.message || "Có lỗi xảy ra khi lưu đặt phòng");
     }
   };
 
@@ -192,22 +197,39 @@ export default function BookingPage() {
           <Descriptions column={1} bordered size="middle">
             {/* <Descriptions.Item label="ID">{detailItem._id}</Descriptions.Item> */}
             <Descriptions.Item label="Khách hàng">
-  {detailItem.customerId?.fullName ||
-    detailItem.guestInfo?.fullName ||
-    "-"}
-  <br />
-  <span style={{ color: "#888", fontSize: 12 }}>
-    {detailItem.customerId?.phoneNumber ||
-      detailItem.guestInfo?.phoneNumber ||
-      detailItem.customerId?.email ||
-      ""}
-  </span>
-</Descriptions.Item>
+              {(() => {
+                // Đảm bảo guests là array
+                const guests = Array.isArray(detailItem.guests) ? detailItem.guests : [];
+                const mainGuest = guests.find(guest => guest?.isMainGuest) || guests[0];
+                
+                const fullName = detailItem.customerId?.fullName || mainGuest?.fullName || "-";
+                const phoneOrEmail = detailItem.customerId?.phoneNumber || 
+                                   detailItem.customerId?.email || 
+                                   mainGuest?.phoneNumber || 
+                                   mainGuest?.email || "";
+                
+                return (
+                  <div>
+                    <div style={{ fontWeight: 500 }}>{String(fullName)}</div>
+                    {phoneOrEmail && (
+                      <div style={{ color: "#888", fontSize: 12, marginTop: 4 }}>
+                        {String(phoneOrEmail)}
+                      </div>
+                    )}
+                    {guests.length > 1 && (
+                      <div style={{ color: "#1890ff", fontSize: 12, marginTop: 4 }}>
+                        +{guests.length - 1} khách khác
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </Descriptions.Item>
 
 
             <Descriptions.Item label="Phòng">
               {detailItem.roomId?.roomNumber ||
-                (detailItem.roomId as any)?._id ||
+                (detailItem.roomId as { _id?: string })?._id ||
                 "-"}
             </Descriptions.Item>
             <Descriptions.Item label="Nhận/Trả">
@@ -220,8 +242,8 @@ export default function BookingPage() {
                 ? new Date(detailItem.checkOut).toLocaleString("vi-VN")
                 : "-"}
             </Descriptions.Item>
-            <Descriptions.Item label="Khách">
-              {detailItem.guests}
+            <Descriptions.Item label="Số khách">
+              {detailItem.guestCount || detailItem.guests?.length || 0} người
             </Descriptions.Item>
             <Descriptions.Item label="Tổng tiền">
               {new Intl.NumberFormat("vi-VN", {
@@ -244,17 +266,67 @@ export default function BookingPage() {
                 {detailItem.paymentStatus}
               </Tag>
             </Descriptions.Item>
+            {(() => {
+              const guests = Array.isArray(detailItem.guests) ? detailItem.guests : [];
+              if (guests.length === 0) return null;
+              
+              return (
+                <Descriptions.Item label="Danh sách khách hàng" span={2}>
+                  <div style={{ maxHeight: 200, overflowY: 'auto' }}>
+                    {guests.map((guest, index) => {
+                      // Đảm bảo guest là object hợp lệ
+                      if (!guest || typeof guest !== 'object') return null;
+                      
+                      return (
+                        <div 
+                          key={`guest-${index}`} 
+                          style={{ 
+                            padding: '8px 12px', 
+                            marginBottom: 8, 
+                            border: '1px solid #f0f0f0', 
+                            borderRadius: 6,
+                            backgroundColor: guest.isMainGuest ? '#f6ffed' : '#fafafa'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <span style={{ fontWeight: 500 }}>
+                                {guest.isMainGuest ? '' : ''}{String(guest.fullName || '')}
+                              </span>
+                              {guest.isMainGuest && (
+                                <Tag color="green" style={{ marginLeft: 8, fontSize: 10 }}>
+                                  Khách chính
+                                </Tag>
+                              )}
+                            </div>
+                            <div style={{ fontSize: 12, color: '#666' }}>
+                              {String(guest.age || 0)} tuổi
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                            <div>📱 {String(guest.phoneNumber || '')}</div>
+                            {guest.idNumber && <div>🆔 {String(guest.idNumber)}</div>}
+                            {guest.email && <div>📧 {String(guest.email)}</div>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </Descriptions.Item>
+              );
+            })()}
+            
             <Descriptions.Item label="Ghi chú">
               {detailItem.notes || "-"}
             </Descriptions.Item>
             <Descriptions.Item label="Tạo lúc">
               {detailItem.createdAt
-                ? new Date(detailItem.createdAt as any).toLocaleString("vi-VN")
+                ? new Date(detailItem.createdAt as string).toLocaleString("vi-VN")
                 : "-"}
             </Descriptions.Item>
             <Descriptions.Item label="Cập nhật">
               {detailItem.updatedAt
-                ? new Date(detailItem.updatedAt as any).toLocaleString("vi-VN")
+                ? new Date(detailItem.updatedAt as string).toLocaleString("vi-VN")
                 : "-"}
             </Descriptions.Item>
           </Descriptions>

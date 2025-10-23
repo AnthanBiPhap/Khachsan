@@ -7,8 +7,8 @@ import {
   Descriptions,
   Tag,
 } from "antd";
-import { useEffect, useState } from "react";
-import { FileTextOutlined, PlusOutlined } from "@ant-design/icons";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { FileTextOutlined } from "@ant-design/icons";
 import type { InvoiceItem } from "../../types/invoice";
 import { fetchInvoices, deleteInvoice } from "../../services/invoices.service";
 import { env } from "../../constanst/getEnvs";
@@ -23,22 +23,25 @@ export default function InvoicesPage() {
     pageSize: 10,
     total: 0,
   });
+  const paginationRef = useRef(pagination);
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<InvoiceItem | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [detailItem, setDetailItem] = useState<InvoiceItem | null>(null);
 
-  const load = async (page = 1, limit = 10) => {
+  const load = useCallback(async (page = 1, limit = 10) => {
     try {
       setLoading(true);
       const res = await fetchInvoices(page, limit);
       const list = Array.isArray(res.data) ? res.data : [];
       setItems(list);
-      setPagination({
+      const newPagination = {
         current: res.pagination?.page || 1,
         pageSize: res.pagination?.limit || 10,
-        total: res.pagination?.totalRecord || 0,
-      });
+        total: res.pagination?.total || 0,
+      };
+      setPagination(newPagination);
+      paginationRef.current = newPagination;
     } catch (e) {
       console.error(e);
       message.error("Không tải được danh sách hóa đơn");
@@ -46,7 +49,7 @@ export default function InvoicesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     load();
@@ -54,7 +57,7 @@ export default function InvoicesPage() {
     // Lắng nghe event booking được update để refresh invoice
     const handleBookingUpdate = () => {
       console.log('🔄 Booking updated, refreshing invoices...');
-      load(pagination.current, pagination.pageSize);
+      load(paginationRef.current.current, paginationRef.current.pageSize);
     };
     
     window.addEventListener('bookingUpdated', handleBookingUpdate);
@@ -62,7 +65,7 @@ export default function InvoicesPage() {
     return () => {
       window.removeEventListener('bookingUpdated', handleBookingUpdate);
     };
-  }, [pagination.current, pagination.pageSize]);
+  }, [load]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -100,9 +103,9 @@ export default function InvoicesPage() {
       setOpenForm(false);
       setEditing(null);
       load(pagination.current, pagination.pageSize);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Error saving invoice:", error);
-      message.error(error.message || "Có lỗi xảy ra khi lưu hóa đơn");
+      message.error((error as Error)?.message || "Có lỗi xảy ra khi lưu hóa đơn");
     }
   };
 
@@ -192,21 +195,37 @@ export default function InvoicesPage() {
                 : "-"}
             </Descriptions.Item>
             <Descriptions.Item label="Khách hàng">
-              {detailItem.customerId?.fullName ||
-                detailItem.bookingId?.guestInfo?.fullName ||
-                detailItem.customerId?._id ||
-                "-"}
-              {(
-                detailItem.customerId?.email ||
-                detailItem.bookingId?.guestInfo?.email ||
-                detailItem.bookingId?.guestInfo?.phoneNumber
-              ) && (
-                <div style={{ color: "#888", fontSize: 12 }}>
-                  {detailItem.customerId?.email ||
-                    detailItem.bookingId?.guestInfo?.email ||
-                    detailItem.bookingId?.guestInfo?.phoneNumber}
-                </div>
-              )}
+              {(() => {
+                // Logic mới với mảng guests
+                let customerName = "-";
+                let customerContact = "";
+                
+                if (detailItem.customerId?.fullName) {
+                  // Khách hàng online
+                  customerName = detailItem.customerId.fullName;
+                  customerContact = detailItem.customerId.email || detailItem.customerId.phoneNumber || "";
+                } else if (detailItem.bookingId?.guests && detailItem.bookingId.guests.length > 0) {
+                  // Khách hàng walk_in - lấy tên khách chính
+                  const mainGuest = detailItem.bookingId.guests.find((guest) => guest.isMainGuest) || detailItem.bookingId.guests[0];
+                  customerName = mainGuest?.fullName || "-";
+                  customerContact = mainGuest?.phoneNumber || mainGuest?.email || "";
+                } else if (detailItem.bookingId?.guestInfo?.fullName) {
+                  // Fallback cho dữ liệu cũ
+                  customerName = detailItem.bookingId.guestInfo.fullName;
+                  customerContact = detailItem.bookingId.guestInfo.phoneNumber || detailItem.bookingId.guestInfo.email || "";
+                }
+                
+                return (
+                  <div>
+                    <div>{customerName}</div>
+                    {customerContact && (
+                      <div style={{ color: "#888", fontSize: 12 }}>
+                        {customerContact}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </Descriptions.Item>
             <Descriptions.Item label="Tổng tiền">
               {new Intl.NumberFormat("vi-VN", {

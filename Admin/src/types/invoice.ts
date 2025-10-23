@@ -2,17 +2,25 @@ export interface BookingRef {
   _id: string;
   checkIn?: string;
   checkOut?: string;
+  source?: "online" | "walk_in";
   guestInfo?: {
     fullName?: string;
     email?: string;
     phoneNumber?: string;
   };
+  guests?: Array<{
+    fullName?: string;
+    email?: string;
+    phoneNumber?: string;
+    isMainGuest?: boolean;
+  }>;
 }
 
 export interface CustomerRef {
   _id: string;
   fullName?: string;
   email?: string;
+  phoneNumber?: string;
 }
 
 export type InvoiceStatus = "pending" | "paid" | "failed" | "refunded" | string;

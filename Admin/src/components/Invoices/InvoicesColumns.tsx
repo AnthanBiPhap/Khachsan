@@ -60,16 +60,33 @@ export const invoicesColumns = (
     title: "Khách hàng",
     key: "customer",
     render: (_, r) => {
-      const name = r.customerId?.fullName || r.bookingId?.guestInfo?.fullName || '-';
-      const email = r.customerId?.email || r.bookingId?.guestInfo?.email || '';
+      // Logic mới với mảng guests
+      let customerName = "-";
+      let customerContact = "";
+      
+      if (r.customerId?.fullName) {
+        // Khách hàng online
+        customerName = r.customerId.fullName;
+        customerContact = r.customerId.email || r.customerId.phoneNumber || "";
+      } else if (r.bookingId?.guests && r.bookingId.guests.length > 0) {
+        // Khách hàng walk_in - lấy tên khách chính
+        const mainGuest = r.bookingId.guests.find((guest) => guest.isMainGuest) || r.bookingId.guests[0];
+        customerName = mainGuest?.fullName || "-";
+        customerContact = mainGuest?.phoneNumber || mainGuest?.email || "";
+      } else if (r.bookingId?.guestInfo?.fullName) {
+        // Fallback cho dữ liệu cũ
+        customerName = r.bookingId.guestInfo.fullName;
+        customerContact = r.bookingId.guestInfo.phoneNumber || r.bookingId.guestInfo.email || "";
+      }
+      
       return (
         <div>
-          <Typography.Text strong>{name}</Typography.Text>
-          {email && (
+          <Typography.Text strong>{customerName}</Typography.Text>
+          {customerContact && (
             <>
               <br />
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {email}
+                {customerContact}
               </Typography.Text>
             </>
           )}

@@ -17,12 +17,26 @@ import {
 import Link from 'next/link';
 import { bookingService } from '@/services/bookingService';
 
+type GuestInfo = {
+  fullName: string;
+  phoneNumber: string;
+  idNumber?: string;
+  age?: number;
+  email?: string;
+  isMainGuest?: boolean;
+  _id?: string;
+};
+
 type Booking = {
   _id: string;
-  guestInfo: {
+  customerId?: {
+    _id: string;
     fullName: string;
-    phoneNumber: string;
+    email?: string;
+    phoneNumber?: string;
   };
+  guests: GuestInfo[]; // Mảng khách hàng mới
+  guestCount: number; // Số lượng khách
   roomId: {
     _id: string;
     roomNumber: string;
@@ -30,7 +44,6 @@ type Booking = {
   };
   checkIn: string;
   checkOut: string;
-  guests: number;
   totalPrice: number;
   paymentStatus: 'pending' | 'paid' | 'cancelled' | 'completed' | 'refunded' | 'failed' | 'refund_requested';
   services?: Array<{
@@ -249,7 +262,7 @@ export default function MyBookingsPage() {
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
                   <div className="mb-4 sm:mb-0">
                     <h2 className="text-xl font-semibold text-gray-900">
-                      Phòng {booking.roomId.roomNumber}
+                      Phòng {String(booking.roomId?.roomNumber || '')}
                     </h2>
                     <div className="mt-1">
                       {getStatusBadge(booking.paymentStatus)}
@@ -258,7 +271,7 @@ export default function MyBookingsPage() {
                   <div className="text-right">
                     <p className="text-sm text-gray-500">Mã đặt phòng</p>
                     <p className="font-mono font-medium">
-                      {booking._id.slice(-8).toUpperCase()}
+                      {String(booking._id || '').slice(-8).toUpperCase()}
                     </p>
                   </div>
                 </div>
@@ -295,7 +308,7 @@ export default function MyBookingsPage() {
                         <Users className="h-5 w-5 text-gray-400 mr-3" />
                         <div>
                           <p className="text-sm text-gray-500">Số khách</p>
-                          <p className="font-medium">{booking.guests} người</p>
+                          <p className="font-medium">{String(booking.guestCount || booking.guests?.length || 0)} người</p>
                         </div>
                       </div>
                     </div>
@@ -308,7 +321,7 @@ export default function MyBookingsPage() {
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-gray-600">Giá phòng</span>
-                        <span>{formatCurrency(booking.totalPrice)}</span>
+                        <span>{formatCurrency(Number(booking.totalPrice) || 0)}</span>
                       </div>
 
                       {booking.services && booking.services.length > 0 && (
@@ -337,7 +350,7 @@ export default function MyBookingsPage() {
                       <div className="pt-2 mt-2 border-t border-gray-200">
                         <div className="flex justify-between font-semibold">
                           <span>Tổng cộng</span>
-                          <span>{formatCurrency(booking.totalPrice)}</span>
+                          <span>{formatCurrency(Number(booking.totalPrice) || 0)}</span>
                         </div>
                       </div>
 
@@ -387,7 +400,7 @@ export default function MyBookingsPage() {
                               <div className="flex justify-between items-center">
                                 <span className="text-sm text-blue-700">Thời gian còn lại:</span>
                                 <span className="text-sm font-medium text-blue-900">
-                                  {getDaysUntilCheckIn(booking.checkIn)} ngày
+                                  {String(getDaysUntilCheckIn(booking.checkIn))} ngày
                                 </span>
                               </div>
                               
@@ -395,7 +408,7 @@ export default function MyBookingsPage() {
                                 <span className="text-sm text-blue-700">Số tiền hoàn:</span>
                                 <span className="text-sm font-medium text-blue-900">
                                   {booking.paymentStatus === 'refunded' 
-                                    ? formatCurrency(booking.totalPrice)
+                                    ? formatCurrency(Number(booking.totalPrice) || 0)
                                     : '0 VND'
                                   }
                                 </span>
@@ -465,7 +478,7 @@ export default function MyBookingsPage() {
                   <div className="mt-4 p-3 bg-blue-50 rounded-md">
                     <p className="text-sm text-blue-700">
                       <span className="font-medium">Ghi chú:</span>{' '}
-                      {booking.notes}
+                      {String(booking.notes || '')}
                     </p>
                   </div>
                 )}
@@ -563,7 +576,7 @@ export default function MyBookingsPage() {
                       className="text-gray-400 border-gray-200 cursor-not-allowed w-full sm:w-auto"
                       disabled={true}
                     >
-                      Không thể hoàn tiền (còn {getDaysUntilCheckIn(booking.checkIn)} ngày)
+                      Không thể hoàn tiền (còn {String(getDaysUntilCheckIn(booking.checkIn))} ngày)
                     </Button>
                   )}
                 </div>

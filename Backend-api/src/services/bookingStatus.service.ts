@@ -20,13 +20,13 @@ const getAll = async (query: any) => {
   const logs = await BookingStatus.find(where)
   .populate({
     path: "bookingId",
-    select: "_id checkIn checkOut roomId customerId", // thêm roomId
+    select: "_id checkIn checkOut roomId customerId source guests guestCount", // thêm source, guests, guestCount
     populate: [
-      { path: "customerId", select: "fullName email" },
-      { path: "roomId", select: "roomNumber typeId" }, // populate roomId để lấy roomNumber
+      { path: "customerId", select: "fullName email phoneNumber" },
+      { path: "roomId", select: "roomNumber typeId" },
     ],
   })
-  .populate("actorId", "fullName email")
+  .populate("actorId", "fullName email phoneNumber")
   .skip((page - 1) * limit)
   .limit(limit)
   .sort(sortObject);
@@ -48,10 +48,10 @@ const getById = async (id: string) => {
   const log = await BookingStatus.findById(id)
     .populate({
       path: "bookingId",
-      select: "_id checkIn checkOut roomNumber customerId guestInfo",
-      populate: { path: "customerId", select: "fullName email" },
+      select: "_id checkIn checkOut roomNumber customerId source guests guestCount",
+      populate: { path: "customerId", select: "fullName email phoneNumber" },
     })
-    .populate("actorId", "fullName email");
+    .populate("actorId", "fullName email phoneNumber");
 
   if (!log) throw createError(404, "Booking status not found");
   return log;
@@ -69,10 +69,10 @@ const create = async (payload: any) => {
   const savedLog = await log.save();
   await savedLog.populate({
     path: "bookingId",
-    select: "_id checkIn checkOut roomNumber customerId guestInfo",
-    populate: { path: "customerId", select: "fullName email" },
+    select: "_id checkIn checkOut roomNumber customerId source guests guestCount",
+    populate: { path: "customerId", select: "fullName email phoneNumber" },
   });
-  await savedLog.populate("actorId", "fullName email");
+  await savedLog.populate("actorId", "fullName email phoneNumber");
   return savedLog;
 };
 
@@ -89,10 +89,10 @@ const updateById = async (id: string, payload: any) => {
   const updatedLog = await log.save();
   await updatedLog.populate({
     path: "bookingId",
-    select: "_id checkIn checkOut roomNumber customerId guestInfo",
-    populate: { path: "customerId", select: "fullName email" },
+    select: "_id checkIn checkOut roomNumber customerId source guests guestCount",
+    populate: { path: "customerId", select: "fullName email phoneNumber" },
   });
-  await updatedLog.populate("actorId", "fullName email");
+  await updatedLog.populate("actorId", "fullName email phoneNumber");
   return updatedLog;
 };
 

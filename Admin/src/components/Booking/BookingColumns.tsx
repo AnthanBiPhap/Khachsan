@@ -24,8 +24,12 @@ export const bookingColumns = (
     key: "customer",
     align: 'center',
     render: (_, r) => {
-      const fullName = r.customerId?.fullName || r.guestInfo?.fullName || '-';
-      const emailOrPhone = r.customerId?.email || r.guestInfo?.phoneNumber || '';
+      // Lấy thông tin khách chính từ mảng guests
+      const mainGuest = r.guests?.find(guest => guest.isMainGuest) || r.guests?.[0];
+      const fullName = r.customerId?.fullName || mainGuest?.fullName || '-';
+      const emailOrPhone = r.customerId?.email || mainGuest?.phoneNumber || '';
+      const guestCount = r.guestCount || r.guests?.length || 0;
+      
       const content = (
         <div style={{ textAlign: 'center' }}>
           <Typography.Text strong>{fullName}</Typography.Text>
@@ -33,6 +37,13 @@ export const bookingColumns = (
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             {emailOrPhone}
           </Typography.Text>
+          {guestCount > 1 && (
+            <div>
+              <Tag color="blue" size="small">
+                +{guestCount - 1} khách khác
+              </Tag>
+            </div>
+          )}
         </div>
       );
       return handleDetail ? (
@@ -128,14 +139,17 @@ export const bookingColumns = (
         <span>Khách</span>
       </Space>
     ),
-    dataIndex: "guests",
-    key: "guests",
+    dataIndex: "guestCount",
+    key: "guestCount",
     align: 'center',
-    render: (guests) => (
-      <Tag color="cyan" icon={<UserOutlined />}>
-        {guests} người
-      </Tag>
-    )
+    render: (_, r) => {
+      const guestCount = r.guestCount || r.guests?.length || 0;
+      return (
+        <Tag color="cyan" icon={<UserOutlined />}>
+          {guestCount} người
+        </Tag>
+      );
+    }
   },
   {
     title: (

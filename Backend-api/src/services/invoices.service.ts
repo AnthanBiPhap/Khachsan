@@ -29,7 +29,7 @@ const getAll = async (query: any) => {
   }
 
   const invoices = await Invoice.find(where)
-    .populate("bookingId", "_id checkIn checkOut guestInfo")
+    .populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount")
     .populate("customerId", "fullName email phoneNumber")
     .skip((page - 1) * limit)
     .limit(limit)
@@ -49,7 +49,7 @@ const getAll = async (query: any) => {
 
 const getById = async (id: string) => {
   const invoice = await Invoice.findById(id)
-    .populate("bookingId", "_id checkIn checkOut guestInfo")
+    .populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount")
     .populate("customerId", "fullName email phoneNumber");
   if (!invoice) throw createError(404, "Invoice not found");
   return invoice;
@@ -63,8 +63,10 @@ const create = async (payload: any) => {
     status: payload.status || "pending",
     issuedAt: payload.issuedAt || Date.now(),
   });
-  await invoice.save();
-  return invoice.populate("customerId", "fullName email phoneNumber");
+  const savedInvoice = await invoice.save();
+  await savedInvoice.populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount");
+  await savedInvoice.populate("customerId", "fullName email phoneNumber");
+  return savedInvoice;
 };
 
 const updateById = async (id: string, payload: any) => {
@@ -77,8 +79,10 @@ const updateById = async (id: string, payload: any) => {
   );
 
   Object.assign(invoice, cleanUpdates);
-  await invoice.save();
-  return invoice.populate("customerId", "fullName email phoneNumber");
+  const updatedInvoice = await invoice.save();
+  await updatedInvoice.populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount");
+  await updatedInvoice.populate("customerId", "fullName email phoneNumber");
+  return updatedInvoice;
 };
 
 const deleteById = async (id: string) => {
@@ -91,10 +95,9 @@ const printInvoice = async (invoiceId: string) => {
   const invoice = await Invoice.findById(invoiceId)
     .populate({
       path: "bookingId",
-      select: "_id checkIn checkOut roomId services guestInfo",
+      select: "_id checkIn checkOut roomId services guestInfo source guests guestCount",
       populate: { path: "roomId", select: "roomNumber" },
     })
-
     .populate("customerId", "fullName email phoneNumber");
 
   if (!invoice) throw createError(404, "Invoice not found");
@@ -132,18 +135,36 @@ const printInvoice = async (invoiceId: string) => {
   // --- Customer info ---
   doc.fontSize(14).text("THÔNG TIN KHÁCH HÀNG", { underline: true });
   
-  // Phân biệt khách online vs walk-in
+  // Logic mới với mảng guests
   if (customer?.fullName) {
     // Khách online (có tài khoản)
     doc.fontSize(12).text(`Tên: ${customer.fullName}`);
     doc.text(`Email: ${customer.email || "-"}`);
     doc.text(`Điện thoại: ${customer.phoneNumber || "-"}`);
+  } else if (booking?.guests && booking.guests.length > 0) {
+    // Khách hàng walk_in - lấy thông tin khách chính
+    const mainGuest = booking.guests.find((guest: any) => guest.isMainGuest) || booking.guests[0];
+    doc.fontSize(12).text(`Tên: ${mainGuest?.fullName || "-"}`);
+    doc.text(`Số CMND/CCCD: ${mainGuest?.idNumber || "-"}`);
+    doc.text(`Tuổi: ${mainGuest?.age || "-"}`);
+    doc.text(`Điện thoại: ${mainGuest?.phoneNumber || "-"}`);
+    // Không hiển thị email cho khách walk_in
+    
+    // Hiển thị thông tin khách phụ nếu có
+    if (booking.guests.length > 1) {
+      doc.text(`Số khách: ${booking.guestCount || booking.guests.length} người`);
+      const otherGuests = booking.guests.filter((guest: any) => !guest.isMainGuest);
+      if (otherGuests.length > 0) {
+        doc.text(`Khách phụ: ${otherGuests.map((g: any) => g.fullName).join(", ")}`);
+      }
+    }
   } else if (booking?.guestInfo) {
-    // Khách walk-in (đặt tại quầy)
+    // Fallback cho dữ liệu cũ
     doc.fontSize(12).text(`Tên: ${booking.guestInfo.fullName || "-"}`);
     doc.text(`Số CMND/CCCD: ${booking.guestInfo.idNumber || "-"}`);
     doc.text(`Tuổi: ${booking.guestInfo.age || "-"}`);
     doc.text(`Điện thoại: ${booking.guestInfo.phoneNumber || "-"}`);
+    // Không hiển thị email cho khách walk_in
   } else {
     // Không có thông tin
     doc.fontSize(12).text("Không có thông tin khách hàng");

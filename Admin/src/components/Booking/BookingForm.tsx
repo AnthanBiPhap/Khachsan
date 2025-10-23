@@ -32,7 +32,7 @@ import {
 import { useEffect, useState, useMemo } from "react";
 import dayjs, { Dayjs } from "dayjs";
 import axios from "axios";
-import type { Booking, Room } from "../../types/booking";
+import type { Booking, Room, GuestInfo } from "../../types/booking";
 import type { BookingFormProps } from "../../types/booking";
 
 interface Service {
@@ -67,9 +67,11 @@ export default function BookingForm({
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [extraHours, setExtraHours] = useState<number>(0);
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
+  const [guests, setGuests] = useState<GuestInfo[]>([]);
+  const [guestCount, setGuestCount] = useState<number>(1);
 
   // Walk-in khi không có customerId (đặt trực tiếp tại quầy)
-  const isWalkIn = !booking?.customerId;
+  // const isWalkIn = !booking?.customerId;
 
   const roomPrice = useMemo(() => {
     if (!selectedRoom || !checkIn || !checkOut) return 0;
@@ -108,7 +110,7 @@ export default function BookingForm({
         setRooms(roomsRes.data?.data?.rooms || []);
         setBookings(bookingsRes.data?.data?.bookings || []);
         setServices(servicesRes.data?.data?.data || []);
-        console.log(servicesRes);
+        console.log('Services loaded:', servicesRes.data?.data?.data?.length || 0);
       } catch (err) {
         console.error(err);
         message.error("Không thể tải dữ liệu");
@@ -135,6 +137,35 @@ export default function BookingForm({
     setAvailableRooms(filtered);
   }, [checkIn, checkOut, rooms, bookings]);
 
+  // Initialize guests when guestCount changes
+  useEffect(() => {
+    if (guestCount <= 0) return;
+    
+    const newGuests = Array.from({ length: guestCount }, (_, index) => {
+      const existingGuest = guests[index];
+      return {
+        fullName: existingGuest?.fullName || "",
+        phoneNumber: existingGuest?.phoneNumber || "",
+        idNumber: existingGuest?.idNumber || "",
+        age: existingGuest?.age || 0,
+        email: existingGuest?.email || "",
+        isMainGuest: index === 0,
+      };
+    });
+    
+    // Only update if the structure actually changed
+    if (newGuests.length !== guests.length || 
+        newGuests.some((guest, index) => 
+          guest.fullName !== guests[index]?.fullName ||
+          guest.phoneNumber !== guests[index]?.phoneNumber ||
+          guest.idNumber !== guests[index]?.idNumber ||
+          guest.age !== guests[index]?.age ||
+          guest.email !== guests[index]?.email
+        )) {
+      setGuests(newGuests);
+    }
+  }, [guestCount, guests]);
+
   // Fill form when editing
   useEffect(() => {
     if (booking) {
@@ -142,12 +173,14 @@ export default function BookingForm({
         ...booking,
         checkIn: booking.checkIn ? dayjs(booking.checkIn) : null,
         checkOut: booking.checkOut ? dayjs(booking.checkOut) : null,
-        guestInfo: booking.guestInfo || {},
+        guestCount: booking.guestCount || booking.guests?.length || 1,
         extraHours: (booking as Booking & { extendHours?: number }).extendHours || 0,
       });
       setCheckIn(booking.checkIn ? dayjs(booking.checkIn) : null);
       setCheckOut(booking.checkOut ? dayjs(booking.checkOut) : null);
       setExtraHours((booking as Booking & { extendHours?: number }).extendHours || 0);
+      setGuestCount(booking.guestCount || booking.guests?.length || 1);
+      setGuests(booking.guests || []);
 
       const roomIdValue = (booking.roomId as Room)?._id || booking.roomId;
       const room = rooms.find((r) => r._id === roomIdValue);
@@ -171,6 +204,8 @@ export default function BookingForm({
       setSelectedRoom(null);
       setExtraHours(0);
       setSelectedServices([]);
+      setGuests([]);
+      setGuestCount(1);
     }
   }, [booking, rooms, form]);
 
@@ -234,6 +269,8 @@ export default function BookingForm({
         extendHours: extraHours,
         totalPrice,
         actualCheckOut: adjustedCheckOut.toISOString(), // thêm giờ thực tế
+        guests: guests, // Sử dụng mảng khách hàng mới
+        guestCount: guestCount, // Số lượng khách
         services: selectedServices.map((s) => ({
           serviceId: s.serviceId,
           name: s.name,
@@ -241,11 +278,6 @@ export default function BookingForm({
           quantity: s.quantity,
         })),
       };
-
-      // Với booking online (có customerId), không gửi guestInfo rỗng lên BE
-      if (!isWalkIn) {
-        delete (bookingData as Partial<Booking> & { guestInfo?: unknown }).guestInfo;
-      }
 
       await onSave(bookingData);
 
@@ -290,6 +322,7 @@ export default function BookingForm({
       okText={booking ? "Cập nhật" : "Tạo mới"}
       cancelText="Hủy bỏ"
       style={{ top: 20 }}
+      destroyOnHidden={true}
     >
       <Form
         form={form}
@@ -302,102 +335,141 @@ export default function BookingForm({
             <Space>
               <UserOutlined style={{ color: '#1890ff' }} />
               <span>Thông tin khách hàng</span>
+              <Tag color="blue">{guestCount} khách</Tag>
             </Space>
           }
           size="small"
           style={{ marginBottom: 16 }}
         >
-          <Row gutter={[16, 8]}>
+          <Row gutter={[16, 8]} style={{ marginBottom: 16 }}>
             <Col span={12}>
               <Form.Item
-                name={["guestInfo", "fullName"]}
+                name="guestCount"
                 label={
                   <Space>
                     <UserOutlined />
-                    <span>Họ và tên</span>
+                    <span>Số lượng khách</span>
                   </Space>
                 }
-                rules={[{ required: isWalkIn, message: "Nhập họ và tên khách" }]}
+                rules={[{ required: true, message: "Nhập số lượng khách" }]}
               >
-                <Input 
-                  placeholder="Nhập họ và tên" 
-                  prefix={<UserOutlined style={{ color: '#bfbfbf' }} />}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={12}>
-              <Form.Item
-                name={["guestInfo", "phoneNumber"]}
-                label={
-                  <Space>
-                    <PhoneOutlined />
-                    <span>Số điện thoại</span>
-                  </Space>
-                }
-                rules={[{ required: isWalkIn, message: "Nhập số điện thoại" }]}
-              >
-                <Input 
-                  placeholder="Nhập số điện thoại" 
-                  prefix={<PhoneOutlined style={{ color: '#bfbfbf' }} />}
+                <InputNumber
+                  min={1}
+                  max={10}
+                  style={{ width: "100%" }}
+                  placeholder="Số khách"
+                  onChange={(value) => setGuestCount(value || 1)}
                 />
               </Form.Item>
             </Col>
           </Row>
 
-          <Row gutter={[16, 8]}>
-            <Col span={12}>
-              <Form.Item
-                name={["guestInfo", "email"]}
-                label={
-                  <Space>
-                    <MailOutlined />
-                    <span>Email</span>
-                  </Space>
-                }
-                rules={[{ type: "email", message: "Email không hợp lệ" }]}
-              >
-                <Input 
-                  placeholder="Nhập email (nếu có)" 
-                  prefix={<MailOutlined style={{ color: '#bfbfbf' }} />}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item
-                name={["guestInfo", "idNumber"]}
-                label={
-                  <Space>
-                    <IdcardOutlined />
-                    <span>CMND/CCCD</span>
-                  </Space>
-                }
-                rules={[{ required: isWalkIn, message: "Nhập CMND/CCCD" }]}
-              >
-                <Input 
-                  placeholder="Số CMND/CCCD" 
-                  prefix={<IdcardOutlined style={{ color: '#bfbfbf' }} />}
-                />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item
-                name={["guestInfo", "age"]}
-                label={
-                  <Space>
-                    <UserOutlined />
-                    <span>Tuổi</span>
-                  </Space>
-                }
-                rules={[{ type: "number", min: 0, message: "Tuổi không hợp lệ" }]}
-              >
-                <InputNumber
-                  min={0}
-                  style={{ width: "100%" }}
-                  placeholder="Tuổi"
-                />
-              </Form.Item>
-            </Col>
-          </Row>
+          {guests.map((guest, index) => (
+            <Card 
+              key={`guest-${index}`}
+              size="small" 
+              style={{ marginBottom: 12 }}
+              title={
+                <Space>
+                  <span>{guest.isMainGuest ? "👑 Khách chính" : `Khách ${index + 1}`}</span>
+                  {index === 0 && <Tag color="green">Người đặt phòng</Tag>}
+                </Space>
+              }
+            >
+              <Row gutter={[16, 8]}>
+                <Col span={12}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                      Họ và tên *
+                    </label>
+                    <Input 
+                      value={guest.fullName}
+                      onChange={(e) => {
+                        const newGuests = [...guests];
+                        newGuests[index].fullName = e.target.value;
+                        setGuests(newGuests);
+                      }}
+                      placeholder="Nhập họ và tên" 
+                      prefix={<UserOutlined style={{ color: '#bfbfbf' }} />}
+                    />
+                  </div>
+                </Col>
+                <Col span={12}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                      Số điện thoại *
+                    </label>
+                    <Input 
+                      value={guest.phoneNumber}
+                      onChange={(e) => {
+                        const newGuests = [...guests];
+                        newGuests[index].phoneNumber = e.target.value;
+                        setGuests(newGuests);
+                      }}
+                      placeholder="Nhập số điện thoại" 
+                      prefix={<PhoneOutlined style={{ color: '#bfbfbf' }} />}
+                    />
+                  </div>
+                </Col>
+              </Row>
+
+              <Row gutter={[16, 8]}>
+                <Col span={8}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                      CMND/CCCD *
+                    </label>
+                    <Input 
+                      value={guest.idNumber}
+                      onChange={(e) => {
+                        const newGuests = [...guests];
+                        newGuests[index].idNumber = e.target.value;
+                        setGuests(newGuests);
+                      }}
+                      placeholder="Số CMND/CCCD" 
+                      prefix={<IdcardOutlined style={{ color: '#bfbfbf' }} />}
+                    />
+                  </div>
+                </Col>
+                <Col span={8}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                      Tuổi *
+                    </label>
+                    <InputNumber
+                      value={guest.age}
+                      onChange={(value) => {
+                        const newGuests = [...guests];
+                        newGuests[index].age = value || 0;
+                        setGuests(newGuests);
+                      }}
+                      min={0}
+                      max={120}
+                      style={{ width: "100%" }}
+                      placeholder="Tuổi"
+                    />
+                  </div>
+                </Col>
+                <Col span={8}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
+                      Email
+                    </label>
+                    <Input 
+                      value={guest.email}
+                      onChange={(e) => {
+                        const newGuests = [...guests];
+                        newGuests[index].email = e.target.value;
+                        setGuests(newGuests);
+                      }}
+                      placeholder="Nhập email (nếu có)" 
+                      prefix={<MailOutlined style={{ color: '#bfbfbf' }} />}
+                    />
+                  </div>
+                </Col>
+              </Row>
+            </Card>
+          ))}
         </Card>
 
         {/* Quy định check-in sớm */}
@@ -507,24 +579,6 @@ export default function BookingForm({
                       availableRooms.find((r) => r._id === v) || null
                     )
                   }
-                />
-              </Form.Item>
-            </Col>
-            <Col span={6}>
-              <Form.Item
-                name="guests"
-                label={
-                  <Space>
-                    <UserOutlined />
-                    <span>Số khách</span>
-                  </Space>
-                }
-                rules={[{ required: true }]}
-              >
-                <InputNumber 
-                  min={1} 
-                  style={{ width: "100%" }} 
-                  placeholder="Số khách"
                 />
               </Form.Item>
             </Col>

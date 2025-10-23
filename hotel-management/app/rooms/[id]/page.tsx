@@ -75,6 +75,16 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
     { serviceId: string; quantity: number }[]
   >([]);
 
+  // Guest information
+  const [guestInfo, setGuestInfo] = useState<Array<{
+    fullName: string;
+    idNumber: string;
+    age: number;
+    phoneNumber: string;
+    email: string;
+    isMainGuest: boolean;
+  }>>([]);
+
   // Load room
   useEffect(() => {
     if (!roomId) return;
@@ -87,6 +97,23 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         setLoading(false);
       });
   }, [roomId]);
+
+  // Initialize guest info when guests count changes
+  useEffect(() => {
+    const newGuestInfo = Array.from({ length: guests }, (_, index) => {
+      // Preserve existing data if available
+      const existingGuest = guestInfo[index];
+      return {
+        fullName: existingGuest?.fullName || "",
+        idNumber: existingGuest?.idNumber || "",
+        age: existingGuest?.age || 0,
+        phoneNumber: existingGuest?.phoneNumber || "",
+        email: existingGuest?.email || "",
+        isMainGuest: index === 0, // First guest is main guest by default
+      };
+    });
+    setGuestInfo(newGuestInfo);
+  }, [guests]);
 
   useEffect(() => {
     fetch("/api/services", {
@@ -190,7 +217,65 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
     );
   }, [room, checkIn, checkOut, extraHours, selectedServices, services]);
 
+  // Validation function
+  const validateGuestInfo = () => {
+    const usedIdNumbers = new Set();
+    const usedPhoneNumbers = new Set();
+    
+    for (let i = 0; i < guestInfo.length; i++) {
+      const guest = guestInfo[i];
+      
+      // Validate required fields
+      if (!guest.fullName.trim()) {
+        message.error(`Vui lòng nhập họ tên cho khách ${i + 1}`);
+        return false;
+      }
+      if (!guest.idNumber.trim()) {
+        message.error(`Vui lòng nhập số CMND/CCCD cho khách ${i + 1}`);
+        return false;
+      }
+      if (!guest.age || guest.age < 0 || guest.age > 120) {
+        message.error(`Vui lòng nhập tuổi hợp lệ cho khách ${i + 1}`);
+        return false;
+      }
+      if (!guest.phoneNumber.trim()) {
+        message.error(`Vui lòng nhập số điện thoại cho khách ${i + 1}`);
+        return false;
+      }
+      
+      // Validate unique ID numbers
+      if (usedIdNumbers.has(guest.idNumber)) {
+        message.error(`Số CMND/CCCD của khách ${i + 1} đã được sử dụng bởi khách khác`);
+        return false;
+      }
+      usedIdNumbers.add(guest.idNumber);
+      
+      // Validate unique phone numbers
+      if (usedPhoneNumbers.has(guest.phoneNumber)) {
+        message.error(`Số điện thoại của khách ${i + 1} đã được sử dụng bởi khách khác`);
+        return false;
+      }
+      usedPhoneNumbers.add(guest.phoneNumber);
+      
+      // Validate ID number format (9-20 characters)
+      if (guest.idNumber.length < 9 || guest.idNumber.length > 20) {
+        message.error(`Số CMND/CCCD của khách ${i + 1} phải có từ 9-20 ký tự`);
+        return false;
+      }
+      
+      // Validate phone number format (6-20 characters)
+      if (guest.phoneNumber.length < 6 || guest.phoneNumber.length > 20) {
+        message.error(`Số điện thoại của khách ${i + 1} phải có từ 6-20 ký tự`);
+        return false;
+      }
+    }
+    return true;
+  };
+
   const handleConfirmBooking = () => {
+    if (!validateGuestInfo()) {
+      return;
+    }
     setIsModalOpen(true);
   };
   // Hàm parse checkIn với giờ mặc định 14h
@@ -228,7 +313,8 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         checkOut: new Date(checkOutDate).toISOString(),
         extraHours: extraHours || 0,
         actualCheckOut: new Date(checkOutDate).toISOString(),
-        guests,
+        guests: guestInfo, // Sử dụng mảng thông tin khách hàng mới
+        guestCount: guests,
         totalPrice,
         services: selectedServices.map((s) => {
           const srv = services.find((srv) => srv._id === s.serviceId);
@@ -251,7 +337,8 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         totalPrice,
         checkIn: checkInDate.toISOString(),
         checkOut: new Date(checkOutDate).toISOString(),
-        guests,
+        guests: guestInfo, // Sử dụng mảng thông tin khách hàng
+        guestCount: guests,
         nights: getNights(),
         customerEmail: userData?.email || '',
         customerId: userData?._id,
@@ -426,6 +513,125 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
               </div>
             </div>
 
+            {/* Guest Information section */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">👥 Thông tin khách hàng</h3>
+              <div className="space-y-4">
+                {guestInfo.map((guest, index) => (
+                  <div key={index} className="border border-gray-200 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="font-semibold text-gray-800">
+                        {guest.isMainGuest ? "👑 Khách chính" : `Khách ${index + 1}`}
+                      </h4>
+                      {index === 0 && (
+                        <Badge variant="default" className="text-xs">
+                          Người đặt phòng
+                        </Badge>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Họ và tên *
+                        </label>
+                        <Input
+                          value={guest.fullName}
+                          onChange={(e) => {
+                            const newGuestInfo = [...guestInfo];
+                            newGuestInfo[index].fullName = e.target.value;
+                            setGuestInfo(newGuestInfo);
+                          }}
+                          placeholder="Nhập họ và tên"
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Số CMND/CCCD *
+                        </label>
+                        <Input
+                          value={guest.idNumber}
+                          onChange={(e) => {
+                            const newGuestInfo = [...guestInfo];
+                            newGuestInfo[index].idNumber = e.target.value;
+                            setGuestInfo(newGuestInfo);
+                          }}
+                          placeholder="Nhập số CMND/CCCD (9-20 ký tự)"
+                          className="w-full"
+                          maxLength={20}
+                        />
+                        {guest.idNumber && (guest.idNumber.length < 9 || guest.idNumber.length > 20) && (
+                          <p className="text-xs text-red-500 mt-1">
+                            Số CMND/CCCD phải có từ 9-20 ký tự
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Tuổi *
+                        </label>
+                        <Input
+                          type="number"
+                          value={guest.age || ""}
+                          onChange={(e) => {
+                            const newGuestInfo = [...guestInfo];
+                            newGuestInfo[index].age = parseInt(e.target.value) || 0;
+                            setGuestInfo(newGuestInfo);
+                          }}
+                          placeholder="Nhập tuổi"
+                          className="w-full"
+                          min="0"
+                          max="120"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Số điện thoại *
+                        </label>
+                        <Input
+                          value={guest.phoneNumber}
+                          onChange={(e) => {
+                            const newGuestInfo = [...guestInfo];
+                            newGuestInfo[index].phoneNumber = e.target.value;
+                            setGuestInfo(newGuestInfo);
+                          }}
+                          placeholder="Nhập số điện thoại (6-20 ký tự)"
+                          className="w-full"
+                          maxLength={20}
+                        />
+                        {guest.phoneNumber && (guest.phoneNumber.length < 6 || guest.phoneNumber.length > 20) && (
+                          <p className="text-xs text-red-500 mt-1">
+                            Số điện thoại phải có từ 6-20 ký tự
+                          </p>
+                        )}
+                      </div>
+                      
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Email
+                        </label>
+                        <Input
+                          type="email"
+                          value={guest.email}
+                          onChange={(e) => {
+                            const newGuestInfo = [...guestInfo];
+                            newGuestInfo[index].email = e.target.value;
+                            setGuestInfo(newGuestInfo);
+                          }}
+                          placeholder="Nhập email (không bắt buộc)"
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             {/* Services section */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h3 className="text-lg font-bold text-gray-800 mb-4">🛠️ Dịch vụ bổ sung</h3>
@@ -488,7 +694,7 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                   <Button
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3"
                     onClick={handleConfirmBooking}
-                    disabled={!checkIn || !checkOut}
+                    disabled={!checkIn || !checkOut || guestInfo.length === 0}
                   >
                     🚀 Xác nhận & Thanh toán
                   </Button>
@@ -496,6 +702,12 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                   {(!checkIn || !checkOut) && (
                     <p className="text-xs text-gray-500 text-center mt-2">
                       Vui lòng chọn ngày nhận và trả phòng
+                    </p>
+                  )}
+                  
+                  {guestInfo.length === 0 && (
+                    <p className="text-xs text-gray-500 text-center mt-2">
+                      Vui lòng nhập thông tin khách hàng
                     </p>
                   )}
                 </div>

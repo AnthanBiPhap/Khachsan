@@ -10,6 +10,7 @@ export interface GuestInfo {
   idNumber: string;
   age: number;
   email?: string;
+  isMainGuest?: boolean;
   actualCheckIn?: string;  // thêm vào
   actualCheckOut?: string; // thêm vào
 }
@@ -22,13 +23,13 @@ export interface BookingService {
 
 export interface Booking {
   _id: string;
-  // Nếu khách có tài khoản thì customerId, nếu walk-in thì guestInfo
+  // Nếu khách có tài khoản thì customerId, nếu walk-in thì guests
   customerId?: User; 
-  guestInfo?: GuestInfo;
+  guests: GuestInfo[]; // Mảng khách hàng (bắt buộc)
+  guestCount: number; // Số lượng khách
   roomId: Room;
   checkIn: string;
   checkOut: string;
-  guests: number;
   services?: BookingService[];
   totalPrice: number;
   paymentStatus: 'pending' | 'paid' | 'refunded' | 'failed';
