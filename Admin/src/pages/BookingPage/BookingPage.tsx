@@ -11,6 +11,7 @@ import {
 import { CalendarOutlined, PlusOutlined, IdcardOutlined, UserOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import BookingForm from "../../components/Booking/BookingForm";
+import BookingSearchFilter from "../../components/Booking/BookingSearchFilter";
 import type { Booking } from "../../types/booking";
 import { fetchBookings, deleteBooking } from "../../services/booking.service";
 import { env } from "../../constanst/getEnvs";
@@ -18,6 +19,7 @@ import { bookingColumns } from "../../components/Booking/BookingColumns";
 
 export default function BookingPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [filteredBookings, setFilteredBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -28,6 +30,11 @@ export default function BookingPage() {
   const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [detailItem, setDetailItem] = useState<Booking | null>(null);
+  
+  // Search và Filter states
+  const [searchText, setSearchText] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterSource, setFilterSource] = useState<string>("all");
 
   const loadBookings = async (page = 1, limit = 10) => {
     try {
@@ -35,6 +42,7 @@ export default function BookingPage() {
       const res = await fetchBookings(page, limit);
       const bookingsData = Array.isArray(res.data) ? res.data : [];
       setBookings(bookingsData);
+      setFilteredBookings(bookingsData);
       setPagination({
         current: res.pagination?.page || 1,
         pageSize: res.pagination?.limit || 10,
@@ -52,6 +60,38 @@ export default function BookingPage() {
   useEffect(() => {
     loadBookings();
   }, []);
+
+  // Filter và search logic
+  useEffect(() => {
+    let filtered = [...bookings];
+
+    // Search filter
+    if (searchText) {
+      filtered = filtered.filter(booking => {
+        const searchLower = searchText.toLowerCase();
+        return (
+          booking._id.toLowerCase().includes(searchLower) ||
+          (booking.roomId as { roomNumber?: string })?.roomNumber?.toLowerCase().includes(searchLower) ||
+          booking.guests?.some(guest => 
+            guest.fullName?.toLowerCase().includes(searchLower) ||
+            guest.phoneNumber?.includes(searchText)
+          )
+        );
+      });
+    }
+
+    // Status filter
+    if (filterStatus !== "all") {
+      filtered = filtered.filter(booking => booking.paymentStatus === filterStatus);
+    }
+
+    // Source filter
+    if (filterSource !== "all") {
+      filtered = filtered.filter(booking => booking.source === filterSource);
+    }
+
+    setFilteredBookings(filtered);
+  }, [bookings, searchText, filterStatus, filterSource]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -147,6 +187,25 @@ export default function BookingPage() {
         </Button>
       </div>
 
+      {/* Search và Filter */}
+      <div style={{ width: '100%', minWidth: '800px' }}>
+        <BookingSearchFilter
+          searchText={searchText}
+          onSearchChange={setSearchText}
+          filterStatus={filterStatus}
+          onStatusChange={setFilterStatus}
+          filterSource={filterSource}
+          onSourceChange={setFilterSource}
+          onClearFilters={() => {
+            setSearchText("");
+            setFilterStatus("all");
+            setFilterSource("all");
+          }}
+          totalCount={bookings.length}
+          filteredCount={filteredBookings.length}
+        />
+      </div>
+
       <Table
         columns={bookingColumns(
           (record) => {
@@ -159,7 +218,7 @@ export default function BookingPage() {
             setOpenDetail(true);
           }
         )}
-        dataSource={bookings}
+        dataSource={filteredBookings}
         rowKey="_id"
         loading={loading}
         pagination={{
@@ -169,7 +228,6 @@ export default function BookingPage() {
         }}
         onChange={(p) => loadBookings(p.current, p.pageSize)}
         bordered
-        scroll={{ x: "max-content" }}
         locale={{ emptyText: "Không có dữ liệu đặt phòng" }}
       />
 

@@ -22,7 +22,6 @@ export const bookingColumns = (
   {
     title: "Khách hàng",
     key: "customer",
-    align: 'center',
     render: (_, r) => {
       // Lấy thông tin khách chính từ mảng guests
       const mainGuest = r.guests?.find(guest => guest.isMainGuest) || r.guests?.[0];
@@ -39,7 +38,7 @@ export const bookingColumns = (
           </Typography.Text>
           {guestCount > 1 && (
             <div>
-              <Tag color="blue" size="small">
+              <Tag color="blue" style={{ fontSize: 12 }}>
                 +{guestCount - 1} khách khác
               </Tag>
             </div>

@@ -9,6 +9,7 @@ import {
 import { useEffect, useState } from "react";
 import { CalendarOutlined } from "@ant-design/icons";
 import BookingForm from "../../components/BookingStatus/BookingStatusForm";
+import BookingStatusSearchFilter from "../../components/BookingStatus/BookingStatusSearchFilter";
 import type { BookingStatusLog } from "../../types/bookingstatus";
 import {
   fetchBookings,
@@ -19,6 +20,7 @@ import { bookingStatusColumns } from "../../components/BookingStatus/BookingStat
 
 export default function BookingPage() {
   const [bookings, setBookings] = useState<BookingStatusLog[]>([]);
+  const [filteredBookings, setFilteredBookings] = useState<BookingStatusLog[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -31,6 +33,11 @@ export default function BookingPage() {
   );
   const [openDetail, setOpenDetail] = useState(false);
   const [detailItem, setDetailItem] = useState<BookingStatusLog | null>(null);
+  
+  // Search và Filter states
+  const [searchText, setSearchText] = useState("");
+  const [filterAction, setFilterAction] = useState<string>("all");
+  const [filterSource, setFilterSource] = useState<string>("all");
 
   const loadBookings = async (page = 1, limit = 10) => {
     //bookingStatus
@@ -39,6 +46,7 @@ export default function BookingPage() {
       const res = await fetchBookings(page, limit);
       const bookingsData = Array.isArray(res.data) ? res.data : [];
       setBookings(bookingsData);
+      setFilteredBookings(bookingsData);
       setPagination({
         current: res.pagination?.page || 1,
         pageSize: res.pagination?.limit || 10,
@@ -56,6 +64,40 @@ export default function BookingPage() {
   useEffect(() => {
     loadBookings();
   }, []);
+
+  // Filter và search logic
+  useEffect(() => {
+    let filtered = [...bookings];
+
+    // Search filter
+    if (searchText) {
+      filtered = filtered.filter(booking => {
+        const searchLower = searchText.toLowerCase();
+        return (
+          booking._id.toLowerCase().includes(searchLower) ||
+          booking.actorName?.toLowerCase().includes(searchLower) ||
+          booking.bookingId?._id?.toLowerCase().includes(searchLower) ||
+          (booking.bookingId as any)?.roomNumber?.toLowerCase().includes(searchLower) ||
+          booking.bookingId?.guests?.some((guest: any) => 
+            guest.fullName?.toLowerCase().includes(searchLower) ||
+            guest.phoneNumber?.includes(searchText)
+          )
+        );
+      });
+    }
+
+    // Action filter
+    if (filterAction !== "all") {
+      filtered = filtered.filter(booking => booking.action === filterAction);
+    }
+
+    // Source filter
+    if (filterSource !== "all") {
+      filtered = filtered.filter(booking => booking.bookingId?.source === filterSource);
+    }
+
+    setFilteredBookings(filtered);
+  }, [bookings, searchText, filterAction, filterSource]);
 
   // Lắng nghe event từ trang Booking để refresh dữ liệu
   useEffect(() => {
@@ -141,6 +183,24 @@ export default function BookingPage() {
         </Button> */}
       </div>
 
+      <div style={{ width: '100%', minWidth: '800px' }}>
+        <BookingStatusSearchFilter
+          searchText={searchText}
+          onSearchChange={setSearchText}
+          filterAction={filterAction}
+          onActionChange={setFilterAction}
+          filterSource={filterSource}
+          onSourceChange={setFilterSource}
+          onClearFilters={() => {
+            setSearchText("");
+            setFilterAction("all");
+            setFilterSource("all");
+          }}
+          totalCount={bookings.length}
+          filteredCount={filteredBookings.length}
+        />
+      </div>
+
       <Table
         columns={bookingStatusColumns(
           (record) => {
@@ -153,7 +213,7 @@ export default function BookingPage() {
             setOpenDetail(true);
           }
         )}
-        dataSource={bookings}
+        dataSource={filteredBookings}
         rowKey="_id"
         loading={loading}
         pagination={{

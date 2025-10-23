@@ -106,7 +106,7 @@ const Defaultlayout: React.FC = () => {
           </div>
         </Content>
         <Footer style={{ textAlign: 'center', padding: '10px 50px' }}>
-          Hotel Management System {new Date().getFullYear()} Created by Your Team
+          Trang khách sạn của Miko Hotel {new Date().getFullYear()}
         </Footer>
       </Layout>
     </Layout>
