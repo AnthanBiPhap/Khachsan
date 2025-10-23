@@ -12,6 +12,7 @@ import {
   StarOutlined,
   FileDoneOutlined,
   CreditCardOutlined,
+  UserOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Layout, Menu, theme } from 'antd';
@@ -45,6 +46,7 @@ const menuItems = [
   createMenuItem('Users', '/users', <TeamOutlined />),
   createMenuItem('Bookings', '/bookings', <BookOutlined />),
   createMenuItem('Booking Status', '/bookingStatus', <FileDoneOutlined />),
+  createMenuItem('Guests', '/guests', <UserOutlined />),
   createMenuItem('Rooms', '/rooms', <HomeOutlined />),
   createMenuItem('Room Types', '/room-types', <AppstoreOutlined />),
   createMenuItem('Services', '/services', <ToolOutlined />),

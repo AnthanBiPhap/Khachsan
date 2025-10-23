@@ -8,7 +8,7 @@ import {
   Tag,
   Alert
 } from "antd";
-import { CalendarOutlined, PlusOutlined, IdcardOutlined } from "@ant-design/icons";
+import { CalendarOutlined, PlusOutlined, IdcardOutlined, UserOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import BookingForm from "../../components/Booking/BookingForm";
 import type { Booking } from "../../types/booking";
@@ -272,45 +272,21 @@ export default function BookingPage() {
               
               return (
                 <Descriptions.Item label="Danh sách khách hàng" span={2}>
-                  <div style={{ maxHeight: 200, overflowY: 'auto' }}>
-                    {guests.map((guest, index) => {
-                      // Đảm bảo guest là object hợp lệ
-                      if (!guest || typeof guest !== 'object') return null;
-                      
-                      return (
-                        <div 
-                          key={`guest-${index}`} 
-                          style={{ 
-                            padding: '8px 12px', 
-                            marginBottom: 8, 
-                            border: '1px solid #f0f0f0', 
-                            borderRadius: 6,
-                            backgroundColor: guest.isMainGuest ? '#f6ffed' : '#fafafa'
-                          }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                              <span style={{ fontWeight: 500 }}>
-                                {guest.isMainGuest ? '' : ''}{String(guest.fullName || '')}
-                              </span>
-                              {guest.isMainGuest && (
-                                <Tag color="green" style={{ marginLeft: 8, fontSize: 10 }}>
-                                  Khách chính
-                                </Tag>
-                              )}
-                            </div>
-                            <div style={{ fontSize: 12, color: '#666' }}>
-                              {String(guest.age || 0)} tuổi
-                            </div>
-                          </div>
-                          <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
-                            <div>📱 {String(guest.phoneNumber || '')}</div>
-                            {guest.idNumber && <div>🆔 {String(guest.idNumber)}</div>}
-                            {guest.email && <div>📧 {String(guest.email)}</div>}
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <Tag color="blue" icon={<UserOutlined />}>
+                      {guests.length} khách hàng
+                    </Tag>
+                    <Button 
+                      type="primary" 
+                      size="small"
+                      icon={<UserOutlined />}
+                      onClick={() => {
+                        // Chuyển đến trang Guests và mở chi tiết booking này
+                        window.location.href = `/guests?bookingId=${detailItem._id}`;
+                      }}
+                    >
+                      Xem khách hàng
+                    </Button>
                   </div>
                 </Descriptions.Item>
               );

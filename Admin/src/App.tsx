@@ -10,6 +10,7 @@ import Emptylayout from "./layouts/Emptylayout";
 import UserPage from "./pages/UserPage/UserPage";
 import BookingPage from "./pages/BookingPage/BookingPage";
 import BookingStatusPage from "./pages/BookingStatusPage/BookingStatusPage";
+import GuestsPage from "./pages/GuestsPage/GuestsPage";
 import RoomsPage from "./pages/RoomsPage/RoomsPage";
 import RoomTypesPage from "./pages/RoomTypesPage/RoomTypesPage";
 import ServicesPage from "./pages/ServicesPage/ServicesPage";
@@ -20,7 +21,7 @@ import InvoicesPage from "./pages/InvoicesPage/InvoicesPage";
 import PaymentsPage from "./pages/PaymentPage/PaymentsPage";
 import { useAuthStore } from "./stores/authStore";
 
-function PrivateRoute({ children }) {
+function PrivateRoute({ children }: { children: React.ReactNode }) {
   const user = useAuthStore.getState().user;
   if (!user) return <Navigate to="/login" replace />;
   return children;
@@ -48,6 +49,7 @@ function App() {
           <Route path="users" element={<UserPage />} />
           <Route path="bookings" element={<BookingPage />} />
           <Route path="bookingStatus" element={<BookingStatusPage />} />
+          <Route path="guests" element={<GuestsPage />} />
           <Route path="rooms" element={<RoomsPage />} />
           <Route path="room-types" element={<RoomTypesPage />} />
           <Route path="services" element={<ServicesPage />} />
