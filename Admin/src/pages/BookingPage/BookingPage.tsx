@@ -12,6 +12,8 @@ import { CalendarOutlined, PlusOutlined, IdcardOutlined, UserOutlined } from "@a
 import { useEffect, useState } from "react";
 import BookingForm from "../../components/Booking/BookingForm";
 import BookingSearchFilter from "../../components/Booking/BookingSearchFilter";
+import BookingStatistics from "../../components/Booking/BookingStatistics";
+import ExportButton from "../../components/Booking/ExportButton";
 import type { Booking } from "../../types/booking";
 import { fetchBookings, deleteBooking } from "../../services/booking.service";
 import { env } from "../../constanst/getEnvs";
@@ -35,6 +37,20 @@ export default function BookingPage() {
   const [searchText, setSearchText] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterSource, setFilterSource] = useState<string>("all");
+  
+  // Sort states
+  const [sortField, setSortField] = useState<string>("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Statistics states
+  const [statistics, setStatistics] = useState({
+    totalBookings: 0,
+    currentGuests: 0,
+    todayRevenue: 0,
+    monthRevenue: 0,
+    pendingBookings: 0,
+    paidBookings: 0
+  });
 
   const loadBookings = async (page = 1, limit = 10) => {
     try {
@@ -48,6 +64,9 @@ export default function BookingPage() {
         pageSize: res.pagination?.limit || 10,
         total: res.pagination?.totalRecord || 0,
       });
+      
+      // Tính toán thống kê
+      calculateStatistics(bookingsData);
     } catch (e) {
       console.error(e);
       message.error("Không tải được danh sách đặt phòng");
@@ -57,11 +76,62 @@ export default function BookingPage() {
     }
   };
 
+  // Function để tính toán thống kê
+  const calculateStatistics = (bookingsData: Booking[]) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const totalBookings = bookingsData.length;
+    let currentGuests = 0;
+    let todayRevenue = 0;
+    let monthRevenue = 0;
+    let pendingBookings = 0;
+    let paidBookings = 0;
+
+    bookingsData.forEach(booking => {
+      // Tính khách đang ở (check-in <= hôm nay < check-out)
+      const checkIn = new Date(booking.checkIn || '');
+      const checkOut = new Date(booking.checkOut || '');
+      
+      if (checkIn <= now && now < checkOut) {
+        currentGuests += booking.guestCount || booking.guests?.length || 0;
+      }
+
+      // Tính doanh thu hôm nay
+      const bookingDate = new Date(booking.createdAt || '');
+      if (bookingDate >= today && booking.paymentStatus === 'paid') {
+        todayRevenue += Number(booking.totalPrice) || 0;
+      }
+
+      // Tính doanh thu tháng này
+      if (bookingDate >= monthStart && booking.paymentStatus === 'paid') {
+        monthRevenue += Number(booking.totalPrice) || 0;
+      }
+
+      // Đếm trạng thái thanh toán
+      if (booking.paymentStatus === 'pending') {
+        pendingBookings++;
+      } else if (booking.paymentStatus === 'paid') {
+        paidBookings++;
+      }
+    });
+
+    setStatistics({
+      totalBookings,
+      currentGuests,
+      todayRevenue,
+      monthRevenue,
+      pendingBookings,
+      paidBookings
+    });
+  };
+
   useEffect(() => {
     loadBookings();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Filter và search logic
+  // Filter, search và sort logic
   useEffect(() => {
     let filtered = [...bookings];
 
@@ -90,8 +160,62 @@ export default function BookingPage() {
       filtered = filtered.filter(booking => booking.source === filterSource);
     }
 
+    // Sort logic
+    filtered.sort((a, b) => {
+      let aValue: string | number;
+      let bValue: string | number;
+
+      switch (sortField) {
+        case "createdAt": {
+          aValue = new Date(a.createdAt || 0).getTime();
+          bValue = new Date(b.createdAt || 0).getTime();
+          break;
+        }
+        case "checkIn": {
+          aValue = new Date(a.checkIn || 0).getTime();
+          bValue = new Date(b.checkIn || 0).getTime();
+          break;
+        }
+        case "checkOut": {
+          aValue = new Date(a.checkOut || 0).getTime();
+          bValue = new Date(b.checkOut || 0).getTime();
+          break;
+        }
+        case "totalPrice": {
+          aValue = Number(a.totalPrice) || 0;
+          bValue = Number(b.totalPrice) || 0;
+          break;
+        }
+        case "paymentStatus": {
+          aValue = a.paymentStatus || "";
+          bValue = b.paymentStatus || "";
+          break;
+        }
+        case "guestName": {
+          const aGuest = a.guests?.find(guest => guest.isMainGuest) || a.guests?.[0];
+          const bGuest = b.guests?.find(guest => guest.isMainGuest) || b.guests?.[0];
+          aValue = aGuest?.fullName || a.customerId?.fullName || "";
+          bValue = bGuest?.fullName || b.customerId?.fullName || "";
+          break;
+        }
+        case "roomNumber": {
+          aValue = (a.roomId as { roomNumber?: string })?.roomNumber || "";
+          bValue = (b.roomId as { roomNumber?: string })?.roomNumber || "";
+          break;
+        }
+        default: {
+          aValue = a.createdAt || "";
+          bValue = b.createdAt || "";
+        }
+      }
+
+      if (aValue < bValue) return sortOrder === "asc" ? -1 : 1;
+      if (aValue > bValue) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+
     setFilteredBookings(filtered);
-  }, [bookings, searchText, filterStatus, filterSource]);
+  }, [bookings, searchText, filterStatus, filterSource, sortField, sortOrder]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -175,17 +299,33 @@ export default function BookingPage() {
             }}
           />
         </div>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setEditingBooking(null);
-            setOpenForm(true);
-          }}
-        >
-          Thêm đặt phòng
-        </Button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            style={{ width: '100%' }}
+            onClick={() => {
+              setEditingBooking(null);
+              setOpenForm(true);
+            }}
+          >
+            Thêm đặt phòng
+          </Button>
+          <ExportButton 
+            bookings={filteredBookings}
+          />
+        </div>
       </div>
+
+      {/* Statistics */}
+      <BookingStatistics
+        totalBookings={statistics.totalBookings}
+        currentGuests={statistics.currentGuests}
+        todayRevenue={statistics.todayRevenue}
+        monthRevenue={statistics.monthRevenue}
+        pendingBookings={statistics.pendingBookings}
+        paidBookings={statistics.paidBookings}
+      />
 
       {/* Search và Filter */}
       <div style={{ width: '100%', minWidth: '800px' }}>
@@ -196,10 +336,16 @@ export default function BookingPage() {
           onStatusChange={setFilterStatus}
           filterSource={filterSource}
           onSourceChange={setFilterSource}
+          sortField={sortField}
+          onSortFieldChange={setSortField}
+          sortOrder={sortOrder}
+          onSortOrderChange={setSortOrder}
           onClearFilters={() => {
             setSearchText("");
             setFilterStatus("all");
             setFilterSource("all");
+            setSortField("createdAt");
+            setSortOrder("desc");
           }}
           totalCount={bookings.length}
           filteredCount={filteredBookings.length}

@@ -1,5 +1,5 @@
 import { Input, Select, Row, Col, Card, Space, Button, Typography } from "antd";
-import { SearchOutlined, FilterOutlined } from "@ant-design/icons";
+import { SearchOutlined, FilterOutlined, SortAscendingOutlined } from "@ant-design/icons";
 
 const { Text } = Typography;
 
@@ -10,6 +10,10 @@ interface BookingSearchFilterProps {
   onStatusChange: (value: string) => void;
   filterSource: string;
   onSourceChange: (value: string) => void;
+  sortField: string;
+  onSortFieldChange: (value: string) => void;
+  sortOrder: "asc" | "desc";
+  onSortOrderChange: (value: "asc" | "desc") => void;
   onClearFilters: () => void;
   totalCount: number;
   filteredCount: number;
@@ -22,6 +26,10 @@ export default function BookingSearchFilter({
   onStatusChange,
   filterSource,
   onSourceChange,
+  sortField,
+  onSortFieldChange,
+  sortOrder,
+  onSortOrderChange,
   onClearFilters,
   totalCount,
   filteredCount,
@@ -36,7 +44,7 @@ export default function BookingSearchFilter({
       }}
     >
       <Row gutter={[16, 16]} style={{ flex: 1 }}>
-        <Col xs={24} sm={12} md={8}>
+        <Col xs={24} sm={12} md={6}>
           <Input
             placeholder="Tìm kiếm theo mã booking, phòng, tên khách, SĐT..."
             prefix={<SearchOutlined />}
@@ -49,7 +57,7 @@ export default function BookingSearchFilter({
             }}
           />
         </Col>
-        <Col xs={24} sm={12} md={8}>
+        <Col xs={24} sm={12} md={6}>
           <Select
             placeholder="Lọc theo trạng thái"
             value={filterStatus}
@@ -68,21 +76,57 @@ export default function BookingSearchFilter({
             <Select.Option value="refunded">Đã hoàn tiền</Select.Option>
           </Select>
         </Col>
-        <Col xs={24} sm={12} md={8}>
+        <Col xs={24} sm={12} md={6}>
           <Select
             placeholder="Lọc theo nguồn"
             value={filterSource}
             onChange={onSourceChange}
             style={{ 
-              width: '300px', // Tăng chiều rộng hơn nữa
+              width: '100%',
               height: '40px'
             }}
-            dropdownStyle={{ width: '300px' }}
+            dropdownStyle={{ width: '200px' }}
           >
             <Select.Option value="all">Tất cả nguồn</Select.Option>
             <Select.Option value="online">Online</Select.Option>
             <Select.Option value="walk_in">Walk-in</Select.Option>
           </Select>
+        </Col>
+        <Col xs={24} sm={12} md={6}>
+          <Space.Compact style={{ width: '100%' }}>
+            <Select
+              placeholder="Sắp xếp theo"
+              value={sortField}
+              onChange={onSortFieldChange}
+              style={{ 
+                width: '60%',
+                height: '40px'
+              }}
+            >
+              <Select.Option value="createdAt">Ngày tạo</Select.Option>
+              <Select.Option value="checkIn">Ngày nhận phòng</Select.Option>
+              <Select.Option value="checkOut">Ngày trả phòng</Select.Option>
+              <Select.Option value="totalPrice">Tổng tiền</Select.Option>
+              <Select.Option value="paymentStatus">Trạng thái thanh toán</Select.Option>
+              <Select.Option value="guestName">Tên khách hàng</Select.Option>
+              <Select.Option value="roomNumber">Số phòng</Select.Option>
+            </Select>
+            <Select
+              value={sortOrder}
+              onChange={onSortOrderChange}
+              style={{ 
+                width: '40%',
+                height: '40px'
+              }}
+            >
+              <Select.Option value="desc">
+                <SortAscendingOutlined /> Giảm dần
+              </Select.Option>
+              <Select.Option value="asc">
+                <SortAscendingOutlined style={{ transform: 'rotate(180deg)' }} /> Tăng dần
+              </Select.Option>
+            </Select>
+          </Space.Compact>
         </Col>
       </Row>
       <div 
