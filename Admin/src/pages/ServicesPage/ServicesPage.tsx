@@ -16,9 +16,11 @@ import { fetchServices, deleteService } from "../../services/services.service";
 import { env } from "../../constanst/getEnvs";
 import { servicesColumns } from "../../components/Services/ServicesColumns";
 import ServicesForm from "../../components/Services/ServicesForm";
+import ServiceSearchFilter from "../../components/Services/ServiceSearchFilter";
 
 export default function ServicesPage() {
   const [items, setItems] = useState<ServiceItem[]>([]);
+  const [filteredItems, setFilteredItems] = useState<ServiceItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -29,6 +31,11 @@ export default function ServicesPage() {
   const [editing, setEditing] = useState<ServiceItem | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [detailItem, setDetailItem] = useState<ServiceItem | null>(null);
+  
+  // Search và Filter states
+  const [searchText, setSearchText] = useState("");
+  const [filterPrice, setFilterPrice] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const load = async (page = 1, limit = 10) => {
     try {
@@ -36,6 +43,7 @@ export default function ServicesPage() {
       const res = await fetchServices(page, limit);
       const list = Array.isArray(res.data) ? res.data : [];
       setItems(list);
+      setFilteredItems(list);
       setPagination({
         current: res.pagination?.page || 1,
         pageSize: res.pagination?.limit || 10,
@@ -53,6 +61,46 @@ export default function ServicesPage() {
   useEffect(() => {
     load();
   }, []);
+
+  // Filter services based on search and filter criteria
+  useEffect(() => {
+    let filtered = [...items];
+
+    // Search filter
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      filtered = filtered.filter(service =>
+        service.name?.toLowerCase().includes(searchLower) ||
+        service.description?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Price filter
+    if (filterPrice !== 'all') {
+      filtered = filtered.filter(service => {
+        const price = service.basePrice || 0;
+        switch (filterPrice) {
+          case 'under100k':
+            return price < 100000;
+          case '100k-500k':
+            return price >= 100000 && price <= 500000;
+          case '500k-1m':
+            return price >= 500000 && price <= 1000000;
+          case 'over1m':
+            return price > 1000000;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(service => service.status === filterStatus);
+    }
+
+    setFilteredItems(filtered);
+  }, [items, searchText, filterPrice, filterStatus]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -120,6 +168,23 @@ export default function ServicesPage() {
         </Button>
       </div>
 
+      {/* Search và Filter */}
+      <ServiceSearchFilter
+        searchText={searchText}
+        onSearchChange={setSearchText}
+        filterPrice={filterPrice}
+        onPriceChange={setFilterPrice}
+        filterStatus={filterStatus}
+        onStatusChange={setFilterStatus}
+        onClearFilters={() => {
+          setSearchText("");
+          setFilterPrice("all");
+          setFilterStatus("all");
+        }}
+        totalCount={items.length}
+        filteredCount={filteredItems.length}
+      />
+
       <Table
         columns={servicesColumns(
           (record) => {
@@ -132,7 +197,7 @@ export default function ServicesPage() {
             setOpenDetail(true);
           }
         )}
-        dataSource={items}
+        dataSource={filteredItems}
         rowKey="_id"
         loading={loading}
         pagination={{

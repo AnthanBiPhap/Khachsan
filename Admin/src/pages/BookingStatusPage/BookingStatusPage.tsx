@@ -5,6 +5,7 @@ import {
   Drawer,
   Descriptions,
   Tag,
+  Alert,
 } from "antd";
 import { useEffect, useState } from "react";
 import { CalendarOutlined } from "@ant-design/icons";
@@ -168,9 +169,44 @@ export default function BookingPage() {
           marginBottom: 16,
         }}
       >
-        <Typography.Title level={4}>
-          <CalendarOutlined /> Nhật ký trạng thái đặt phòng
-        </Typography.Title>
+        <div>
+          <Typography.Title level={4}>
+            <CalendarOutlined /> Nhật ký trạng thái đặt phòng
+          </Typography.Title>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+            <Alert
+              message={
+                <span style={{ fontSize: '13px', lineHeight: '1.6' }}>
+                  <CalendarOutlined style={{ marginRight: 12, fontSize: '12px' }} />
+                  <strong>Quy định ghi log:</strong> Mọi thay đổi trạng thái đặt phòng phải được ghi lại đầy đủ với thông tin người thao tác, thời gian và lý do thay đổi.
+                </span>
+              }
+              type="info"
+              showIcon
+              style={{
+                fontSize: 12,
+                padding: '8px 12px'
+              }}
+            />
+            
+            <Alert
+              message={
+                <span style={{ fontSize: '13px', lineHeight: '1.6' }}>
+                  <CalendarOutlined style={{ marginRight: 12, fontSize: '12px' }} />
+                  <strong>Quy định check-in/check-out:</strong> Khách check-in phải được xác nhận bởi nhân viên lễ tân. Check-out phải được thực hiện trước 12:00 trưa ngày trả phòng.
+                </span>
+              }
+              type="warning"
+              showIcon
+              style={{
+                fontSize: 12,
+                padding: '8px 12px'
+              }}
+            />
+            
+           
+          </div>
+        </div>
         {/* <Button
           type="primary"
           icon={<PlusOutlined />}

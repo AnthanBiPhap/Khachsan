@@ -18,9 +18,11 @@ import { fetchRooms, deleteRoom } from "../../services/rooms.service";
 import { env } from "../../constanst/getEnvs";
 import { roomsColumns } from "../../components/Rooms/RoomsColumns";
 import RoomsForm from "../../components/Rooms/RoomsForm";
+import RoomSearchFilter from "../../components/Rooms/RoomSearchFilter";
 
 export default function RoomsPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [filteredRooms, setFilteredRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -31,6 +33,11 @@ export default function RoomsPage() {
   const [editingRoom, setEditingRoom] = useState<Room | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [detailItem, setDetailItem] = useState<Room | null>(null);
+  
+  // Search và Filter states
+  const [searchText, setSearchText] = useState("");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
 
   const loadRooms = async (page = 1, limit = 10) => {
     try {
@@ -38,6 +45,7 @@ export default function RoomsPage() {
       const res = await fetchRooms(page, limit);
       const list = Array.isArray(res.data) ? res.data : [];
       setRooms(list);
+      setFilteredRooms(list);
       setPagination({
         current: res.pagination?.page || 1,
         pageSize: res.pagination?.limit || 10,
@@ -55,6 +63,37 @@ export default function RoomsPage() {
   useEffect(() => {
     loadRooms();
   }, []);
+
+  // Filter rooms based on search and filter criteria
+  useEffect(() => {
+    let filtered = [...rooms];
+
+    // Search filter
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      filtered = filtered.filter(room =>
+        room.roomNumber?.toLowerCase().includes(searchLower) ||
+        room.typeId?.name?.toLowerCase().includes(searchLower) ||
+        room.description?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Type filter
+    if (filterType !== 'all') {
+      filtered = filtered.filter(room => room.typeId?._id === filterType);
+    }
+
+    // Status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(room => {
+        // Giả sử có field status trong Room type
+        const roomStatus = (room as any).status || 'available';
+        return roomStatus === filterStatus;
+      });
+    }
+
+    setFilteredRooms(filtered);
+  }, [rooms, searchText, filterType, filterStatus]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -122,6 +161,23 @@ export default function RoomsPage() {
         </Button>
       </div>
 
+      {/* Search và Filter */}
+      <RoomSearchFilter
+        searchText={searchText}
+        onSearchChange={setSearchText}
+        filterType={filterType}
+        onTypeChange={setFilterType}
+        filterStatus={filterStatus}
+        onStatusChange={setFilterStatus}
+        onClearFilters={() => {
+          setSearchText("");
+          setFilterType("all");
+          setFilterStatus("all");
+        }}
+        totalCount={rooms.length}
+        filteredCount={filteredRooms.length}
+      />
+
       <Table
         columns={roomsColumns(
           (record) => {
@@ -134,7 +190,7 @@ export default function RoomsPage() {
             setOpenDetail(true);
           }
         )}
-        dataSource={rooms}
+        dataSource={filteredRooms}
         rowKey="_id"
         loading={loading}
         pagination={{

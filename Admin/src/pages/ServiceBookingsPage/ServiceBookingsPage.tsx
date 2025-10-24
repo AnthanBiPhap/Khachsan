@@ -1,25 +1,14 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   Typography,
-  Button,
-  Card,
-  Col,
-  DatePicker,
   Descriptions,
-  Form,
-  Input,
-  InputNumber,
   List,
-  Modal,
-  Row,
-  Select,
-  Space,
   Tag,
   message,
   Drawer,
 } from "antd";
-import { ShoppingCartOutlined, PlusOutlined } from "@ant-design/icons";
+import { ShoppingCartOutlined } from "@ant-design/icons";
 import type { ServiceBookingItem } from "../../types/serviceBooking";
 import {
   fetchServiceBookings,
@@ -28,9 +17,13 @@ import {
 import { env } from "../../constanst/getEnvs";
 import { serviceBookingsColumns } from "../../components/ServiceBookings/ServiceBookingsColumns";
 import ServiceBookingsForm from "../../components/ServiceBookings/ServiceBookingsForm";
+import ServiceBookingSearchFilter from "../../components/ServiceBookings/ServiceBookingSearchFilter";
+import ServiceBookingStatistics from "../../components/ServiceBookings/ServiceBookingStatistics";
+import dayjs from "dayjs";
 
 export default function ServiceBookingsPage() {
   const [items, setItems] = useState<ServiceBookingItem[]>([]);
+  const [filteredItems, setFilteredItems] = useState<ServiceBookingItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -41,6 +34,22 @@ export default function ServiceBookingsPage() {
   const [editing, setEditing] = useState<ServiceBookingItem | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [detailItem, setDetailItem] = useState<ServiceBookingItem | null>(null);
+  
+  // Search và Filter states
+  const [searchText, setSearchText] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterService, setFilterService] = useState<string>("all");
+  const [filterDate, setFilterDate] = useState<string>("all");
+  
+  // Statistics state
+  const [statistics, setStatistics] = useState({
+    totalBookings: 0,
+    completedBookings: 0,
+    cancelledBookings: 0,
+    reservedBookings: 0,
+    totalRevenue: 0,
+    todayRevenue: 0,
+  });
 
   const load = async (page = 1, limit = 10) => {
     try {
@@ -48,11 +57,15 @@ export default function ServiceBookingsPage() {
       const res = await fetchServiceBookings(page, limit);
       const list = Array.isArray(res.data) ? res.data : [];
       setItems(list);
+      setFilteredItems(list);
       setPagination({
         current: res.pagination?.page || 1,
         pageSize: res.pagination?.limit || 10,
-        total: res.pagination?.totalRecord || 0,
+        total: res.pagination?.total || 0,
       });
+      
+      // Calculate statistics
+      calculateStatistics(list);
     } catch (e) {
       console.error(e);
       message.error("Không tải được danh sách lịch dịch vụ");
@@ -65,6 +78,84 @@ export default function ServiceBookingsPage() {
   useEffect(() => {
     load();
   }, []);
+
+  // Calculate statistics function
+  const calculateStatistics = (data: ServiceBookingItem[]) => {
+    const today = dayjs().startOf('day');
+    const totalBookings = data.length;
+    const completedBookings = data.filter(item => item.status === 'completed').length;
+    const cancelledBookings = data.filter(item => item.status === 'cancelled').length;
+    const reservedBookings = data.filter(item => item.status === 'reserved').length;
+    
+    const totalRevenue = data
+      .filter(item => item.status === 'completed')
+      .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    const todayRevenue = data
+      .filter(item => {
+        const scheduledDate = dayjs(item.scheduledAt).startOf('day');
+        return item.status === 'completed' && scheduledDate.isSame(today);
+      })
+      .reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    setStatistics({
+      totalBookings,
+      completedBookings,
+      cancelledBookings,
+      reservedBookings,
+      totalRevenue,
+      todayRevenue,
+    });
+  };
+
+  // Filter service bookings based on search and filter criteria
+  useEffect(() => {
+    let filtered = [...items];
+
+    // Search filter
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      filtered = filtered.filter(item =>
+        item.bookingId?.guestInfo?.fullName?.toLowerCase().includes(searchLower) ||
+        item.serviceId?.name?.toLowerCase().includes(searchLower) ||
+        item.customerId?.fullName?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(item => item.status === filterStatus);
+    }
+
+    // Service filter
+    if (filterService !== 'all') {
+      filtered = filtered.filter(item => 
+        item.serviceId?._id === filterService
+      );
+    }
+
+    // Date filter
+    if (filterDate !== 'all') {
+      const now = dayjs();
+      filtered = filtered.filter(item => {
+        const scheduledDate = dayjs(item.scheduledAt);
+        switch (filterDate) {
+          case 'today':
+            return scheduledDate.isSame(now, 'day');
+          case 'tomorrow':
+            return scheduledDate.isSame(now.add(1, 'day'), 'day');
+          case 'thisWeek':
+            return scheduledDate.isSame(now, 'week');
+          case 'thisMonth':
+            return scheduledDate.isSame(now, 'month');
+          default:
+            return true;
+        }
+      });
+    }
+
+    setFilteredItems(filtered);
+  }, [items, searchText, filterStatus, filterService, filterDate]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -134,6 +225,36 @@ export default function ServiceBookingsPage() {
         </Button> */}
       </div>
 
+      {/* Statistics */}
+      <ServiceBookingStatistics
+        totalBookings={statistics.totalBookings}
+        completedBookings={statistics.completedBookings}
+        cancelledBookings={statistics.cancelledBookings}
+        reservedBookings={statistics.reservedBookings}
+        totalRevenue={statistics.totalRevenue}
+        todayRevenue={statistics.todayRevenue}
+      />
+
+      {/* Search và Filter */}
+      <ServiceBookingSearchFilter
+        searchText={searchText}
+        onSearchChange={setSearchText}
+        filterStatus={filterStatus}
+        onStatusChange={setFilterStatus}
+        filterService={filterService}
+        onServiceChange={setFilterService}
+        filterDate={filterDate}
+        onDateChange={setFilterDate}
+        onClearFilters={() => {
+          setSearchText("");
+          setFilterStatus("all");
+          setFilterService("all");
+          setFilterDate("all");
+        }}
+        totalCount={items.length}
+        filteredCount={filteredItems.length}
+      />
+
       <Table
         columns={serviceBookingsColumns(
           (record) => {
@@ -146,7 +267,7 @@ export default function ServiceBookingsPage() {
             setOpenDetail(true);
           }
         )}
-        dataSource={items}
+        dataSource={filteredItems}
         rowKey="_id"
         loading={loading}
         pagination={{
@@ -340,15 +461,6 @@ export default function ServiceBookingsPage() {
                     );
                   }
 
-                  // Kiểm tra thông tin trực tiếp từ service booking
-                  if (detailItem.guestName || detailItem.phoneNumber) {
-                    return (
-                      <div>
-                        <div>Tên: {detailItem.guestName || "Chưa có tên"}</div>
-                        <div>Điện thoại: {detailItem.phoneNumber || "N/A"}</div>
-                      </div>
-                    );
-                  }
 
                   // Nếu không có thông tin nào
                   return "Không có thông tin khách hàng";

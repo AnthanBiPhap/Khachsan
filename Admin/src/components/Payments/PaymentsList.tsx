@@ -15,6 +15,7 @@ import {
 } from '@ant-design/icons';
 import { paymentService } from '../../services/payment.service';
 import PaymentDetails from './PaymentDetails';
+import PaymentSearchFilter from './PaymentSearchFilter';
 
 interface Payment {
   _id: string;
@@ -60,6 +61,7 @@ interface Payment {
 
 const PaymentsList: React.FC = () => {
   const [payments, setPayments] = useState<Payment[]>([]);
+  const [filteredPayments, setFilteredPayments] = useState<Payment[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
   const [detailsVisible, setDetailsVisible] = useState(false);
@@ -68,6 +70,12 @@ const PaymentsList: React.FC = () => {
     pageSize: 10,
     total: 0,
   });
+  
+  // Search và Filter states
+  const [searchText, setSearchText] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterMethod, setFilterMethod] = useState<string>("all");
+  const [filterAmount, setFilterAmount] = useState<string>("all");
   // const [stats, setStats] = useState({
   //   totalPayments: 0,
   //   totalAmount: 0,
@@ -87,6 +95,7 @@ const PaymentsList: React.FC = () => {
       
       console.log('Setting payments data:', response.payments);
       setPayments(response.payments);
+      setFilteredPayments(response.payments);
       setPagination({
         current: response.pagination.page,
         pageSize: response.pagination.limit,
@@ -133,6 +142,56 @@ const PaymentsList: React.FC = () => {
   useEffect(() => {
     console.log('Payments state updated:', payments);
   }, [payments]);
+
+  // Filter payments based on search and filter criteria
+  useEffect(() => {
+    let filtered = [...payments];
+
+    // Search filter
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      filtered = filtered.filter(payment => {
+        const customerName = payment.customer?.fullName || '';
+        const bookingId = payment.bookingId?._id || '';
+        const transactionId = payment.transactionId || '';
+        
+        return customerName.toLowerCase().includes(searchLower) ||
+               bookingId.toLowerCase().includes(searchLower) ||
+               transactionId.toLowerCase().includes(searchLower);
+      });
+    }
+
+    // Status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(payment => payment.status === filterStatus);
+    }
+
+    // Method filter
+    if (filterMethod !== 'all') {
+      filtered = filtered.filter(payment => payment.paymentMethod === filterMethod);
+    }
+
+    // Amount filter
+    if (filterAmount !== 'all') {
+      filtered = filtered.filter(payment => {
+        const amount = payment.amount;
+        switch (filterAmount) {
+          case 'under1m':
+            return amount < 1000000;
+          case '1m-5m':
+            return amount >= 1000000 && amount <= 5000000;
+          case '5m-10m':
+            return amount >= 5000000 && amount <= 10000000;
+          case 'over10m':
+            return amount > 10000000;
+          default:
+            return true;
+        }
+      });
+    }
+
+    setFilteredPayments(filtered);
+  }, [payments, searchText, filterStatus, filterMethod, filterAmount]);
 
   const handleTableChange = (pagination: unknown) => {
     const paginationObj = pagination as { current: number; pageSize: number };
@@ -398,6 +457,26 @@ const PaymentsList: React.FC = () => {
         </Col>
       </Row>
 
+      {/* Search và Filter */}
+      <PaymentSearchFilter
+        searchText={searchText}
+        onSearchChange={setSearchText}
+        filterStatus={filterStatus}
+        onStatusChange={setFilterStatus}
+        filterMethod={filterMethod}
+        onMethodChange={setFilterMethod}
+        filterAmount={filterAmount}
+        onAmountChange={setFilterAmount}
+        onClearFilters={() => {
+          setSearchText("");
+          setFilterStatus("all");
+          setFilterMethod("all");
+          setFilterAmount("all");
+        }}
+        totalCount={payments.length}
+        filteredCount={filteredPayments.length}
+      />
+
       <Card
         title={
           <Space>
@@ -416,7 +495,7 @@ const PaymentsList: React.FC = () => {
       >
         <Table
           columns={columns}
-          dataSource={payments}
+          dataSource={filteredPayments}
           rowKey="_id"
           loading={loading}
           key={`payments-table-${payments.length}`}

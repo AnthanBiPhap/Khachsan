@@ -14,9 +14,12 @@ import { fetchInvoices, deleteInvoice } from "../../services/invoices.service";
 import { env } from "../../constanst/getEnvs";
 import { invoicesColumns } from "../../components/Invoices/InvoicesColumns";
 import InvoicesForm from "../../components/Invoices/InvoicesForm";
+import InvoiceSearchFilter from "../../components/Invoices/InvoiceSearchFilter";
+import InvoiceStatistics from "../../components/Invoices/InvoiceStatistics";
 
 export default function InvoicesPage() {
   const [items, setItems] = useState<InvoiceItem[]>([]);
+  const [filteredItems, setFilteredItems] = useState<InvoiceItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -28,6 +31,22 @@ export default function InvoicesPage() {
   const [editing, setEditing] = useState<InvoiceItem | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [detailItem, setDetailItem] = useState<InvoiceItem | null>(null);
+  
+  // Search và Filter states
+  const [searchText, setSearchText] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterSource, setFilterSource] = useState<string>("all");
+  const [filterAmount, setFilterAmount] = useState<string>("all");
+  
+  // Statistics state
+  const [statistics, setStatistics] = useState({
+    totalInvoices: 0,
+    paidInvoices: 0,
+    pendingInvoices: 0,
+    failedInvoices: 0,
+    refundedInvoices: 0,
+    totalRevenue: 0,
+  });
 
   const load = useCallback(async (page = 1, limit = 10) => {
     try {
@@ -35,6 +54,7 @@ export default function InvoicesPage() {
       const res = await fetchInvoices(page, limit);
       const list = Array.isArray(res.data) ? res.data : [];
       setItems(list);
+      setFilteredItems(list);
       const newPagination = {
         current: res.pagination?.page || 1,
         pageSize: res.pagination?.limit || 10,
@@ -42,6 +62,9 @@ export default function InvoicesPage() {
       };
       setPagination(newPagination);
       paginationRef.current = newPagination;
+      
+      // Calculate statistics
+      calculateStatistics(list);
     } catch (e) {
       console.error(e);
       message.error("Không tải được danh sách hóa đơn");
@@ -66,6 +89,80 @@ export default function InvoicesPage() {
       window.removeEventListener('bookingUpdated', handleBookingUpdate);
     };
   }, [load]);
+
+  // Calculate statistics function
+  const calculateStatistics = (data: InvoiceItem[]) => {
+    const totalInvoices = data.length;
+    const paidInvoices = data.filter(item => item.status === 'paid').length;
+    const pendingInvoices = data.filter(item => item.status === 'pending').length;
+    const failedInvoices = data.filter(item => item.status === 'failed').length;
+    const refundedInvoices = data.filter(item => item.status === 'refunded').length;
+    
+    const totalRevenue = data
+      .filter(item => item.status === 'paid')
+      .reduce((sum, item) => sum + item.totalAmount, 0);
+    
+    setStatistics({
+      totalInvoices,
+      paidInvoices,
+      pendingInvoices,
+      failedInvoices,
+      refundedInvoices,
+      totalRevenue,
+    });
+  };
+
+  // Filter invoices based on search and filter criteria
+  useEffect(() => {
+    let filtered = [...items];
+
+    // Search filter
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      filtered = filtered.filter(invoice => {
+        const customerName = invoice.customerId?.fullName || '';
+        const bookingId = invoice.bookingId?._id || '';
+        const guestName = invoice.bookingId?.guestInfo?.fullName || '';
+        const walkInGuestName = invoice.bookingId?.guests?.find(g => g.isMainGuest)?.fullName || '';
+        
+        return customerName.toLowerCase().includes(searchLower) ||
+               bookingId.toLowerCase().includes(searchLower) ||
+               guestName.toLowerCase().includes(searchLower) ||
+               walkInGuestName.toLowerCase().includes(searchLower);
+      });
+    }
+
+    // Status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(invoice => invoice.status === filterStatus);
+    }
+
+    // Source filter
+    if (filterSource !== 'all') {
+      filtered = filtered.filter(invoice => invoice.bookingId?.source === filterSource);
+    }
+
+    // Amount filter
+    if (filterAmount !== 'all') {
+      filtered = filtered.filter(invoice => {
+        const amount = invoice.totalAmount;
+        switch (filterAmount) {
+          case 'under1m':
+            return amount < 1000000;
+          case '1m-5m':
+            return amount >= 1000000 && amount <= 5000000;
+          case '5m-10m':
+            return amount >= 5000000 && amount <= 10000000;
+          case 'over10m':
+            return amount > 10000000;
+          default:
+            return true;
+        }
+      });
+    }
+
+    setFilteredItems(filtered);
+  }, [items, searchText, filterStatus, filterSource, filterAmount]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -133,6 +230,36 @@ export default function InvoicesPage() {
         </Button> */}
       </div>
 
+      {/* Statistics */}
+      <InvoiceStatistics
+        totalInvoices={statistics.totalInvoices}
+        paidInvoices={statistics.paidInvoices}
+        pendingInvoices={statistics.pendingInvoices}
+        failedInvoices={statistics.failedInvoices}
+        refundedInvoices={statistics.refundedInvoices}
+        totalRevenue={statistics.totalRevenue}
+      />
+
+      {/* Search và Filter */}
+      <InvoiceSearchFilter
+        searchText={searchText}
+        onSearchChange={setSearchText}
+        filterStatus={filterStatus}
+        onStatusChange={setFilterStatus}
+        filterSource={filterSource}
+        onSourceChange={setFilterSource}
+        filterAmount={filterAmount}
+        onAmountChange={setFilterAmount}
+        onClearFilters={() => {
+          setSearchText("");
+          setFilterStatus("all");
+          setFilterSource("all");
+          setFilterAmount("all");
+        }}
+        totalCount={items.length}
+        filteredCount={filteredItems.length}
+      />
+
       <Table
         columns={invoicesColumns(
           (record) => {
@@ -145,7 +272,7 @@ export default function InvoicesPage() {
             setOpenDetail(true);
           }
         )}
-        dataSource={items}
+        dataSource={filteredItems}
         rowKey="_id"
         loading={loading}
         pagination={{

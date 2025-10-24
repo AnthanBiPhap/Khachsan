@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { UserOutlined, PhoneOutlined, IdcardOutlined, EyeOutlined } from "@ant-design/icons";
 import { fetchBookings } from "../../services/booking.service";
+import GuestSearchFilter from "../../components/Guests/GuestSearchFilter";
 import type { Booking } from "../../types/booking";
 
 const { Title } = Typography;
@@ -40,6 +41,7 @@ interface Guest {
 
 export default function GuestsPage() {
   const [guests, setGuests] = useState<Guest[]>([]);
+  const [filteredGuests, setFilteredGuests] = useState<Guest[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -48,6 +50,11 @@ export default function GuestsPage() {
   });
   const [openDetail, setOpenDetail] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  
+  // Search và Filter states
+  const [searchText, setSearchText] = useState("");
+  const [filterSource, setFilterSource] = useState<string>("all");
+  const [filterAge, setFilterAge] = useState<string>("all");
   const [searchParams] = useSearchParams();
 
   const loadGuests = async (page = 1, limit = 10) => {
@@ -85,6 +92,7 @@ export default function GuestsPage() {
       });
       
       setGuests(mainGuests);
+      setFilteredGuests(mainGuests);
       setPagination({
         current: res.pagination?.page || 1,
         pageSize: res.pagination?.limit || 10,
@@ -102,6 +110,50 @@ export default function GuestsPage() {
   useEffect(() => {
     loadGuests();
   }, []);
+
+  // Filter guests based on search and filter criteria
+  useEffect(() => {
+    let filtered = [...guests];
+
+    // Search filter
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      filtered = filtered.filter(guest =>
+        guest.fullName?.toLowerCase().includes(searchLower) ||
+        guest.phoneNumber?.toLowerCase().includes(searchLower) ||
+        guest.idNumber?.toLowerCase().includes(searchLower) ||
+        guest.email?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Source filter
+    if (filterSource !== 'all') {
+      filtered = filtered.filter(guest => guest.bookingInfo?.source === filterSource);
+    }
+
+    // Age filter
+    if (filterAge !== 'all') {
+      filtered = filtered.filter(guest => {
+        const age = guest.age;
+        if (!age) return false;
+        
+        switch (filterAge) {
+          case 'under18':
+            return age < 18;
+          case '18-30':
+            return age >= 18 && age <= 30;
+          case '31-50':
+            return age >= 31 && age <= 50;
+          case 'over50':
+            return age > 50;
+          default:
+            return true;
+        }
+      });
+    }
+
+    setFilteredGuests(filtered);
+  }, [guests, searchText, filterSource, filterAge]);
 
   // Tự động mở chi tiết nếu có bookingId trong URL
   useEffect(() => {
@@ -293,9 +345,26 @@ export default function GuestsPage() {
         </Col>
       </Row>
 
+      {/* Search và Filter */}
+      <GuestSearchFilter
+        searchText={searchText}
+        onSearchChange={setSearchText}
+        filterSource={filterSource}
+        onSourceChange={setFilterSource}
+        filterAge={filterAge}
+        onAgeChange={setFilterAge}
+        onClearFilters={() => {
+          setSearchText("");
+          setFilterSource("all");
+          setFilterAge("all");
+        }}
+        totalCount={guests.length}
+        filteredCount={filteredGuests.length}
+      />
+
       <Table
         columns={columns}
-        dataSource={guests}
+        dataSource={filteredGuests}
         rowKey="_id"
         loading={loading}
         pagination={{

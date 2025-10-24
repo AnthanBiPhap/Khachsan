@@ -19,9 +19,11 @@ import {
 import { env } from "../../constanst/getEnvs";
 import { roomTypesColumns } from "../../components/RoomTypes/RoomTypesColumns";
 import RoomTypesForm from "../../components/RoomTypes/RoomTypesForm";
+import RoomTypeSearchFilter from "../../components/RoomTypes/RoomTypeSearchFilter";
 
 export default function RoomTypesPage() {
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
+  const [filteredRoomTypes, setFilteredRoomTypes] = useState<RoomType[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -32,6 +34,11 @@ export default function RoomTypesPage() {
   const [editing, setEditing] = useState<RoomType | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [detailItem, setDetailItem] = useState<RoomType | null>(null);
+  
+  // Search và Filter states
+  const [searchText, setSearchText] = useState("");
+  const [filterPrice, setFilterPrice] = useState<string>("all");
+  const [filterCapacity, setFilterCapacity] = useState<string>("all");
 
   const load = async (page = 1, limit = 10) => {
     try {
@@ -39,6 +46,7 @@ export default function RoomTypesPage() {
       const res = await fetchRoomTypes(page, limit);
       const list = Array.isArray(res.data) ? res.data : [];
       setRoomTypes(list);
+      setFilteredRoomTypes(list);
       setPagination({
         current: res.pagination?.page || 1,
         pageSize: res.pagination?.limit || 10,
@@ -56,6 +64,52 @@ export default function RoomTypesPage() {
   useEffect(() => {
     load();
   }, []);
+
+  // Filter room types based on search and filter criteria
+  useEffect(() => {
+    let filtered = [...roomTypes];
+
+    // Search filter
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      filtered = filtered.filter(roomType =>
+        roomType.name?.toLowerCase().includes(searchLower) ||
+        roomType.description?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Price filter
+    if (filterPrice !== 'all') {
+      filtered = filtered.filter(roomType => {
+        const price = roomType.pricePerNight || 0;
+        switch (filterPrice) {
+          case 'under500k':
+            return price < 500000;
+          case '500k-1m':
+            return price >= 500000 && price <= 1000000;
+          case '1m-2m':
+            return price >= 1000000 && price <= 2000000;
+          case 'over2m':
+            return price > 2000000;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Capacity filter
+    if (filterCapacity !== 'all') {
+      filtered = filtered.filter(roomType => {
+        const capacity = roomType.capacity || 0;
+        if (filterCapacity === 'over4') {
+          return capacity > 4;
+        }
+        return capacity === parseInt(filterCapacity);
+      });
+    }
+
+    setFilteredRoomTypes(filtered);
+  }, [roomTypes, searchText, filterPrice, filterCapacity]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -123,6 +177,23 @@ export default function RoomTypesPage() {
         </Button>
       </div>
 
+      {/* Search và Filter */}
+      <RoomTypeSearchFilter
+        searchText={searchText}
+        onSearchChange={setSearchText}
+        filterPrice={filterPrice}
+        onPriceChange={setFilterPrice}
+        filterCapacity={filterCapacity}
+        onCapacityChange={setFilterCapacity}
+        onClearFilters={() => {
+          setSearchText("");
+          setFilterPrice("all");
+          setFilterCapacity("all");
+        }}
+        totalCount={roomTypes.length}
+        filteredCount={filteredRoomTypes.length}
+      />
+
       <Table
         columns={roomTypesColumns(
           (record) => {
@@ -135,7 +206,7 @@ export default function RoomTypesPage() {
             setOpenDetail(true);
           }
         )}
-        dataSource={roomTypes}
+        dataSource={filteredRoomTypes}
         rowKey="_id"
         loading={loading}
         pagination={{

@@ -185,14 +185,14 @@ export const bookingStatusColumns = (
     key: "actions",
     render: (_, r) => (
       <Space>
-        <Button 
+        {/* <Button 
           type="link" 
           size="small" 
           icon={<EditOutlined />}
           onClick={() => handleEdit(r)}
         >
           Sửa
-        </Button>
+        </Button> */}
         <Button 
           type="link" 
           size="small" 

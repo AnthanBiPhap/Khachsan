@@ -19,9 +19,12 @@ import {
 import { env } from "../../constanst/getEnvs";
 import { locationsColumns } from "../../components/Locations/LocationsColumns";
 import LocationsForm from "../../components/Locations/LocationsForm";
+import LocationSearchFilter from "../../components/Locations/LocationSearchFilter";
+import LocationStatistics from "../../components/Locations/LocationStatistics";
 
 export default function LocationsPage() {
   const [items, setItems] = useState<LocationItem[]>([]);
+  const [filteredItems, setFilteredItems] = useState<LocationItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
     current: 1,
@@ -32,6 +35,22 @@ export default function LocationsPage() {
   const [editing, setEditing] = useState<LocationItem | null>(null);
   const [openDetail, setOpenDetail] = useState(false);
   const [detailItem, setDetailItem] = useState<LocationItem | null>(null);
+  
+  // Search và Filter states
+  const [searchText, setSearchText] = useState("");
+  const [filterType, setFilterType] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [filterRating, setFilterRating] = useState<string>("all");
+  
+  // Statistics state
+  const [statistics, setStatistics] = useState({
+    totalLocations: 0,
+    activeLocations: 0,
+    hiddenLocations: 0,
+    deletedLocations: 0,
+    averageRating: 0,
+    topRatedCount: 0,
+  });
 
   const load = async (page = 1, limit = 10) => {
     try {
@@ -39,11 +58,15 @@ export default function LocationsPage() {
       const res = await fetchLocations(page, limit);
       const list = Array.isArray(res.data) ? res.data : [];
       setItems(list);
+      setFilteredItems(list);
       setPagination({
         current: res.pagination?.page || 1,
         pageSize: res.pagination?.limit || 10,
         total: res.pagination?.totalRecord || 0,
       });
+      
+      // Calculate statistics
+      calculateStatistics(list);
     } catch (e) {
       console.error(e);
       message.error("Không tải được danh sách địa điểm");
@@ -56,6 +79,65 @@ export default function LocationsPage() {
   useEffect(() => {
     load();
   }, []);
+
+  // Calculate statistics function
+  const calculateStatistics = (data: LocationItem[]) => {
+    const totalLocations = data.length;
+    const activeLocations = data.filter(item => item.status === 'active').length;
+    const hiddenLocations = data.filter(item => item.status === 'hidden').length;
+    const deletedLocations = data.filter(item => item.status === 'deleted').length;
+    
+    const locationsWithRating = data.filter(item => item.ratingAvg && item.ratingAvg > 0);
+    const averageRating = locationsWithRating.length > 0 
+      ? locationsWithRating.reduce((sum, item) => sum + (item.ratingAvg || 0), 0) / locationsWithRating.length
+      : 0;
+    
+    const topRatedCount = data.filter(item => item.ratingAvg && item.ratingAvg >= 5).length;
+    
+    setStatistics({
+      totalLocations,
+      activeLocations,
+      hiddenLocations,
+      deletedLocations,
+      averageRating,
+      topRatedCount,
+    });
+  };
+
+  // Filter locations based on search and filter criteria
+  useEffect(() => {
+    let filtered = [...items];
+
+    // Search filter
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      filtered = filtered.filter(location =>
+        location.name?.toLowerCase().includes(searchLower) ||
+        location.address?.toLowerCase().includes(searchLower) ||
+        location.description?.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Type filter
+    if (filterType !== 'all') {
+      filtered = filtered.filter(location => location.type === filterType);
+    }
+
+    // Status filter
+    if (filterStatus !== 'all') {
+      filtered = filtered.filter(location => location.status === filterStatus);
+    }
+
+    // Rating filter
+    if (filterRating !== 'all') {
+      const minRating = parseFloat(filterRating);
+      filtered = filtered.filter(location => 
+        location.ratingAvg && location.ratingAvg >= minRating
+      );
+    }
+
+    setFilteredItems(filtered);
+  }, [items, searchText, filterType, filterStatus, filterRating]);
 
   const handleDelete = async (id: string) => {
     try {
@@ -123,6 +205,36 @@ export default function LocationsPage() {
         </Button>
       </div>
 
+      {/* Statistics */}
+      <LocationStatistics
+        totalLocations={statistics.totalLocations}
+        activeLocations={statistics.activeLocations}
+        hiddenLocations={statistics.hiddenLocations}
+        deletedLocations={statistics.deletedLocations}
+        averageRating={statistics.averageRating}
+        topRatedCount={statistics.topRatedCount}
+      />
+
+      {/* Search và Filter */}
+      <LocationSearchFilter
+        searchText={searchText}
+        onSearchChange={setSearchText}
+        filterType={filterType}
+        onTypeChange={setFilterType}
+        filterStatus={filterStatus}
+        onStatusChange={setFilterStatus}
+        filterRating={filterRating}
+        onRatingChange={setFilterRating}
+        onClearFilters={() => {
+          setSearchText("");
+          setFilterType("all");
+          setFilterStatus("all");
+          setFilterRating("all");
+        }}
+        totalCount={items.length}
+        filteredCount={filteredItems.length}
+      />
+
       <Table
         columns={locationsColumns(
           (record) => {
@@ -135,7 +247,7 @@ export default function LocationsPage() {
             setOpenDetail(true);
           }
         )}
-        dataSource={items}
+        dataSource={filteredItems}
         rowKey="_id"
         loading={loading}
         pagination={{
