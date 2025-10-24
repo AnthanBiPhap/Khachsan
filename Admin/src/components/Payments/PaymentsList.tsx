@@ -290,23 +290,6 @@ const PaymentsList: React.FC = () => {
 
   const columns = [
     {
-      title: (
-        <Space>
-          <CreditCardOutlined style={{ color: '#1890ff' }} />
-          <span>ID</span>
-        </Space>
-      ),
-      dataIndex: '_id',
-      key: '_id',
-      width: 100,
-      render: (id: string) => (
-        <Space>
-          <CreditCardOutlined style={{ color: '#1890ff', fontSize: 12 }} />
-          <Typography.Text code>{id.substring(0, 8)}...</Typography.Text>
-        </Space>
-      ),
-    },
-    {
       title: "Khách hàng",
       key: 'customer',
       render: (record: Payment) => {
