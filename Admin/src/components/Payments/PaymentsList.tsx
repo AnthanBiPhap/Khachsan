@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, Button, Space, Modal, message, Tooltip, Card, Statistic, Row, Col, Typography } from 'antd';
+import { Table, Tag, Button, Space, Modal, message, Tooltip, Card, Statistic, Row, Col, Typography, Form, Select, Input } from 'antd';
 import { 
   EyeOutlined, 
   EditOutlined, 
@@ -76,6 +76,11 @@ const PaymentsList: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterMethod, setFilterMethod] = useState<string>("all");
   const [filterAmount, setFilterAmount] = useState<string>("all");
+  
+  // Edit payment modal states
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingPayment, setEditingPayment] = useState<Payment | null>(null);
+  const [editForm] = Form.useForm();
   // const [stats, setStats] = useState({
   //   totalPayments: 0,
   //   totalAmount: 0,
@@ -198,6 +203,31 @@ const PaymentsList: React.FC = () => {
     fetchPayments(paginationObj.current, paginationObj.pageSize);
   };
 
+  // Edit payment functions
+  const handleEditPayment = (payment: Payment) => {
+    setEditingPayment(payment);
+    editForm.setFieldsValue({
+      paymentMethod: payment.paymentMethod,
+      status: payment.status,
+      notes: payment.notes || '',
+    });
+    setEditModalVisible(true);
+  };
+
+  const handleUpdatePayment = async () => {
+    try {
+      const values = await editForm.validateFields();
+      if (editingPayment) {
+        await paymentService.updateById(editingPayment._id, values);
+        message.success('Cập nhật thanh toán thành công');
+        setEditModalVisible(false);
+        fetchPayments(pagination.current, pagination.pageSize);
+      }
+    } catch (error) {
+      message.error('Cập nhật thanh toán thất bại');
+    }
+  };
+
   const handleViewDetails = (payment: Payment) => {
     setSelectedPayment(payment);
     setDetailsVisible(true);
@@ -250,9 +280,9 @@ const PaymentsList: React.FC = () => {
 
   const getPaymentMethodText = (method: string) => {
     const texts: Record<string, string> = {
-      stripe: 'Stripe',
-      cash: 'Tiền mặt',
-      bank_transfer: 'Chuyển khoản',
+      stripe: 'Stripe (Online)',
+      cash: 'Tiền mặt (Walk-in)',
+      bank_transfer: 'Chuyển khoản (Walk-in)',
       other: 'Khác',
     };
     return texts[method] || method;
@@ -280,6 +310,24 @@ const PaymentsList: React.FC = () => {
       title: "Khách hàng",
       key: 'customer',
       render: (record: Payment) => {
+        // Ưu tiên lấy tên từ booking.guests (cho cả walk-in và online)
+        if (record.bookingId?.guests && record.bookingId.guests.length > 0) {
+          const mainGuest = record.bookingId.guests.find((guest: any) => guest.isMainGuest) || record.bookingId.guests[0];
+          const customerType = record.bookingId?.source === 'walk_in' ? 'Walk-in Customer' : 'Online Customer';
+          const contactInfo = mainGuest.phoneNumber ? `📱 ${mainGuest.phoneNumber}` : customerType;
+          
+          return (
+            <div>
+              <Typography.Text strong>{mainGuest.fullName || 'Guest'}</Typography.Text>
+              <br />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {contactInfo}
+              </Typography.Text>
+            </div>
+          );
+        }
+        
+        // Fallback: lấy từ customerId nếu không có guests
         const name = record.customerId?.fullName || record.customer?.fullName || 'Guest';
         const email = record.customerId?.email || record.customer?.email || 'guest@example.com';
         return (
@@ -375,14 +423,37 @@ const PaymentsList: React.FC = () => {
       ),
       dataIndex: 'paidAt',
       key: 'paidAt',
-      render: (paidAt: string) => (
-        <Space>
-          <CalendarOutlined style={{ color: '#13c2c2', fontSize: 12 }} />
-          <Typography.Text type="secondary">
-            {paidAt ? new Date(paidAt).toLocaleDateString('vi-VN') : 'N/A'}
-          </Typography.Text>
-        </Space>
-      ),
+      render: (paidAt: string, record: Payment) => {
+        // Sử dụng ngày tạo booking làm ngày thanh toán
+        const bookingDate = record.bookingId?.createdAt || record.createdAt;
+        
+        if (bookingDate) {
+          const date = new Date(bookingDate);
+          return (
+            <Space>
+              <CalendarOutlined style={{ color: '#13c2c2', fontSize: 12 }} />
+              <div>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {date.toLocaleDateString('vi-VN')}
+                </Typography.Text>
+                <br />
+                <Typography.Text type="secondary" style={{ fontSize: 10 }}>
+                  {date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                </Typography.Text>
+              </div>
+            </Space>
+          );
+        }
+        
+        return (
+          <Space>
+            <CalendarOutlined style={{ color: '#d9d9d9', fontSize: 12 }} />
+            <Typography.Text type="secondary">
+              N/A
+            </Typography.Text>
+          </Space>
+        );
+      },
     },
     {
       title: (
@@ -402,11 +473,18 @@ const PaymentsList: React.FC = () => {
               onClick={() => handleViewDetails(record)}
             />
           </Tooltip>
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              onClick={() => handleEditPayment(record)}
+            />
+          </Tooltip>
           {record.status === 'pending' && (
             <Tooltip title="Hoàn thành">
               <Button
                 type="text"
-                icon={<EditOutlined />}
+                icon={<CheckCircleOutlined />}
                 onClick={() => handleUpdateStatus(record._id, 'completed')}
               />
             </Tooltip>
@@ -525,6 +603,61 @@ const PaymentsList: React.FC = () => {
             onClose={() => setDetailsVisible(false)}
           />
         )}
+      </Modal>
+
+      {/* Edit Payment Modal */}
+      <Modal
+        title="Chỉnh sửa thanh toán"
+        open={editModalVisible}
+        onOk={handleUpdatePayment}
+        onCancel={() => setEditModalVisible(false)}
+        okText="Cập nhật"
+        cancelText="Hủy"
+        width={600}
+      >
+        <Form
+          form={editForm}
+          layout="vertical"
+          initialValues={{
+            paymentMethod: 'cash',
+            status: 'pending',
+            notes: ''
+          }}
+        >
+          <Form.Item
+            label="Phương thức thanh toán"
+            name="paymentMethod"
+            rules={[{ required: true, message: 'Vui lòng chọn phương thức thanh toán' }]}
+          >
+            <Select>
+              <Select.Option value="stripe">Stripe (Online)</Select.Option>
+              <Select.Option value="cash">Tiền mặt (Walk-in)</Select.Option>
+              <Select.Option value="bank_transfer">Chuyển khoản (Walk-in)</Select.Option>
+              <Select.Option value="other">Khác</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            label="Trạng thái"
+            name="status"
+            rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}
+          >
+            <Select>
+              <Select.Option value="pending">Chờ thanh toán</Select.Option>
+              <Select.Option value="completed">Đã thanh toán</Select.Option>
+              <Select.Option value="failed">Thất bại</Select.Option>
+              <Select.Option value="cancelled">Đã hủy</Select.Option>
+              <Select.Option value="refunded">Đã hoàn tiền</Select.Option>
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            label="Ghi chú"
+            name="notes"
+          >
+            <Input.TextArea rows={3} placeholder="Nhập ghi chú..." />
+          </Form.Item>
+        </Form>
       </Modal>
     </div>
   );

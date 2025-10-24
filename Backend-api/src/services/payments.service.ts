@@ -36,7 +36,7 @@ const getAll = async (filters: any = {}) => {
   const payments = await Payment.find(query)
     .populate({
       path: "bookingId",
-      select: "roomId checkIn checkOut guests totalPrice",
+      select: "roomId checkIn checkOut guests totalPrice source createdAt updatedAt",
       populate: {
         path: "roomId",
         select: "roomNumber typeId",
@@ -130,7 +130,6 @@ const create = async (payload: any) => {
     notes,
     expiresAt,
     status: payload.status || "pending",
-    paidAt: payload.paidAt,
   });
 
   try {
@@ -166,12 +165,14 @@ const updateById = async (id: string, payload: any) => {
     throw createError(400, "Cannot update completed payment");
   }
 
+  const updateData = { ...payload, updatedAt: new Date() };
+
   const updatedPayment = await Payment.findByIdAndUpdate(
     id,
-    { ...payload, updatedAt: new Date() },
+    updateData,
     { new: true, runValidators: true }
   )
-    .populate("bookingId", "roomId checkIn checkOut guests totalPrice")
+    .populate("bookingId", "roomId checkIn checkOut guests totalPrice source")
     .populate("customerId", "fullName email phoneNumber");
 
   return updatedPayment;
@@ -183,10 +184,6 @@ const updateStatus = async (id: string, status: string, additionalData: any = {}
   if (!payment) throw createError(404, "Payment not found");
 
   const updateData: any = { status };
-
-  if (status === "completed") {
-    updateData.paidAt = new Date();
-  }
 
   if (status === "refunded" && additionalData.refundInfo) {
     updateData.refundInfo = {
@@ -391,10 +388,12 @@ const syncPaymentWithBooking = async (bookingId: string, bookingPaymentStatus: s
     
     // Cập nhật payment nếu status khác
     if (paymentStatus !== payment.status) {
-      await Payment.findByIdAndUpdate(payment._id, { 
+      const updateData: any = {
         status: paymentStatus,
         updatedAt: new Date()
-      });
+      };
+      
+      await Payment.findByIdAndUpdate(payment._id, updateData);
       
       console.log(`✅ Đã đồng bộ payment ${payment._id}: ${payment.status} → ${paymentStatus}`);
       return { updated: true, paymentId: payment._id, oldStatus: payment.status, newStatus: paymentStatus };

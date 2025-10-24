@@ -162,6 +162,35 @@ const create = async (payload: any) => {
       console.log(`✅ Đã tạo invoice mới cho booking ${savedBooking._id}: totalAmount=${savedBooking.totalPrice}`);
     }
 
+    // Tạo payment cho walk-in customers
+    if (savedBooking.source === "walk_in") {
+      try {
+        const paymentService = require('./payments.service').default;
+        const paymentMethod = savedBooking.paymentStatus === "paid" ? "cash" : "cash";
+        
+        await paymentService.create({
+          bookingId: savedBooking._id.toString(),
+          customerId: null, // Walk-in không có customerId
+          paymentMethod: paymentMethod,
+          amount: savedBooking.totalPrice,
+          currency: 'VND',
+          status: savedBooking.paymentStatus === "paid" ? "completed" : "pending",
+          notes: `Payment for walk-in booking`,
+          ...(paymentMethod === 'cash' && {
+            cashInfo: {
+              receivedBy: 'Admin',
+              receivedAt: new Date(),
+              notes: 'Cash payment received at front desk'
+            }
+          })
+        });
+        console.log(`✅ Đã tạo payment mới cho walk-in booking ${savedBooking._id}`);
+      } catch (paymentError) {
+        console.error(`❌ Lỗi tạo payment cho walk-in booking ${savedBooking._id}:`, paymentError);
+        // Không throw error để không làm crash API
+      }
+    }
+
     await savedBooking.populate("customerId", "fullName email phoneNumber");
     await savedBooking.populate("roomId", "roomNumber typeId");
 
@@ -292,8 +321,35 @@ const updateById = async (id: string, payload: any) => {
   if (updatedBooking.paymentStatus !== previousPaymentStatus) {
     try {
       const paymentService = require('./payments.service').default;
-      await paymentService.syncPaymentWithBooking(updatedBooking._id.toString(), updatedBooking.paymentStatus);
-      console.log(`✅ Đồng bộ payment cho booking ${updatedBooking._id}: ${previousPaymentStatus} → ${updatedBooking.paymentStatus}`);
+      
+      // Kiểm tra xem đã có payment chưa
+      const existingPayment = await paymentService.getByBookingId(updatedBooking._id.toString());
+      
+      if (!existingPayment && updatedBooking.source === 'walk_in') {
+        // Tạo payment mới cho walk-in customer
+        const paymentMethod = updatedBooking.paymentStatus === 'paid' ? 'cash' : 'cash';
+        await paymentService.create({
+          bookingId: updatedBooking._id.toString(),
+          customerId: null, // Walk-in không có customerId
+          paymentMethod: paymentMethod,
+          amount: updatedBooking.totalPrice,
+          currency: 'VND',
+          status: updatedBooking.paymentStatus === 'paid' ? 'completed' : 'pending',
+          notes: `Payment for walk-in booking`,
+          ...(paymentMethod === 'cash' && {
+            cashInfo: {
+              receivedBy: 'Admin',
+              receivedAt: new Date(),
+              notes: 'Cash payment received at front desk'
+            }
+          })
+        });
+        console.log(`✅ Đã tạo payment mới cho walk-in booking ${updatedBooking._id}`);
+      } else if (existingPayment) {
+        // Đồng bộ payment hiện có
+        await paymentService.syncPaymentWithBooking(updatedBooking._id.toString(), updatedBooking.paymentStatus);
+        console.log(`✅ Đồng bộ payment cho booking ${updatedBooking._id}: ${previousPaymentStatus} → ${updatedBooking.paymentStatus}`);
+      }
     } catch (error) {
       console.error(`❌ Lỗi đồng bộ payment cho booking ${updatedBooking._id}:`, error);
       // Không throw error để không làm crash API

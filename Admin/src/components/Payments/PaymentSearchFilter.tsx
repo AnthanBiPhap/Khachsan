@@ -89,9 +89,9 @@ export default function PaymentSearchFilter({
                 placeholder="Chọn phương thức"
               >
                 <Select.Option value="all">Tất cả phương thức</Select.Option>
-                <Select.Option value="stripe">Stripe</Select.Option>
-                <Select.Option value="cash">Tiền mặt</Select.Option>
-                <Select.Option value="bank_transfer">Chuyển khoản</Select.Option>
+                <Select.Option value="stripe">Stripe (Online)</Select.Option>
+                <Select.Option value="cash">Tiền mặt (Walk-in)</Select.Option>
+                <Select.Option value="bank_transfer">Chuyển khoản (Walk-in)</Select.Option>
                 <Select.Option value="other">Khác</Select.Option>
               </Select>
             </div>
