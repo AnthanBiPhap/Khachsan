@@ -29,6 +29,8 @@ export async function GET(request: Request) {
     
     console.log('Final API URL:', url.toString());
     
+    console.log('🔍 Calling backend API:', url.toString());
+    
     // Gọi API backend
     const response = await fetch(url.toString(), {
       headers: {
@@ -37,21 +39,52 @@ export async function GET(request: Request) {
       // Thêm các headers cần thiết khác nếu có
     });
     
+    console.log('🔍 Backend response status:', response.status);
+    console.log('🔍 Backend response ok:', response.ok);
+    
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      console.error('🔍 Backend error response:', errorText);
+      throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
     }
     
     const data = await response.json();
     
+    console.log('🔍 Raw data from backend:', data);
+    console.log('🔍 Data structure:', {
+      hasData: !!data.data,
+      hasLocations: !!data.data?.locations,
+      locationsLength: data.data?.locations?.length || 0
+    });
+    
     // Chuyển đổi dữ liệu từ API backend sang định dạng phù hợp với frontend
-    const locations = data.data.locations.map((location: any) => ({
-      ...location,
-      // Thêm các trường bổ sung nếu cần
-    }));
+    const allLocations = data.data?.locations || [];
+    
+    console.log('🔍 Total locations from backend:', allLocations.length);
+    
+    if (allLocations.length > 0) {
+      console.log('🔍 First location sample:', allLocations[0]);
+      console.log('🔍 Location statuses:', allLocations.map((loc: any) => ({ 
+        id: loc._id, 
+        name: loc.name, 
+        status: loc.status 
+      })));
+    } else {
+      console.log('⚠️ No locations found in backend response');
+    }
+    
+    // Chỉ trả về location có trạng thái active (không ẩn)
+    const visibleLocations = allLocations.filter((location: any) => 
+      location.status === 'active'
+    );
+    
+    console.log('🔍 Total locations:', allLocations.length);
+    console.log('🔍 Visible locations (active only):', visibleLocations.length);
+    console.log('🔍 Hidden locations:', allLocations.filter((loc: any) => loc.status === 'hidden').length);
     
     return NextResponse.json({
       ...data.data,
-      locations
+      locations: visibleLocations
     });
   } catch (error) {
     console.error("Error fetching locations:", error);

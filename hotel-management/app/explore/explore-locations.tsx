@@ -31,13 +31,17 @@ export function ExploreLocations() {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        // Lấy tất cả địa điểm
-        const response = await fetch('http://localhost:8080/api/v1/locations');
+        // Lấy địa điểm qua API route (đã filter ẩn)
+        const response = await fetch('/api/locations');
         if (!response.ok) {
           throw new Error('Không thể tải dữ liệu địa điểm');
         }
         const data = await response.json();
-        setLocations(data.data.locations);
+        
+        console.log('🔍 Explore locations API response:', data);
+        console.log('🔍 Explore locations count:', data.locations?.length || 0);
+        
+        setLocations(data.locations);
 
         // Nếu user đã đăng nhập và có sở thích, lấy địa điểm gợi ý
         if (user && user.preferences && user.preferences.length > 0) {

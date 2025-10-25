@@ -39,14 +39,15 @@ export default function DashboardPage() {
           return;
         }
 
-        const res = await fetch("http://localhost:8080/api/v1/locations", {
+        // Sử dụng API route để lấy locations đã filter ẩn
+        const res = await fetch("/api/locations", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         if (!res.ok) throw new Error("Không thể tải danh sách địa điểm");
 
         const data = await res.json();
-        let allLocations = data.data?.locations || data.locations || [];
+        let allLocations = data.locations || [];
 
         // Lọc theo sở thích user
         if (user?.preferences && user.preferences.length > 0) {

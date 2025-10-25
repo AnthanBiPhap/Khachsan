@@ -39,10 +39,17 @@ export function NearbyAttractions() {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/v1/locations")
-        const data: LocationsResponse = await response.json()
-        if (data.statusCode === 200) {
-          setLocations(data.data.locations)
+        // Sử dụng API route để lấy locations đã filter ẩn
+        const response = await fetch("/api/locations")
+        const data = await response.json()
+        
+        console.log('🔍 Nearby attractions API response:', data)
+        
+        if (data.locations && Array.isArray(data.locations)) {
+          setLocations(data.locations)
+          console.log('🔍 Set locations:', data.locations.length)
+        } else {
+          console.log('⚠️ No locations in response')
         }
       } catch (error) {
         console.error("Error fetching locations:", error)
