@@ -18,9 +18,12 @@ export async function GET() {
     const data = await response.json();
     
     // Trả về data.data.data (nested structure từ backend)
-    const servicesData = data?.data?.data || data?.data || data || [];
+    const allServices = data?.data?.data || data?.data || data || [];
     
-    return NextResponse.json(servicesData);
+    // Chỉ trả về dịch vụ có trạng thái active
+    const activeServices = allServices.filter((service: any) => service.status === 'active');
+    
+    return NextResponse.json(activeServices);
   } catch (error) {
     console.error("❌ Error fetching services:", error);
     return NextResponse.json(

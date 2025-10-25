@@ -1,8 +1,12 @@
 import { env } from "../constanst/getEnvs";
 
-export const fetchServices = async (page = 1, limit = 10) => {
+export const fetchServices = async (page = 1, limit = 10, showAll = true) => {
   try {
-    const res = await fetch(`${env.API_URL}/api/v1/services?page=${page}&limit=${limit}`);
+    // Admin cần xem tất cả dịch vụ (kể cả ẩn) để quản lý
+    const statusParam = showAll ? 'status=all' : '';
+    const url = `${env.API_URL}/api/v1/services?page=${page}&limit=${limit}${statusParam ? '&' + statusParam : ''}`;
+    
+    const res = await fetch(url);
     if (!res.ok) {
       const error = await res.json().catch(() => ({}));
       throw new Error(error.message || "Failed to fetch services");

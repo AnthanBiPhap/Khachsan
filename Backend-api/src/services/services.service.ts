@@ -25,7 +25,15 @@ const getAll = async (query: any) => {
   }
 
   if (query.status) {
-    where.status = query.status
+    if (query.status === 'all') {
+      // Admin muốn xem tất cả dịch vụ (kể cả ẩn)
+      delete where.status; // Xóa filter status để lấy tất cả
+    } else {
+      where.status = query.status
+    }
+  } else {
+    // Mặc định chỉ hiển thị dịch vụ active cho frontend
+    where.status = 'active'
   }
 
   const services = await Service.find(where)

@@ -109,8 +109,11 @@ export default function BookingForm({
         ]);
         setRooms(roomsRes.data?.data?.rooms || []);
         setBookings(bookingsRes.data?.data?.bookings || []);
-        setServices(servicesRes.data?.data?.data || []);
-        console.log('Services loaded:', servicesRes.data?.data?.data?.length || 0);
+        // Chỉ hiển thị dịch vụ có trạng thái active
+        const allServices = servicesRes.data?.data?.data || [];
+        const activeServices = allServices.filter((service: any) => service.status === 'active');
+        setServices(activeServices);
+        console.log('Services loaded:', activeServices.length, 'active services out of', allServices.length);
       } catch (err) {
         console.error(err);
         message.error("Không thể tải dữ liệu");

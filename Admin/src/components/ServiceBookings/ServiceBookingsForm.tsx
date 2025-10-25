@@ -46,7 +46,9 @@ export default function ServiceBookingsForm({ open, item, onCancel, onSave, load
         setLoadingServices(true);
         const res = await axios.get("http://localhost:8080/api/v1/services");
         const arr = res.data?.data?.data || res.data?.data?.services || [];
-        setServices(arr);
+        // Chỉ hiển thị dịch vụ có trạng thái active
+        const activeServices = arr.filter((service: { status: string }) => service.status === 'active');
+        setServices(activeServices);
       } catch {
         message.error("Không tải được danh sách dịch vụ");
       } finally {
