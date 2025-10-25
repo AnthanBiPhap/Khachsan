@@ -285,23 +285,59 @@ export default function BookingPage() {
       >
         {detailItem && (
           <Descriptions column={1} bordered size="middle">
-            {/* <Descriptions.Item label="ID">{detailItem._id}</Descriptions.Item> */}
+            <Descriptions.Item label="ID Log">
+              <code style={{ fontSize: 12, background: '#f5f5f5', padding: '2px 6px', borderRadius: 3 }}>
+                {detailItem._id}
+              </code>
+            </Descriptions.Item>
             <Descriptions.Item label="Booking">
-              {detailItem.bookingId?._id?.slice(0, 8)}... | Nhận:{" "}
-              {detailItem.bookingId?.checkIn
-                ? new Date(detailItem.bookingId.checkIn).toLocaleString("vi-VN")
-                : "-"}{" "}
-              | Trả:{" "}
-              {detailItem.bookingId?.checkOut
-                ? new Date(detailItem.bookingId.checkOut).toLocaleString(
-                    "vi-VN"
-                  )
-                : "-"}
+              <div>
+                <div style={{ fontWeight: 500, marginBottom: 4 }}>
+                  <code style={{ fontSize: 12, background: '#f5f5f5', padding: '2px 6px', borderRadius: 3 }}>
+                    {detailItem.bookingId?._id?.slice(0, 8)}...
+                  </code>
+                </div>
+                <div style={{ fontSize: 12, color: '#666' }}>
+                  📅 Nhận: {detailItem.bookingId?.checkIn
+                    ? new Date(detailItem.bookingId.checkIn).toLocaleString("vi-VN")
+                    : "-"}
+                </div>
+                <div style={{ fontSize: 12, color: '#666' }}>
+                  📅 Trả: {detailItem.bookingId?.checkOut
+                    ? new Date(detailItem.bookingId.checkOut).toLocaleString("vi-VN")
+                    : "-"}
+                </div>
+                {detailItem.bookingId?.roomNumber && (
+                  <div style={{ fontSize: 12, color: '#666' }}>
+                    🏠 Phòng: {detailItem.bookingId.roomNumber}
+                  </div>
+                )}
+              </div>
             </Descriptions.Item>
             <Descriptions.Item label="Người thao tác">
-              {(detailItem.actorId as any)?.fullName ||
-                (detailItem.actorId as any)?._id ||
-                "-"}
+              <div>
+                <div style={{ fontWeight: 500, marginBottom: 4 }}>
+                  {detailItem.actorName || 
+                   (detailItem.actorId as any)?.fullName ||
+                   (detailItem.actorId as any)?._id ||
+                   "Admin / Lễ tân"}
+                </div>
+                {(detailItem.actorId as any)?.email && (
+                  <div style={{ fontSize: 12, color: '#666', marginBottom: 2 }}>
+                    📧 {(detailItem.actorId as any).email}
+                  </div>
+                )}
+                {(detailItem.actorId as any)?.phoneNumber && (
+                  <div style={{ fontSize: 12, color: '#666' }}>
+                    📞 {(detailItem.actorId as any).phoneNumber}
+                  </div>
+                )}
+                {!detailItem.actorId && detailItem.actorName && (
+                  <div style={{ fontSize: 12, color: '#999', fontStyle: 'italic' }}>
+                    Khách hàng walk-in
+                  </div>
+                )}
+              </div>
             </Descriptions.Item>
             <Descriptions.Item label="Hành động">
               <Tag
@@ -321,8 +357,23 @@ export default function BookingPage() {
                 {detailItem.action}
               </Tag>
             </Descriptions.Item>
+            <Descriptions.Item label="Thời gian thao tác">
+              <div style={{ fontSize: 12, color: '#666' }}>
+                {detailItem.createdAt 
+                  ? new Date(detailItem.createdAt).toLocaleString("vi-VN")
+                  : "Không xác định"}
+              </div>
+            </Descriptions.Item>
             <Descriptions.Item label="Ghi chú">
-              {detailItem.note || "-"}
+              <div style={{ 
+                background: detailItem.note ? '#f9f9f9' : '#f5f5f5', 
+                padding: '8px 12px', 
+                borderRadius: 4,
+                border: '1px solid #e8e8e8',
+                minHeight: '40px'
+              }}>
+                {detailItem.note || "Không có ghi chú"}
+              </div>
             </Descriptions.Item>
           </Descriptions>
         )}

@@ -247,7 +247,7 @@ export default function MyBookingsPage() {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Đặt phòng của tôi
+            Lịch sử đặt phòng
           </h1>
           <p className="text-gray-600">Xem và quản lý các đặt phòng của bạn</p>
         </div>

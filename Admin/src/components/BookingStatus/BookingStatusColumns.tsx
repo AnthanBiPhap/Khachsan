@@ -124,6 +124,13 @@ export const bookingStatusColumns = (
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             {contactInfo}
           </Typography.Text>
+          {!record.actorId && record.actorName && (
+            <div style={{ marginTop: 2 }}>
+              <Tag size="small" color="orange" style={{ fontSize: 10 }}>
+                Walk-in
+              </Tag>
+            </div>
+          )}
         </div>
       );
     },
