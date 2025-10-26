@@ -29,6 +29,32 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
   return children;
 }
 
+// Function to check if user has access to specific route
+function hasAccessToRoute(userRole: string, path: string): boolean {
+  if (userRole === 'admin') {
+    return true; // Admin có quyền truy cập tất cả
+  } else if (userRole === 'staff') {
+    // Staff chỉ được truy cập các route cụ thể
+    const allowedPaths = ['/', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/users', '/invoices'];
+    return allowedPaths.includes(path);
+  } else {
+    // User thường chỉ được truy cập dashboard
+    return path === '/';
+  }
+}
+
+function RoleProtectedRoute({ children, path }: { children: React.ReactNode; path: string }) {
+  const { user } = useAuthStore.getState();
+  
+  if (!user) return <Navigate to="/login" replace />;
+  
+  if (!hasAccessToRoute(user.role, path)) {
+    return <Navigate to="/access-denied" replace />;
+  }
+  
+  return children;
+}
+
 function App() {
   const user = useAuthStore.getState().user;
 
@@ -47,19 +73,19 @@ function App() {
             </PrivateRoute>
           }
         >
-          <Route index element={<Dashboard />} />
-          <Route path="users" element={<UserPage />} />
-          <Route path="bookings" element={<BookingPage />} />
-          <Route path="bookingStatus" element={<BookingStatusPage />} />
-          <Route path="guests" element={<GuestsPage />} />
-          <Route path="rooms" element={<RoomsPage />} />
-          <Route path="room-types" element={<RoomTypesPage />} />
-          <Route path="services" element={<ServicesPage />} />
-          <Route path="service-bookings" element={<ServiceBookingsPage />} />
-          <Route path="locations" element={<LocationsPage />} />
-          <Route path="reviews" element={<ReviewsPage />} />
-          <Route path="invoices" element={<InvoicesPage />} />
-          <Route path="payments" element={<PaymentsPage />} />
+          <Route index element={<RoleProtectedRoute path="/"><Dashboard /></RoleProtectedRoute>} />
+          <Route path="users" element={<RoleProtectedRoute path="/users"><UserPage /></RoleProtectedRoute>} />
+          <Route path="bookings" element={<RoleProtectedRoute path="/bookings"><BookingPage /></RoleProtectedRoute>} />
+          <Route path="bookingStatus" element={<RoleProtectedRoute path="/bookingStatus"><BookingStatusPage /></RoleProtectedRoute>} />
+          <Route path="guests" element={<RoleProtectedRoute path="/guests"><GuestsPage /></RoleProtectedRoute>} />
+          <Route path="rooms" element={<RoleProtectedRoute path="/rooms"><RoomsPage /></RoleProtectedRoute>} />
+          <Route path="room-types" element={<RoleProtectedRoute path="/room-types"><RoomTypesPage /></RoleProtectedRoute>} />
+          <Route path="services" element={<RoleProtectedRoute path="/services"><ServicesPage /></RoleProtectedRoute>} />
+          <Route path="service-bookings" element={<RoleProtectedRoute path="/service-bookings"><ServiceBookingsPage /></RoleProtectedRoute>} />
+          <Route path="locations" element={<RoleProtectedRoute path="/locations"><LocationsPage /></RoleProtectedRoute>} />
+          <Route path="reviews" element={<RoleProtectedRoute path="/reviews"><ReviewsPage /></RoleProtectedRoute>} />
+          <Route path="invoices" element={<RoleProtectedRoute path="/invoices"><InvoicesPage /></RoleProtectedRoute>} />
+          <Route path="payments" element={<RoleProtectedRoute path="/payments"><PaymentsPage /></RoleProtectedRoute>} />
         </Route>
 
         {/* Layout rỗng cho login */}

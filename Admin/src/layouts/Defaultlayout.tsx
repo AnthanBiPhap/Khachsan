@@ -43,7 +43,7 @@ function createMenuItem(
   } as MenuItem;
 }
 
-const menuItems = [
+const allMenuItems = [
   createMenuItem('Dashboard', '/', <PieChartOutlined />),
   createMenuItem('Users', '/users', <TeamOutlined />),
   createMenuItem('Bookings', '/bookings', <BookOutlined />),
@@ -60,6 +60,21 @@ const menuItems = [
   // createMenuItem('Invoice Items', '/invoiceitems', <FileTextOutlined />),
 ];
 
+// Function to get menu items based on user role
+const getMenuItemsByRole = (userRole: string): MenuItem[] => {
+  if (userRole === 'admin') {
+    return allMenuItems;
+  } else if (userRole === 'staff') {
+    // Staff chỉ được xem: Dashboard, Bookings, Booking Status, Guests, Service Bookings, Users, Invoices
+    return allMenuItems.filter(item => 
+      ['/', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/users', '/invoices'].includes(item.key)
+    );
+  } else {
+    // User thường chỉ xem Dashboard
+    return allMenuItems.filter(item => item.key === '/');
+  }
+};
+
 const Defaultlayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
@@ -73,10 +88,15 @@ const Defaultlayout: React.FC = () => {
     navigate(e.key);
   };
 
+  // Get menu items based on user role
+  const menuItems = useMemo(() => {
+    return getMenuItemsByRole(user?.role || 'user');
+  }, [user?.role]);
+
   const currentPageTitle = useMemo(() => {
     const currentItem = menuItems.find(item => item.key === location.pathname);
     return currentItem?.label || 'Dashboard';
-  }, [location.pathname]);
+  }, [location.pathname, menuItems]);
 
   const handleLogout = () => {
     logout();
