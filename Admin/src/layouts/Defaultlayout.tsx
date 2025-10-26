@@ -16,7 +16,7 @@ import {
   LogoutOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import { Layout, Menu, theme, Button, Space, Dropdown } from 'antd';
+import { Layout, Menu, theme, Button, Space } from 'antd';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 
@@ -86,7 +86,33 @@ const Defaultlayout: React.FC = () => {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)}>
-        <div className="demo-logo-vertical" style={{ height: 32, margin: 16, background: 'rgba(255, 255, 255, 0.2)' }} />
+        <div 
+          className="demo-logo-vertical" 
+          style={{ 
+            height: collapsed ? 32 : 'auto', 
+            margin: 16, 
+            background: 'rgba(255, 255, 255, 0.2)',
+            padding: collapsed ? '8px' : '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: collapsed ? 'center' : 'flex-start',
+            borderRadius: '6px'
+          }}
+        >
+          {collapsed ? (
+            <UserOutlined style={{ color: 'white', fontSize: '16px' }} />
+          ) : (
+            <div style={{ color: 'white', textAlign: 'center', width: '100%' }}>
+              <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>
+                {user?.fullName || 'Admin'}
+              </div>
+              <div style={{ fontSize: '11px', opacity: 0.8 }}>
+                {user?.role === 'admin' ? 'Quản trị viên' : user?.role === 'staff' ? 'Nhân viên' : 'Người dùng'}
+              </div>
+            </div>
+          )}
+        </div>
+        
         <Menu 
           theme="dark" 
           selectedKeys={[location.pathname]} 
