@@ -19,11 +19,13 @@ import LocationsPage from "./pages/LocationsPage/LocationsPage";
 import ReviewsPage from "./pages/ReviewsPage/ReviewsPage";
 import InvoicesPage from "./pages/InvoicesPage/InvoicesPage";
 import PaymentsPage from "./pages/PaymentPage/PaymentsPage";
+import AccessDenied from "./pages/AccessDenied";
 import { useAuthStore } from "./stores/authStore";
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const user = useAuthStore.getState().user;
+  const { user, isAdminOrStaff } = useAuthStore.getState();
   if (!user) return <Navigate to="/login" replace />;
+  if (!isAdminOrStaff()) return <Navigate to="/access-denied" replace />;
   return children;
 }
 
@@ -64,6 +66,9 @@ function App() {
         <Route path="/login" element={<Emptylayout />}>
           <Route index element={<LoginPage />} />
         </Route>
+
+        {/* Access Denied */}
+        <Route path="/access-denied" element={<AccessDenied />} />
 
         {/* 404 */}
         <Route path="*" element={<NoPage />} />

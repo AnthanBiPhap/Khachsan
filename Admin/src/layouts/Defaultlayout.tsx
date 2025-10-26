@@ -13,10 +13,12 @@ import {
   FileDoneOutlined,
   CreditCardOutlined,
   UserOutlined,
+  LogoutOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import { Layout, Menu, theme } from 'antd';
+import { Layout, Menu, theme, Button, Space, Dropdown } from 'antd';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
+import { useAuthStore } from '../stores/authStore';
 
 const { Header, Content, Footer, Sider } = Layout;
 
@@ -62,6 +64,7 @@ const Defaultlayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
+  const { logout, user } = useAuthStore();
   const {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
@@ -74,6 +77,11 @@ const Defaultlayout: React.FC = () => {
     const currentItem = menuItems.find(item => item.key === location.pathname);
     return currentItem?.label || 'Dashboard';
   }, [location.pathname]);
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -88,10 +96,23 @@ const Defaultlayout: React.FC = () => {
         />
       </Sider>
       <Layout>
-        <Header style={{ padding: 0, background: colorBgContainer, paddingLeft: 16 }}>
+        <Header style={{ padding: 0, background: colorBgContainer, paddingLeft: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ color: 'white', margin: 0, lineHeight: '64px' }}>
             {currentPageTitle}
           </h2>
+          <Space style={{ paddingRight: 16 }}>
+            <span style={{ color: 'white' }}>
+              Xin chào, {user?.fullName}
+            </span>
+            <Button 
+              type="primary" 
+              danger 
+              icon={<LogoutOutlined />}
+              onClick={handleLogout}
+            >
+              Đăng xuất
+            </Button>
+          </Space>
         </Header>
         <Content style={{ margin: '16px' }}>
           <div

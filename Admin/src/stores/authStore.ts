@@ -8,10 +8,13 @@ interface ITokens {
 interface IUser {
   _id: string;
   email: string;
-  first_name: string;
-  last_name: string;
-  active: boolean;
-  roles: string;
+  fullName: string;
+  phoneNumber: string;
+  role: string;
+  status: string;
+  preferences: string[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 type TAuthStore ={
@@ -20,6 +23,8 @@ type TAuthStore ={
   setTokens: (tokens: ITokens) => void;
   clearTokens: () => void;
   setUser: (user: IUser | null)=>void;
+  logout: () => void;
+  isAdminOrStaff: () => boolean;
 }
 
 export const useAuthStore = create<TAuthStore>()(
@@ -34,6 +39,14 @@ export const useAuthStore = create<TAuthStore>()(
         clearTokens: () => set({ tokens: null }),
         setUser: (user: IUser |  null)=>{
           set({ user });
+        },
+        logout: () => {
+          set({ tokens: null, user: null });
+        },
+        isAdminOrStaff: () => {
+          const state = useAuthStore.getState();
+          if (!state.user) return false;
+          return state.user.role === 'admin' || state.user.role === 'staff';
         }
       }),
       {

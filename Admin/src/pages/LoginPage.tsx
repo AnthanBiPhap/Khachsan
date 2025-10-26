@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { LockOutlined, UserOutlined } from '@ant-design/icons';
 import { Button, Checkbox, Form, Input, Flex, message } from 'antd';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios'
 import { env } from '../constanst/getEnvs';
 import { useAuthStore } from '../stores/authStore';
-import { useNavigate } from 'react-router';
 
 
 
@@ -15,7 +15,7 @@ type TFormData = {
 }
 
 const LoginPage: React.FC = () => {
-   const {setTokens, setUser} = useAuthStore();
+   const {setTokens, setUser, isAdminOrStaff} = useAuthStore();
    const [messageApi, contextHolder] = message.useMessage();
    const [isLoading, setIsLoading] = useState(false);
    const navigate = useNavigate();
@@ -49,8 +49,20 @@ const LoginPage: React.FC = () => {
         // 3. Lưu thông tin profile vào local Storage
         if (responseProfile.status === 200) {
           setUser(responseProfile.data.data);
-          // Chuyển hướng đến trang dashboard
-          navigate('/');
+          
+          // 4. Kiểm tra role admin hoặc staff
+          if (isAdminOrStaff()) {
+            // Chuyển hướng đến trang dashboard
+            navigate('/');
+          } else {
+            // Xóa tokens và user nếu không có quyền
+            setTokens({ accessToken: '', refreshToken: '' });
+            setUser(null);
+            messageApi.open({
+              type: 'error',
+              content: 'Bạn không có quyền truy cập vào trang admin. Chỉ admin và staff mới được phép đăng nhập.',
+            });
+          }
         } else {
           messageApi.open({
             type: 'error',
