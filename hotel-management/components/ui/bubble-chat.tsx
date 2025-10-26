@@ -57,12 +57,11 @@ export default function ChatBubble() {
         chatClient = StreamChat.getInstance(apiKey);
         await chatClient.connectUser(user, token);
 
-        // 3. Tạo/mở channel với admin
-        const adminId = "68dcbc941c2f49bbfc7e6ed2"; // id admin fix cứng
-        const channelRes = await fetch(`${API_BASE_URL}/api/v1/chat/open`, {
+        // 3. Mở channel với staff
+        const channelRes = await fetch(`${API_BASE_URL}/api/v1/chat/staff`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ adminId, userId: userData._id }),
+          body: JSON.stringify({ userId: userData._id }),
         });
 
         if (!channelRes.ok) throw new Error("Không mở được channel");
@@ -83,9 +82,23 @@ export default function ChatBubble() {
     init();
 
     return () => {
-      if (chatClient) chatClient.disconnectUser().catch(console.error);
+      if (currentChannel) {
+        currentChannel.stopWatching().catch(console.error);
+      }
+      if (chatClient) {
+        chatClient.disconnectUser().catch(console.error);
+      }
     };
   }, [userData?._id, userData?.fullName]);
+
+  // Cleanup client khi component unmount
+  useEffect(() => {
+    return () => {
+      if (client) {
+        client.disconnectUser().catch(console.error);
+      }
+    };
+  }, [client]);
 
   // Tự đóng chat khi click ra ngoài
   useEffect(() => {
@@ -113,12 +126,15 @@ export default function ChatBubble() {
       </button>
 
       {/* Cửa sổ chat */}
-      {isOpen && !loading && client && channel && (
+      {isOpen && !loading && client && channel && client.state && (
         <div
           ref={chatRef}
           className="fixed bottom-24 right-6 w-96 h-[500px] bg-white shadow-2xl rounded-2xl overflow-hidden flex flex-col z-[1001] animate-in slide-in-from-bottom-4 fade-in duration-300 border border-gray-200"
         >
-          <Chat client={client}>
+          <Chat client={client} onError={(error) => {
+            console.error("Stream Chat error:", error);
+            // Có thể thêm logic để reconnect hoặc hiển thị thông báo lỗi
+          }}>
             <Channel channel={channel}>
               <Window>
                 <ChannelHeader />
