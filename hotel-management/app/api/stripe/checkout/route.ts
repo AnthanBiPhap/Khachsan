@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import { formatPriceForStripe, createProductDescription } from '@/lib/stripe';
 
 // Khởi tạo Stripe với secret key
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_your_secret_key_here', {
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || 'sk_test_51SFQ8PDuSkPZFda2f6giyoDTLFZeuttGEbJF2x8f59cDSo1LwU9KRufeAaZ5ueePBy2RQSGWbfLi5KGsN1F3aI5T00XEqDiLd7', {
   apiVersion: '2024-10-28.acacia',
 });
 

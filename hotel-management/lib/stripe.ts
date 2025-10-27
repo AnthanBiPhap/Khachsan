@@ -1,7 +1,7 @@
 import { loadStripe } from '@stripe/stripe-js';
 
 // Khởi tạo Stripe với publishable key
-const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_your_publishable_key_here';
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51SFQ8PDuSkPZFda2132JoomoaL6bcAHx5Dc91u2mKeHTFDnF1V5VuEd75lo98l1cv7tqRbXIf9umz5I3xuHaAD9u00vIbQpM5i';
 
 export const stripePromise = loadStripe(stripePublishableKey);
 
