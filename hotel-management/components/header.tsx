@@ -38,8 +38,15 @@ export function Header() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
-          <div className="flex items-center">
-            <Link href="/" className="text-2xl font-bold text-blue-600">Miko Hotel</Link>
+          <div className="flex items-center gap-3">
+            <Link href="/" className="flex items-center gap-3">
+              <img
+                src="https://i.pinimg.com/736x/71/8f/64/718f64e051ef2e1e1390493be6f8a29b.jpg"
+                alt="Miko Hotel Logo"
+                className="h-12 w-12 rounded-full object-cover"
+              />
+              <span className="text-2xl font-bold text-blue-600">Miko Hotel</span>
+            </Link>
           </div>
 
           {/* Navigation */}
