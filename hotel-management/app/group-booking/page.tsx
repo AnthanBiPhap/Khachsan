@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { DatePicker, Input, InputNumber, Button, message, Card, Space, Upload, Tabs } from 'antd';
+import { DatePicker, Input, InputNumber, Button, message, Card, Space, Upload, Tabs, Tag, Steps, Divider, Alert, Empty } from 'antd';
 import dayjs from 'dayjs';
 import type { UploadProps } from 'antd';
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
@@ -33,13 +33,13 @@ export default function GroupBookingPage() {
   const [requesterEmail, setRequesterEmail] = useState("");
   const [checkIn, setCheckIn] = useState<dayjs.Dayjs | null>(null);
   const [checkOut, setCheckOut] = useState<dayjs.Dayjs | null>(null);
-  const [peopleCount, setPeopleCount] = useState<number>(10);
-  const [roomCount, setRoomCount] = useState<number>(3);
+  const [peopleCount, setPeopleCount] = useState<number | undefined>(undefined);
+  const [roomCount, setRoomCount] = useState<number | undefined>(undefined);
   const [notes, setNotes] = useState("");
 
   const handleCreate = async () => {
-    if (!requesterName || !requesterPhone || !checkIn || !checkOut) {
-      message.warning('Vui lòng nhập đủ tên, điện thoại, ngày vào/ra.');
+    if (!requesterName || !requesterPhone || !checkIn || !checkOut || !peopleCount || !roomCount) {
+      message.warning('Vui lòng nhập đủ tên, điện thoại, ngày vào/ra, số khách và số phòng.');
       return;
     }
     setLoadingCreate(true);
@@ -50,8 +50,8 @@ export default function GroupBookingPage() {
         requesterEmail: requesterEmail || undefined,
         checkIn: checkIn.toISOString(),
         checkOut: checkOut.toISOString(),
-        peopleCount,
-        roomCount,
+        peopleCount: Number(peopleCount),
+        roomCount: Number(roomCount),
         notes: notes || undefined,
       };
       const data = await groupBookingService.createRequest(payload);
@@ -108,6 +108,52 @@ export default function GroupBookingPage() {
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestId]);
+
+  const statusColor: Record<GroupBookingStatus | '', string> = {
+    pending_approval: 'default',
+    approved: 'blue',
+    info_uploaded: 'purple',
+    quoted: 'orange',
+    awaiting_payment: 'gold',
+    paid: 'green',
+    confirmed: 'cyan',
+    cancelled: 'red',
+    '': 'default',
+  };
+
+  const statusLabel: Record<GroupBookingStatus | '', string> = {
+    pending_approval: 'Chờ duyệt',
+    approved: 'Đã duyệt',
+    info_uploaded: 'Đã upload danh sách',
+    quoted: 'Đã báo giá',
+    awaiting_payment: 'Chờ thanh toán',
+    paid: 'Đã thanh toán',
+    confirmed: 'Đã xác nhận',
+    cancelled: 'Đã hủy',
+    '': '',
+  };
+
+  const currentStep = useMemo(() => {
+    switch (currentStatus) {
+      case 'pending_approval':
+        return 0;
+      case 'approved':
+        return 1;
+      case 'info_uploaded':
+        return 2;
+      case 'quoted':
+      case 'awaiting_payment':
+        return 3;
+      case 'paid':
+        return 4;
+      case 'confirmed':
+        return 5;
+      case 'cancelled':
+        return 0;
+      default:
+        return 0;
+    }
+  }, [currentStatus]);
 
   const handleDownloadTemplate = async () => {
     if (!requestId) {
@@ -168,37 +214,71 @@ export default function GroupBookingPage() {
   };
 
   return (
-    <Space direction="vertical" size={24} style={{ width: '100%' }}>
-      <Card title="Đặt phòng theo tour (Group Booking)">
-        <p style={{ marginBottom: 12 }}>
-          Quy trình: Gửi yêu cầu → Admin duyệt → Tải mẫu và upload danh sách → Nhận báo giá/Thanh toán → Xác nhận.
-        </p>
+    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '16px' }}>
+      <Card title={<span>Đặt phòng theo tour <Tag color="geekblue">Group Booking</Tag></span>}>
+        <div style={{ marginBottom: 16 }}>
+          <Steps
+            size="small"
+            current={currentStep}
+            items={[
+              { title: 'Gửi yêu cầu' },
+              { title: 'Admin duyệt' },
+              { title: 'Upload danh sách' },
+              { title: 'Báo giá & Thanh toán' },
+              { title: 'Đã thanh toán' },
+              { title: 'Xác nhận' },
+            ]}
+          />
+        </div>
+        {createdId || requestId ? (
+          <Alert
+            type={currentStatus === 'cancelled' ? 'error' : 'info'}
+            showIcon
+            style={{ marginBottom: 16 }}
+            message={
+              <span>
+                Mã yêu cầu: <b>{requestId || createdId}</b>{' '}
+                {currentStatus && (
+                  <Tag color={statusColor[currentStatus]} style={{ marginLeft: 8 }}>{statusLabel[currentStatus]}</Tag>
+                )}
+              </span>
+            }
+            description={lastUpdated ? `Cập nhật: ${lastUpdated}${isPolling ? ' (đang kiểm tra...)' : ''}` : undefined}
+          />
+        ) : null}
+        <Divider style={{ margin: '16px 0' }} />
         <Tabs
           items={[
             {
               key: 'request',
               label: '1) Gửi yêu cầu',
               children: (
-                <Space direction="vertical" size={12} style={{ width: 600, maxWidth: '100%' }}>
-                  <Input placeholder="Tên người liên hệ" value={requesterName} onChange={(e) => setRequesterName(e.target.value)} />
-                  <Input placeholder="Số điện thoại" value={requesterPhone} onChange={(e) => setRequesterPhone(e.target.value)} />
-                  <Input placeholder="Email (không bắt buộc)" value={requesterEmail} onChange={(e) => setRequesterEmail(e.target.value)} />
-                  <Space>
-                    <DatePicker placeholder="Ngày check-in" value={checkIn} onChange={setCheckIn} />
-                    <DatePicker placeholder="Ngày check-out" value={checkOut} onChange={setCheckOut} />
+                <Space direction="vertical" size={12} style={{ width: 720, maxWidth: '100%' }}>
+                  <Alert
+                    type="info"
+                    showIcon
+                    message="Điền thông tin liên hệ và thời gian lưu trú"
+                    description="Chúng tôi sẽ kiểm tra phòng trống và liên hệ khi được duyệt."
+                  />
+                  <Input size="large" placeholder="Tên người liên hệ" value={requesterName} onChange={(e) => setRequesterName(e.target.value)} />
+                  <Input size="large" placeholder="Số điện thoại" value={requesterPhone} onChange={(e) => setRequesterPhone(e.target.value)} />
+                  <Input size="large" placeholder="Email (không bắt buộc)" value={requesterEmail} onChange={(e) => setRequesterEmail(e.target.value)} />
+                  <Space wrap>
+                    <DatePicker size="large" placeholder="Ngày check-in" value={checkIn} onChange={setCheckIn} />
+                    <DatePicker size="large" placeholder="Ngày check-out" value={checkOut} onChange={setCheckOut} />
                   </Space>
-                  <Space>
-                    <InputNumber min={1} placeholder="Số khách" value={peopleCount} onChange={(v) => setPeopleCount(v || 1)} />
-                    <InputNumber min={1} placeholder="Số phòng" value={roomCount} onChange={(v) => setRoomCount(v || 1)} />
+                  <Space wrap>
+                    <InputNumber size="large" min={1} placeholder="Số khách" value={peopleCount} onChange={(v) => setPeopleCount(typeof v === 'number' ? v : undefined)} />
+                    <InputNumber size="large" min={1} placeholder="Số phòng" value={roomCount} onChange={(v) => setRoomCount(typeof v === 'number' ? v : undefined)} />
                   </Space>
-                  <Input.TextArea rows={3} placeholder="Ghi chú" value={notes} onChange={(e) => setNotes(e.target.value)} />
-                  <Button type="primary" loading={loadingCreate} onClick={handleCreate}>Gửi yêu cầu</Button>
+                  <Input.TextArea rows={4} placeholder="Ghi chú (yêu cầu đặc biệt, giờ đến, v.v.)" value={notes} onChange={(e) => setNotes(e.target.value)} />
+                  <Button type="primary" size="large" loading={loadingCreate} onClick={handleCreate}>Gửi yêu cầu</Button>
                   {createdId ? (
                     <div>
                       Mã yêu cầu của bạn: <b>{createdId}</b>
                       {currentStatus ? (
                         <span style={{ marginLeft: 12 }}>
-                          Trạng thái: <b>{currentStatus}</b>
+                          Trạng thái: <b>{statusLabel[currentStatus]}</b>
                           {lastUpdated ? <em style={{ marginLeft: 8, color: '#888' }}>(cập nhật: {lastUpdated}{isPolling ? ', đang kiểm tra...' : ''})</em> : null}
                         </span>
                       ) : null}
@@ -214,15 +294,22 @@ export default function GroupBookingPage() {
               key: 'upload',
               label: '2) Tải mẫu & upload danh sách',
               children: (
-                <Space direction="vertical" size={12} style={{ width: 600, maxWidth: '100%' }}>
-                  <Input placeholder="Nhập mã yêu cầu (ID)" value={requestId} onChange={(e) => setRequestId(e.target.value)} />
+                <Space direction="vertical" size={12} style={{ width: 720, maxWidth: '100%' }}>
+                  <Alert
+                    type="warning"
+                    showIcon
+                    message="Sau khi được duyệt, vui lòng tải mẫu và upload danh sách đoàn"
+                  />
+                  <Input size="large" placeholder="Nhập mã yêu cầu (ID)" value={requestId} onChange={(e) => setRequestId(e.target.value)} />
                   {requestId ? (
                     <div>
-                      Trạng thái hiện tại: <b>{currentStatus || 'đang kiểm tra...'}</b>
+                      Trạng thái hiện tại: {currentStatus ? <Tag color={statusColor[currentStatus]}>{statusLabel[currentStatus]}</Tag> : <i>đang kiểm tra...</i>}
                       {lastUpdated ? <em style={{ marginLeft: 8, color: '#888' }}>(cập nhật: {lastUpdated}{isPolling ? ', đang kiểm tra...' : ''})</em> : null}
                       <div style={{ marginTop: 8 }}>
-                        <Button size="small" onClick={() => fetchStatus(requestId)} loading={isPolling}>Kiểm tra ngay</Button>
-                        <Button size="small" style={{ marginLeft: 8 }} onClick={() => { localStorage.removeItem('group_booking_request_id'); setCreatedId(''); setCurrentStatus(''); setRequestId(''); }}>Xóa mã lưu</Button>
+                        <Space>
+                          <Button onClick={() => fetchStatus(requestId)} loading={isPolling}>Kiểm tra ngay</Button>
+                          <Button onClick={() => { localStorage.removeItem('group_booking_request_id'); setCreatedId(''); setCurrentStatus(''); setRequestId(''); }}>Xóa mã lưu</Button>
+                        </Space>
                       </div>
                       {(currentStatus === 'quoted' || currentStatus === 'awaiting_payment') && (
                         <div style={{ marginTop: 16, padding: 12, border: '1px dashed #d9d9d9', borderRadius: 6 }}>
@@ -259,7 +346,7 @@ export default function GroupBookingPage() {
           ]}
         />
       </Card>
-    </Space>
+    </div>
   );
 }
 

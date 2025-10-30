@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Table, Tag, Space, Button, message, Tooltip, Modal, Descriptions, InputNumber, Input, Form } from 'antd';
+import { Table, Tag, Space, Button, message, Tooltip, Modal, Descriptions, InputNumber, Input, Form, Card, Row, Col, Select, DatePicker, Alert, Divider } from 'antd';
 import { CheckCircleOutlined, UploadOutlined, DollarOutlined, FileExcelOutlined, ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
@@ -53,6 +53,17 @@ const statusColor: Record<GroupBookingStatus, string> = {
   cancelled: 'red',
 };
 
+const statusLabel: Record<GroupBookingStatus, string> = {
+  pending_approval: 'Chờ duyệt',
+  approved: 'Đã duyệt',
+  info_uploaded: 'Đã upload danh sách',
+  quoted: 'Đã báo giá',
+  awaiting_payment: 'Chờ thanh toán',
+  paid: 'Đã thanh toán',
+  confirmed: 'Đã xác nhận',
+  cancelled: 'Đã hủy',
+};
+
 const GroupBookingsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<GroupBookingItem[]>([]);
@@ -62,6 +73,11 @@ const GroupBookingsPage: React.FC = () => {
   const [quoteAmount, setQuoteAmount] = useState<number | null>(null);
   const [paymentLink, setPaymentLink] = useState<string>("");
   const [autoBreakdown, setAutoBreakdown] = useState<Array<{ roomId: string; roomNumber: string; typeName?: string; pricePerNight: number; nights: number; subtotal: number }>>([]);
+
+  // Filters
+  const [search, setSearch] = useState<string>("");
+  const [status, setStatus] = useState<GroupBookingStatus | 'all'>('all');
+  const [dateRange, setDateRange] = useState<any>(null);
 
   const openQuote = (item: GroupBookingItem) => {
     setQuoteTarget(item);
@@ -155,6 +171,32 @@ const GroupBookingsPage: React.FC = () => {
     }
   };
 
+  const filteredItems = useMemo(() => {
+    let list = items;
+    if (search) {
+      const s = search.toLowerCase();
+      list = list.filter((i) =>
+        i.requesterName.toLowerCase().includes(s) ||
+        i.requesterPhone.toLowerCase().includes(s) ||
+        (i.requesterEmail || '').toLowerCase().includes(s) ||
+        i._id.toLowerCase().includes(s)
+      );
+    }
+    if (status !== 'all') {
+      list = list.filter((i) => i.status === status);
+    }
+    if (dateRange && dateRange[0] && dateRange[1]) {
+      const [start, end] = dateRange;
+      const s = start.startOf('day').toDate().getTime();
+      const e = end.endOf('day').toDate().getTime();
+      list = list.filter((i) => {
+        const t = new Date(i.createdAt).getTime();
+        return t >= s && t <= e;
+      });
+    }
+    return list;
+  }, [items, search, status, dateRange]);
+
   const columns = [
     {
       title: 'Mã',
@@ -184,36 +226,15 @@ const GroupBookingsPage: React.FC = () => {
     {
       title: 'Trạng thái',
       dataIndex: 'status',
-      render: (s: GroupBookingStatus) => <Tag color={statusColor[s]}>{s}</Tag>
+      render: (s: GroupBookingStatus) => <Tag color={statusColor[s]}>{statusLabel[s]}</Tag>
     },
     {
       title: 'Thao tác',
-      width: 520,
+      width: 220,
       render: (_: any, r: GroupBookingItem) => (
         <Space>
           <Button icon={<ReloadOutlined />} onClick={load}>Tải lại</Button>
-          <Tooltip title="Duyệt yêu cầu">
-            <Button disabled={r.status !== 'pending_approval'} type="primary" onClick={() => approve(r._id)}>
-              Duyệt
-            </Button>
-          </Tooltip>
-          <Tooltip title="Tải Excel mẫu">
-            <Button icon={<FileExcelOutlined />} onClick={() => openTemplate(r._id)}>Mẫu</Button>
-          </Tooltip>
-          <Tooltip title="Gửi báo giá / Link thanh toán">
-            <Button disabled={!(r.status === 'approved' || r.status === 'info_uploaded' || r.status === 'quoted' || r.status === 'awaiting_payment')} onClick={() => openQuote(r)}>
-              Báo giá
-            </Button>
-          </Tooltip>
-          <Tooltip title="Tải file danh sách đã upload">
-            <Button disabled={!(r.status === 'info_uploaded' || r.status === 'quoted' || r.status === 'awaiting_payment' || r.status === 'paid' || r.status === 'confirmed')} icon={<DownloadOutlined />} onClick={() => window.open(`${API_URL}/group-bookings/${r._id}/members.xlsx`, '_blank')}>Danh sách</Button>
-          </Tooltip>
-          <Tooltip title="Đánh dấu đã thanh toán">
-            <Button disabled={!(r.status === 'quoted' || r.status === 'awaiting_payment')} icon={<DollarOutlined />} onClick={() => markPaid(r._id)}>Đã TT</Button>
-          </Tooltip>
-          <Tooltip title="Xác nhận hoàn tất">
-            <Button disabled={r.status !== 'paid'} type="dashed" icon={<CheckCircleOutlined />} onClick={() => confirm(r._id)}>Xác nhận</Button>
-          </Tooltip>
+          <Button type="primary" onClick={() => setViewItem(r)}>Chi tiết</Button>
         </Space>
       )
     }
@@ -221,22 +242,71 @@ const GroupBookingsPage: React.FC = () => {
 
   return (
     <>
+      <Card style={{ marginBottom: 16 }}>
+        <Row gutter={[12, 12]} align="middle">
+          <Col xs={24} md={8}>
+            <Input placeholder="Tìm theo mã, tên, điện thoại, email" value={search} onChange={(e) => setSearch(e.target.value)} allowClear />
+          </Col>
+          <Col xs={12} md={6}>
+            <Select
+              value={status}
+              onChange={(v) => setStatus(v as any)}
+              style={{ width: '100%' }}
+              options={[
+                { label: 'Tất cả trạng thái', value: 'all' },
+                ...Object.entries(statusLabel).map(([k, v]) => ({ label: v, value: k }))
+              ]}
+            />
+          </Col>
+          <Col xs={12} md={8}>
+            <DatePicker.RangePicker style={{ width: '100%' }} onChange={(v) => setDateRange(v)} />
+          </Col>
+          <Col xs={24} md={2}>
+            <Button block icon={<ReloadOutlined />} onClick={load}>Tải</Button>
+          </Col>
+        </Row>
+      </Card>
       <Table
         rowKey="_id"
         loading={loading}
-        dataSource={items}
+        dataSource={filteredItems}
         columns={columns as any}
-        pagination={{ pageSize: 10 }}
+        pagination={{ pageSize: 10, showSizeChanger: true }}
+        sticky
+        expandable={{
+          expandedRowRender: (r: GroupBookingItem) => (
+            <div>
+              <Divider style={{ margin: '12px 0' }} />
+              <Descriptions title="Chi tiết nhanh" size="small" column={2}>
+                <Descriptions.Item label="Người liên hệ">{r.requesterName}</Descriptions.Item>
+                <Descriptions.Item label="Điện thoại">{r.requesterPhone}</Descriptions.Item>
+                <Descriptions.Item label="Ngày">{new Date(r.checkIn).toLocaleDateString()} → {new Date(r.checkOut).toLocaleDateString()}</Descriptions.Item>
+                <Descriptions.Item label="Báo giá">{r.quoteAmount != null ? `${r.quoteAmount.toLocaleString()} VND` : '-'}</Descriptions.Item>
+              </Descriptions>
+              <Divider style={{ margin: '12px 0' }} />
+              <b>Danh sách đoàn:</b>
+              {Array.isArray(r.members) && r.members.length > 0 ? (
+                <ul style={{ paddingLeft: 18, marginTop: 8 }}>
+                  {r.members.map((m, idx) => (
+                    <li key={idx}>{m.fullName} {m.isLeader ? '(Trưởng đoàn)' : ''} {m.phoneNumber ? ` - ${m.phoneNumber}` : ''}</li>
+                  ))}
+                </ul>
+              ) : (
+                <div style={{ marginTop: 8 }}><Tag>Chưa có</Tag></div>
+              )}
+            </div>
+          )
+        }}
       />
 
-      <Modal open={!!viewItem} onCancel={() => setViewItem(null)} footer={null} title={`Chi tiết ${viewItem?._id || ''}`} width={720}>
+      <Modal open={!!viewItem} onCancel={() => setViewItem(null)} footer={null} title={`Chi tiết ${viewItem?._id || ''}`} width={760}>
         {viewItem && (
           <Descriptions bordered column={1} size="small">
             <Descriptions.Item label="Người liên hệ">{viewItem.requesterName} - {viewItem.requesterPhone}</Descriptions.Item>
             <Descriptions.Item label="Email">{viewItem.requesterEmail || '-'}</Descriptions.Item>
             <Descriptions.Item label="Ngày">{new Date(viewItem.checkIn).toLocaleString()} → {new Date(viewItem.checkOut).toLocaleString()}</Descriptions.Item>
             <Descriptions.Item label="Số khách/phòng">{viewItem.peopleCount} / {viewItem.roomCount}</Descriptions.Item>
-            <Descriptions.Item label="Trạng thái"><Tag color={statusColor[viewItem.status]}>{viewItem.status}</Tag></Descriptions.Item>
+            <Descriptions.Item label="Trạng thái"><Tag color={statusColor[viewItem.status]}>{statusLabel[viewItem.status]}</Tag></Descriptions.Item>
             <Descriptions.Item label="Báo giá">{viewItem.quoteAmount ? viewItem.quoteAmount.toLocaleString() : '-'}</Descriptions.Item>
             <Descriptions.Item label="Link thanh toán">{viewItem.paymentLink ? <a href={viewItem.paymentLink} target="_blank">{viewItem.paymentLink}</a> : '-'}</Descriptions.Item>
             <Descriptions.Item label="Ghi chú">{viewItem.notes || '-'}</Descriptions.Item>
@@ -250,6 +320,35 @@ const GroupBookingsPage: React.FC = () => {
               ) : 'Chưa có'}
             </Descriptions.Item>
           </Descriptions>
+        )}
+        {viewItem && (
+          <>
+            <Divider />
+            <Space wrap>
+              <Tooltip title="Duyệt yêu cầu">
+                <Button disabled={viewItem.status !== 'pending_approval'} type="primary" onClick={() => approve(viewItem._id)}>
+                  Duyệt
+                </Button>
+              </Tooltip>
+              <Tooltip title="Tải Excel mẫu">
+                <Button icon={<FileExcelOutlined />} onClick={() => openTemplate(viewItem._id)}>Mẫu</Button>
+              </Tooltip>
+              <Tooltip title="Gửi báo giá / Link thanh toán">
+                <Button disabled={!(viewItem.status === 'approved' || viewItem.status === 'info_uploaded' || viewItem.status === 'quoted' || viewItem.status === 'awaiting_payment')} onClick={() => openQuote(viewItem)}>
+                  Báo giá
+                </Button>
+              </Tooltip>
+              <Tooltip title="Tải file danh sách đã upload">
+                <Button disabled={!(viewItem.status === 'info_uploaded' || viewItem.status === 'quoted' || viewItem.status === 'awaiting_payment' || viewItem.status === 'paid' || viewItem.status === 'confirmed')} icon={<DownloadOutlined />} onClick={() => window.open(`${API_URL}/group-bookings/${viewItem._id}/members.xlsx`, '_blank')}>Danh sách</Button>
+              </Tooltip>
+              <Tooltip title="Đánh dấu đã thanh toán">
+                <Button disabled={!(viewItem.status === 'quoted' || viewItem.status === 'awaiting_payment')} icon={<DollarOutlined />} onClick={() => markPaid(viewItem._id)}>Đã TT</Button>
+              </Tooltip>
+              <Tooltip title="Xác nhận hoàn tất">
+                <Button disabled={viewItem.status !== 'paid'} type="dashed" icon={<CheckCircleOutlined />} onClick={() => confirm(viewItem._id)}>Xác nhận</Button>
+              </Tooltip>
+            </Space>
+          </>
         )}
       </Modal>
 
