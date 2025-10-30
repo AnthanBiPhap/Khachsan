@@ -71,6 +71,7 @@ const create = async (payload: any) => {
         email: payload.email,
         phoneNumber: payload.phoneNumber,
         password: payload.password,
+        dateOfBirth: payload.dateOfBirth,
         role: payload.role,
         isActive: payload.isActive,
         preferences: payload.preferences || []

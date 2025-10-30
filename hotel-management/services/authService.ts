@@ -38,6 +38,7 @@ export interface User {
   email: string;
   role: 'customer' | 'staff' | 'admin';
   phoneNumber?: string;
+  dateOfBirth?: string;
   status?: 'active' | 'blocked';
   preferences?: string[];
   createdAt?: string;
@@ -57,6 +58,7 @@ const authService = {
     email: string;
     password: string;
     phoneNumber: string;
+    dateOfBirth?: string;
     preferences?: string[];
   }): Promise<void> => {
     try {

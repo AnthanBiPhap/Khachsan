@@ -26,6 +26,10 @@ const userSchema = new Schema(
             required: [true, 'Số điện thoại là bắt buộc'],
             trim: true
         },
+        dateOfBirth: {
+            type: Date,
+            required: false
+        },
         role: {
             type: String,
             enum: ['customer','staff','admin'],

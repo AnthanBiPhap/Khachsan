@@ -30,6 +30,7 @@ export default function RegisterPage() {
     password: '',
     confirmPassword: '',
     phoneNumber: '',
+    dateOfBirth: '',
     preferences: [] as string[]
   });
   const [error, setError] = useState('');
@@ -197,6 +198,20 @@ export default function RegisterPage() {
                     className="mt-2 h-11 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors"
                     placeholder="Nhập số điện thoại"
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="dateOfBirth" className="text-sm font-semibold text-gray-700">Ngày sinh</Label>
+                  <Input
+                    id="dateOfBirth"
+                    name="dateOfBirth"
+                    type="date"
+                    value={formData.dateOfBirth}
+                    onChange={handleChange}
+                    className="mt-2 h-11 rounded-xl border-gray-300 focus:border-blue-500 focus:ring-blue-500 transition-colors"
+                    placeholder="Chọn ngày sinh"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Ngày sinh không bắt buộc</p>
                 </div>
 
                 <div>
