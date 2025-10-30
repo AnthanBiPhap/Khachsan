@@ -98,7 +98,7 @@ const printInvoice = async (invoiceId: string) => {
   const invoice = await Invoice.findById(invoiceId)
     .populate({
       path: "bookingId",
-      select: "_id checkIn checkOut roomId services guestInfo source guests guestCount",
+      select: "_id checkIn checkOut roomId services guestInfo source guests guestCount totalPrice paidAmount remainingAmount paymentStatus",
       populate: { path: "roomId", select: "roomNumber" },
     })
     .populate("customerId", "fullName email phoneNumber");
@@ -121,7 +121,7 @@ const printInvoice = async (invoiceId: string) => {
   // --- Header ---
   doc
     .fontSize(20)
-    .text("HÓA ĐƠN THANH TOÁN", { align: "center", underline: true })
+    .text("HÓA ĐƠN THANH TOÁN KHÁCH SẠN MIKO", { align: "center", underline: true })
     .moveDown(1);
 
   // --- Invoice info ---
@@ -217,13 +217,59 @@ const printInvoice = async (invoiceId: string) => {
   }
   doc.moveDown(0.5);
 
-  // --- Total ---
-  const totalFormatted = new Intl.NumberFormat("vi-VN").format(
-    invoice.totalAmount
-  );
-  doc
-    .fontSize(16)
-    .text(`TỔNG CỘNG: ${totalFormatted} VND`, { align: "right" });
+  // --- Total & Payment Summary ---
+  const nf = new Intl.NumberFormat("vi-VN");
+  const totalFormatted = nf.format(invoice.totalAmount);
+
+  // Xác định số tiền đã thanh toán và còn lại (ưu tiên theo invoice, fallback theo booking)
+  const paidAmount = (invoice as any).paidAmount ?? booking?.paidAmount ?? 0;
+  const remainingAmount = (invoice as any).remainingAmount ?? booking?.remainingAmount ?? Math.max((invoice.totalAmount || 0) - (paidAmount || 0), 0);
+  const paymentStatus = (invoice as any).paymentStatus ?? booking?.paymentStatus ?? "pending";
+
+  // Nhãn trạng thái thanh toán
+  let paymentLabel = "Chờ thanh toán";
+  if (paymentStatus === "partial_paid") paymentLabel = "Đã thanh toán 50%";
+  else if (paymentStatus === "paid") paymentLabel = "Đã thanh toán đủ";
+  else if (paymentStatus === "failed") paymentLabel = "Thanh toán thất bại";
+  else if (paymentStatus === "refunded") paymentLabel = "Đã hoàn tiền";
+
+  doc.fontSize(14).text("TÓM TẮT THANH TOÁN", { underline: true }).moveDown(0.5);
+  doc.fontSize(12).text(`Trạng thái: ${paymentLabel}`);
+  doc.text(`Tổng giá trị: ${totalFormatted} VND`);
+  doc.text(`Đã thanh toán: ${nf.format(paidAmount)} VND`);
+  doc.text(`Còn lại: ${nf.format(remainingAmount)} VND`).moveDown(0.5);
+
+  // Dòng tổng cộng nổi bật ở cuối
+  doc.fontSize(16).text(`TỔNG CỘNG: ${totalFormatted} VND`, { align: "right" });
+
+  // --- Signature Section ---
+  doc.moveDown(2);
+  const pageWidth = (doc.page as any).width || 595.28; // A4 width in pt
+  const margin = 50;
+  const columnWidth = (pageWidth - margin * 2) / 2;
+
+  // Ngày ký (tạo thủ công để tránh lỗi render ký tự)
+  const signDate = `Ngày ${moment().format("DD")} tháng ${moment().format("MM")} năm ${moment().format("YYYY")}`;
+
+  // Cột bên phải: Giám đốc khách sạn
+  const directorTitle = "Giám đốc khách sạn";
+  const rightX = margin + columnWidth;
+  doc.font("NotoSans").fontSize(12).text(signDate, rightX, undefined, { width: columnWidth, align: "right" });
+  doc.text(directorTitle, rightX, undefined, { width: columnWidth, align: "right" }).moveDown(3);
+  // Dòng ký giám đốc
+  const rightX1 = margin + columnWidth + 40;
+  const rightX2 = margin + columnWidth * 2;
+  const yLineRight = (doc.y || 0) + 10;
+  doc.moveTo(rightX1, yLineRight).lineTo(rightX2, yLineRight).stroke();
+
+  // Gợi ý: có thể chèn chữ ký hình ảnh nếu có file signature.png trong thư mục public
+  // try {
+  //   const sigPath = path.join(process.cwd(), "public/signature.png");
+  //   if (fs.existsSync(sigPath)) {
+  //     // Vẽ ảnh chữ ký phía cột phải, phía trên dòng ký
+  //     doc.image(sigPath, rightX + columnWidth - 160, yLineRight - 60, { width: 120 });
+  //   }
+  // } catch {}
 
   doc.end();
 
