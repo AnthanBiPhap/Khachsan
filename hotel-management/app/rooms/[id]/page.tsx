@@ -79,11 +79,19 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
   const [guestInfo, setGuestInfo] = useState<Array<{
     fullName: string;
     idNumber: string;
-    age: number;
+    dateOfBirth: string;
     phoneNumber: string;
     email: string;
     isMainGuest: boolean;
   }>>([]);
+
+  // Pricing info with birthday discount
+  const [pricingInfo, setPricingInfo] = useState<{
+    totalPrice: number;
+    breakdown: Array<{ date: Date; price: number; isBirthday: boolean }>;
+    discountApplied: boolean;
+    discountAmount: number;
+  } | null>(null);
 
   // Load room
   useEffect(() => {
@@ -106,7 +114,7 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
       return {
         fullName: existingGuest?.fullName || "",
         idNumber: existingGuest?.idNumber || "",
-        age: existingGuest?.age || 0,
+        dateOfBirth: existingGuest?.dateOfBirth || "",
         phoneNumber: existingGuest?.phoneNumber || "",
         email: existingGuest?.email || "",
         isMainGuest: index === 0, // First guest is main guest by default
@@ -199,11 +207,54 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
     return diff > 0 ? diff / (1000 * 60 * 60 * 24) : 0;
   };
 
+  // Fetch pricing info with birthday discount
+  useEffect(() => {
+    const fetchPricingInfo = async () => {
+      if (!room || !checkIn || !checkOut || guestInfo.length === 0 || !guestInfo[0]?.dateOfBirth) {
+        setPricingInfo(null);
+        return;
+      }
+
+      try {
+        const response = await fetch(`http://localhost:8080/api/v1/bookings/price/calculate?${new URLSearchParams({
+          roomId: room._id,
+          checkIn: new Date(checkIn).toISOString(),
+          checkOut: new Date(checkOut).toISOString(),
+          customerId: userData?._id || '',
+          guests: JSON.stringify(guestInfo)
+        })}`);
+
+        if (response.ok) {
+          const data = await response.json();
+          setPricingInfo(data?.data || null);
+        } else {
+          setPricingInfo(null);
+        }
+      } catch (error) {
+        console.error('Error fetching pricing info:', error);
+        setPricingInfo(null);
+      }
+    };
+
+    fetchPricingInfo();
+  }, [room, checkIn, checkOut, guestInfo, userData]);
+
   const totalPrice = useMemo(() => {
     if (!room) return 0;
-    const nights = getNights(); // số đêm chuẩn
+    
+    // Nếu có pricing info với giảm giá, sử dụng giá đã giảm
+    if (pricingInfo) {
+      const serviceTotal = selectedServices.reduce((sum, s) => {
+        const service = services.find((srv) => srv._id === s.serviceId);
+        if (!service) return sum;
+        return sum + s.quantity * (service.basePrice || 0);
+      }, 0);
+      
+      return pricingInfo.totalPrice + serviceTotal;
+    }
 
-    // Tổng dịch vụ
+    // Nếu không có pricing info, tính giá bình thường
+    const nights = getNights();
     const serviceTotal = selectedServices.reduce((sum, s) => {
       const service = services.find((srv) => srv._id === s.serviceId);
       if (!service) return sum;
@@ -215,7 +266,17 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
       (extraHours || 0) * (room.typeId.extraHourPrice || 0) +
       serviceTotal
     );
-  }, [room, checkIn, checkOut, extraHours, selectedServices, services]);
+  }, [room, checkIn, checkOut, extraHours, selectedServices, services, pricingInfo]);
+
+  // Tính giá thanh toán (50% tổng giá trị)
+  const paymentAmount = useMemo(() => {
+    return Math.round(totalPrice * 0.5);
+  }, [totalPrice]);
+
+  // Tính số tiền còn lại
+  const remainingAmount = useMemo(() => {
+    return totalPrice - paymentAmount;
+  }, [totalPrice, paymentAmount]);
 
   // Validation function
   const validateGuestInfo = () => {
@@ -234,10 +295,18 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         message.error(`Vui lòng nhập số CMND/CCCD cho khách ${i + 1}`);
         return false;
       }
-      if (!guest.age || guest.age < 0 || guest.age > 120) {
-        message.error(`Vui lòng nhập tuổi hợp lệ cho khách ${i + 1}`);
+      if (!guest.dateOfBirth || guest.dateOfBirth.trim() === '') {
+        message.error(`Vui lòng nhập ngày sinh cho khách ${i + 1}`);
         return false;
       }
+      
+      // Kiểm tra độ tuổi >= 18
+      const age = Math.floor((new Date().getTime() - new Date(guest.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+      if (age < 18) {
+        message.error(`Khách ${i + 1} (${guest.fullName}) phải từ 18 tuổi trở lên để đặt phòng`);
+        return false;
+      }
+      
       if (!guest.phoneNumber.trim()) {
         message.error(`Vui lòng nhập số điện thoại cho khách ${i + 1}`);
         return false;
@@ -315,7 +384,7 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         actualCheckOut: new Date(checkOutDate).toISOString(),
         guests: guestInfo, // Sử dụng mảng thông tin khách hàng mới
         guestCount: guests,
-        totalPrice,
+        totalPrice: paymentAmount, // Chỉ thanh toán 50%
         services: selectedServices.map((s) => {
           const srv = services.find((srv) => srv._id === s.serviceId);
           return {
@@ -334,7 +403,7 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
       const payload = {
         roomId: room._id,
         roomName: bookingData.roomName,
-        totalPrice,
+        totalPrice: paymentAmount, // Chỉ thanh toán 50%
         checkIn: checkInDate.toISOString(),
         checkOut: new Date(checkOutDate).toISOString(),
         guests: guestInfo, // Sử dụng mảng thông tin khách hàng
@@ -571,21 +640,24 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                       
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Tuổi *
+                          Ngày sinh *
                         </label>
                         <Input
-                          type="number"
-                          value={guest.age || ""}
+                          type="date"
+                          value={guest.dateOfBirth || ""}
                           onChange={(e) => {
                             const newGuestInfo = [...guestInfo];
-                            newGuestInfo[index].age = parseInt(e.target.value) || 0;
+                            newGuestInfo[index].dateOfBirth = e.target.value;
                             setGuestInfo(newGuestInfo);
                           }}
-                          placeholder="Nhập tuổi"
+                          placeholder="Chọn ngày sinh"
                           className="w-full"
-                          min="0"
-                          max="120"
                         />
+                        {guest.dateOfBirth && (
+                          <p className="text-xs text-gray-500 mt-1">
+                            Tuổi: {Math.floor((new Date().getTime() - new Date(guest.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))} tuổi
+                          </p>
+                        )}
                       </div>
                       
                       <div>
@@ -647,12 +719,29 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                 <h3 className="text-lg font-bold text-gray-800 mb-4">💳 Tóm tắt đặt phòng</h3>
                 
                 <div className="space-y-3 mb-6">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Phòng {room.roomNumber}</span>
-                    <span className="font-medium">
-                      {getNights()} đêm × {room.typeId.pricePerNight.toLocaleString()} VNĐ
-                    </span>
-                  </div>
+                  {pricingInfo && pricingInfo.discountApplied ? (
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-600">Phòng {room.roomNumber}</span>
+                        <span className="font-medium">
+                          {getNights()} đêm × {room.typeId.pricePerNight.toLocaleString()} VNĐ
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>🎂 Giảm giá sinh nhật (50%)</span>
+                        <span className="font-medium">
+                          -{pricingInfo.discountAmount.toLocaleString()} VNĐ
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Phòng {room.roomNumber}</span>
+                      <span className="font-medium">
+                        {getNights()} đêm × {room.typeId.pricePerNight.toLocaleString()} VNĐ
+                      </span>
+                    </div>
+                  )}
                   
                   {extraHours > 0 && (
                     <div className="flex justify-between text-sm">
@@ -684,11 +773,25 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                 </div>
 
                 <div className="border-t pt-4">
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-lg font-bold text-gray-800">Tổng cộng:</span>
-                    <span className="text-xl font-bold text-blue-600">
-                      {totalPrice.toLocaleString()} VNĐ
-                    </span>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-bold text-gray-800">Tổng cộng:</span>
+                      <span className="text-xl font-bold text-gray-800">
+                        {totalPrice.toLocaleString()} VNĐ
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm text-gray-600">
+                      <span>Thanh toán trước (50%):</span>
+                      <span className="font-medium">
+                        {paymentAmount.toLocaleString()} VNĐ
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm text-gray-500">
+                      <span>Còn lại (50%):</span>
+                      <span>
+                        {remainingAmount.toLocaleString()} VNĐ
+                      </span>
+                    </div>
                   </div>
                   
                   <Button
@@ -726,15 +829,39 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         cancelText="Hủy"
       >
         <div className="space-y-3">
-          <p className="text-lg font-semibold">
-            Tổng tiền cần thanh toán: {totalPrice.toLocaleString()} VNĐ
-          </p>
+          {pricingInfo && pricingInfo.discountApplied && (
+            <div className="bg-green-50 p-3 rounded-lg border border-green-200">
+              <p className="text-sm text-green-700 font-medium">
+                🎂 Chúc mừng sinh nhật! Bạn được giảm 50% giá phòng cho ngày sinh nhật
+              </p>
+              <p className="text-xs text-green-600 mt-1">
+                Tiết kiệm: {pricingInfo.discountAmount.toLocaleString()} VNĐ
+              </p>
+            </div>
+          )}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-semibold">Tổng giá trị:</span>
+              <span className="text-lg font-semibold">{totalPrice.toLocaleString()} VNĐ</span>
+            </div>
+            <div className="flex justify-between items-center text-blue-600">
+              <span className="text-lg font-semibold">Thanh toán trước (50%):</span>
+              <span className="text-xl font-bold">{paymentAmount.toLocaleString()} VNĐ</span>
+            </div>
+            <div className="flex justify-between items-center text-gray-500 text-sm">
+              <span>Còn lại (50%):</span>
+              <span>{remainingAmount.toLocaleString()} VNĐ</span>
+            </div>
+          </div>
           <p className="text-gray-600">
             Bạn sẽ được chuyển đến trang thanh toán an toàn của Stripe.
           </p>
           <div className="bg-blue-50 p-3 rounded-lg">
             <p className="text-sm text-blue-700">
               💡 Sau khi thanh toán thành công, bạn sẽ nhận được email xác nhận đặt phòng.
+            </p>
+            <p className="text-sm text-blue-600 mt-1">
+              ⚠️ 50% còn lại sẽ được thanh toán khi nhận phòng.
             </p>
           </div>
         </div>

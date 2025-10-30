@@ -16,6 +16,19 @@ const invoiceSchema = new Schema(
       required: [true, "Tổng tiền hóa đơn là bắt buộc"],
       min: 0,
     },
+    paidAmount: {
+      type: Number,
+      default: 0,
+    },
+    remainingAmount: {
+      type: Number,
+      default: 0,
+    },
+    paymentStatus: {
+      type: String,
+      enum: ["pending", "partial_paid", "paid", "failed", "refunded", "refund_requested", "cancelled"],
+      default: "pending",
+    },
     status: {
       type: String,
       enum: ["pending", "paid", "failed", "refunded"],

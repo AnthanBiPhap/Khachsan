@@ -5,6 +5,8 @@ import invoicesService from "./invoices.service";
 import bookingStatusService from "./bookingStatus.service";
 import Invoice from "../models/invoices.model";
 import User from "../models/users.model";
+import { calculateRoomPriceWithBirthdayDiscount } from "../helpers/pricing.helper";
+import Room from "../models/rooms.model";
 
 // Lấy tất cả booking với filter + pagination
 const getAll = async (query: any) => {
@@ -91,6 +93,65 @@ const create = async (payload: any) => {
     isMainGuest: guest.isMainGuest !== undefined ? guest.isMainGuest : index === 0
   }));
 
+  // Tính lại giá phòng với giảm giá sinh nhật (nếu có)
+  let finalTotalPrice = payload.totalPrice;
+  try {
+    console.log(`🎂 Checking birthday discount for booking:`, {
+      roomId,
+      checkIn,
+      checkOut,
+      customerId: payload.customerId,
+      guestsCount: guestsWithMainFlag?.length,
+      guestsData: guestsWithMainFlag?.map((g: any) => ({
+        fullName: g.fullName,
+        dateOfBirth: g.dateOfBirth,
+        isMainGuest: g.isMainGuest
+      }))
+    });
+    
+    const room = await Room.findById(roomId).populate('typeId', 'pricePerNight');
+    if (room && room.typeId) {
+      const pricePerNight = (room.typeId as any).pricePerNight;
+      const pricingInfo = await calculateRoomPriceWithBirthdayDiscount(
+        pricePerNight,
+        new Date(checkIn),
+        new Date(checkOut),
+        payload.customerId || undefined,
+        guestsWithMainFlag
+      );
+      
+      // Tính lại tổng giá: giá phòng (đã có giảm giá sinh nhật) + giá dịch vụ
+      const servicesTotal = services.reduce((sum: number, s: any) => sum + (s.price * (s.quantity || 1)), 0);
+      finalTotalPrice = pricingInfo.totalPrice + servicesTotal;
+      
+      console.log(`💰 Price calculation:`, {
+        pricePerNight,
+        roomPriceWithDiscount: pricingInfo.totalPrice,
+        servicesTotal,
+        finalTotalPrice,
+        originalPrice: payload.totalPrice,
+        difference: payload.totalPrice - finalTotalPrice
+      });
+      
+      console.log(`🎂 Birthday discount result:`, {
+        originalPrice: payload.totalPrice,
+        roomPriceWithDiscount: pricingInfo.totalPrice,
+        servicesTotal,
+        finalTotalPrice,
+        discountAmount: pricingInfo.discountAmount,
+        discountApplied: pricingInfo.discountApplied,
+        breakdown: pricingInfo.breakdown
+      });
+    }
+  } catch (pricingError) {
+    console.error('❌ Error calculating birthday discount:', pricingError);
+    // Nếu lỗi, sử dụng giá gốc
+  }
+
+  // Tính số tiền thanh toán (50% tổng giá trị)
+  const paidAmount = Math.round(finalTotalPrice * 0.5);
+  const remainingAmount = finalTotalPrice - paidAmount;
+
   const booking = new Booking({
     customerId: payload.customerId || undefined,
     guests: guestsWithMainFlag,
@@ -98,9 +159,11 @@ const create = async (payload: any) => {
     roomId,
     checkIn,
     checkOut,
-    totalPrice: payload.totalPrice,
+    totalPrice: finalTotalPrice,
+    paidAmount: paidAmount,
+    remainingAmount: remainingAmount,
     source: payload.source || (payload.customerId ? "online" : "walk_in"),
-    paymentStatus: payload.paymentStatus || "pending",
+    paymentStatus: "partial_paid", // Luôn là partial_paid vì chỉ thanh toán 50% ban đầu
     notes: payload.notes || "",
     services: services.map((s: any) => ({
       serviceId: s.serviceId,
@@ -149,18 +212,19 @@ const create = async (payload: any) => {
       action: "pending", // trạng thái mặc định khi tạo booking
       note: "Khách hàng đã tạo booking",
     });
-    // Tạo invoice (luôn tạo cho admin, hoặc khi đã thanh toán)
+    // Tạo invoice cho tất cả booking
     let invoice = null;
-    if (savedBooking.paymentStatus === "paid" || payload.source === "walk_in") {
-      invoice = await invoicesService.create({
-        bookingId: savedBooking._id,
-        customerId: savedBooking.customerId?._id,
-        totalAmount: savedBooking.totalPrice,
-        status: savedBooking.paymentStatus === "paid" ? "paid" : "pending",
-        issuedAt: new Date(),
-      });
-      console.log(`✅ Đã tạo invoice mới cho booking ${savedBooking._id}: totalAmount=${savedBooking.totalPrice}`);
-    }
+    invoice = await invoicesService.create({
+      bookingId: savedBooking._id,
+      customerId: savedBooking.customerId?._id,
+      totalAmount: savedBooking.totalPrice,
+      paidAmount: savedBooking.paidAmount,
+      remainingAmount: savedBooking.remainingAmount,
+      paymentStatus: savedBooking.paymentStatus,
+      status: savedBooking.paymentStatus === "paid" ? "paid" : "pending",
+      issuedAt: new Date(),
+    });
+    console.log(`✅ Đã tạo invoice mới cho booking ${savedBooking._id}: totalAmount=${savedBooking.totalPrice}`);
 
     // Tạo payment cho walk-in customers
     if (savedBooking.source === "walk_in") {
@@ -270,6 +334,18 @@ const updateById = async (id: string, payload: any) => {
     hasCustomerId: !!booking.customerId
   });
   
+  // Cập nhật paidAmount và remainingAmount khi paymentStatus thay đổi
+  if (cleanUpdates.paymentStatus === "paid") {
+    cleanUpdates.paidAmount = booking.totalPrice;
+    cleanUpdates.remainingAmount = 0;
+  } else if (cleanUpdates.paymentStatus === "partial_paid") {
+    cleanUpdates.paidAmount = Math.round(booking.totalPrice * 0.5);
+    cleanUpdates.remainingAmount = booking.totalPrice - cleanUpdates.paidAmount;
+  } else if (cleanUpdates.paymentStatus === "pending") {
+    cleanUpdates.paidAmount = 0;
+    cleanUpdates.remainingAmount = booking.totalPrice;
+  }
+  
   Object.assign(booking, cleanUpdates);
   const updatedBooking = await booking.save();
 
@@ -297,7 +373,10 @@ const updateById = async (id: string, payload: any) => {
         // Cập nhật invoice theo booking (cả status và totalAmount)
         await invoicesService.updateById(existingInvoice._id.toString(), { 
           status: updatedBooking.paymentStatus,
-          totalAmount: updatedBooking.totalPrice
+          totalAmount: updatedBooking.totalPrice,
+          paidAmount: updatedBooking.paidAmount,
+          remainingAmount: updatedBooking.remainingAmount,
+          paymentStatus: updatedBooking.paymentStatus
         });
         console.log(`✅ Đã cập nhật invoice ${existingInvoice._id}: status=${updatedBooking.paymentStatus}, totalAmount=${updatedBooking.totalPrice}`);
       } else if (updatedBooking.paymentStatus === "paid") {
@@ -306,7 +385,10 @@ const updateById = async (id: string, payload: any) => {
           bookingId: updatedBooking._id,
           customerId: (updatedBooking as any).customerId?._id,
           totalAmount: updatedBooking.totalPrice,
-          status: "paid",
+          paidAmount: updatedBooking.paidAmount,
+          remainingAmount: updatedBooking.remainingAmount,
+          paymentStatus: updatedBooking.paymentStatus,
+          status: updatedBooking.paymentStatus === "paid" ? "paid" : "pending",
           issuedAt: new Date(),
         });
         console.log(`✅ Đã tạo invoice mới cho booking ${updatedBooking._id}: totalAmount=${updatedBooking.totalPrice}`);
@@ -526,10 +608,37 @@ const deleteById = async (id: string) => {
   return booking;
 };
 
+// Cập nhật trạng thái thanh toán
+const updatePaymentStatus = async (id: string, paymentData: { amount: number; paymentMethod?: string }) => {
+  const booking = await Booking.findById(id);
+  if (!booking) throw createError(404, "Booking not found");
+
+  const newPaidAmount = (booking.paidAmount || 0) + paymentData.amount;
+  const remainingAmount = booking.totalPrice - newPaidAmount;
+  
+  let newPaymentStatus = "partial_paid";
+  if (remainingAmount <= 0) {
+    newPaymentStatus = "paid";
+  }
+
+  const updatedBooking = await Booking.findByIdAndUpdate(
+    id,
+    {
+      paidAmount: newPaidAmount,
+      remainingAmount: Math.max(0, remainingAmount),
+      paymentStatus: newPaymentStatus,
+    },
+    { new: true }
+  );
+
+  return updatedBooking;
+};
+
 export default {
   getAll,
   getById,
   create,
   updateById,
   deleteById,
+  updatePaymentStatus,
 };

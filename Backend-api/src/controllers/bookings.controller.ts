@@ -1,6 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import bookingService from "../services/bookings.service";
 import  {sendJsonSuccess, httpStatus}  from '../helpers/response.helper';
+import { calculateRoomPriceWithBirthdayDiscount } from '../helpers/pricing.helper';
+import Room from '../models/rooms.model';
 
 /**
  * Controller:
@@ -69,10 +71,75 @@ const Delete = async(req: Request, res: Response, next: NextFunction) => {
     }
 }
 
+// Calculate room price with birthday discount
+const calculatePrice = async(req: Request, res: Response, next: NextFunction) => {
+    try{
+        const { roomId, checkIn, checkOut, customerId, guests } = req.query;
+        
+        if (!roomId || !checkIn || !checkOut) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required parameters: roomId, checkIn, checkOut'
+            });
+        }
+
+        const room = await Room.findById(roomId).populate('typeId', 'pricePerNight');
+        if (!room || !room.typeId) {
+            return res.status(404).json({
+                success: false,
+                message: 'Room not found'
+            });
+        }
+
+        const pricePerNight = (room.typeId as any).pricePerNight;
+        
+        // Parse guests từ query string nếu có
+        let parsedGuests = undefined;
+        if (guests) {
+            try {
+                parsedGuests = JSON.parse(guests as string);
+            } catch (e) {
+                // Nếu parse lỗi, giữ undefined
+            }
+        }
+        
+        const result = await calculateRoomPriceWithBirthdayDiscount(
+            pricePerNight,
+            new Date(checkIn as string),
+            new Date(checkOut as string),
+            customerId as string | undefined,
+            parsedGuests
+        );
+
+        sendJsonSuccess(res, result, httpStatus.OK.statusCode, httpStatus.OK.message);
+    }
+    catch(error) {
+        next (error);
+    }
+}
+
+const updatePaymentStatus = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const { amount, paymentMethod } = req.body;
+
+    if (!amount || amount <= 0) {
+      return sendJsonError(res, "Số tiền thanh toán phải lớn hơn 0", httpStatus.BAD_REQUEST.statusCode);
+    }
+
+    const result = await bookingService.updatePaymentStatus(id, { amount, paymentMethod });
+    sendJsonSuccess(res, result, httpStatus.OK.statusCode, httpStatus.OK.message);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export default {
     getAll,
     getById,
     Create,
     Update,
-    Delete
+    Delete,
+    calculatePrice,
+    updatePaymentStatus
 }

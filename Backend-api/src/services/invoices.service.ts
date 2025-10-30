@@ -29,7 +29,7 @@ const getAll = async (query: any) => {
   }
 
   const invoices = await Invoice.find(where)
-    .populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount")
+    .populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount totalPrice paidAmount remainingAmount paymentStatus")
     .populate("customerId", "fullName email phoneNumber")
     .skip((page - 1) * limit)
     .limit(limit)
@@ -60,11 +60,14 @@ const create = async (payload: any) => {
     bookingId: payload.bookingId,
     customerId: payload.customerId,
     totalAmount: payload.totalAmount,
+    paidAmount: payload.paidAmount || 0,
+    remainingAmount: payload.remainingAmount || 0,
+    paymentStatus: payload.paymentStatus || "pending",
     status: payload.status || "pending",
     issuedAt: payload.issuedAt || Date.now(),
   });
   const savedInvoice = await invoice.save();
-  await savedInvoice.populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount");
+  await savedInvoice.populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount totalPrice paidAmount remainingAmount paymentStatus");
   await savedInvoice.populate("customerId", "fullName email phoneNumber");
   return savedInvoice;
 };

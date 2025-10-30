@@ -176,7 +176,8 @@ export const bookingColumns = (
     render: (s: string) => {
       const map: Record<string, { color: string; text: string; icon: React.ReactNode }> = {
         pending: { color: 'orange', text: 'Chờ thanh toán', icon: <CalendarOutlined /> },
-        paid: { color: 'green', text: 'Đã thanh toán', icon: <CreditCardOutlined /> },
+        partial_paid: { color: 'blue', text: 'Thanh toán 50%', icon: <CreditCardOutlined /> },
+        paid: { color: 'green', text: 'Đã thanh toán đủ', icon: <CreditCardOutlined /> },
         failed: { color: 'red', text: 'Thất bại', icon: <DeleteOutlined /> },
         refunded: { color: 'blue', text: 'Hoàn tiền', icon: <DollarOutlined /> },
         refund_requested: { color: 'purple', text: 'Yêu cầu hoàn tiền', icon: <EditOutlined /> },

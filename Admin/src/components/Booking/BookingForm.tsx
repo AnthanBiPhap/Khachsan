@@ -69,15 +69,63 @@ export default function BookingForm({
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [guests, setGuests] = useState<GuestInfo[]>([]);
   const [guestCount, setGuestCount] = useState<number>(1);
+  const [pricingInfo, setPricingInfo] = useState<{
+    totalPrice: number;
+    breakdown: Array<{ date: Date; price: number; isBirthday: boolean }>;
+    discountApplied: boolean;
+    discountAmount: number;
+  } | null>(null);
 
   // Walk-in khi không có customerId (đặt trực tiếp tại quầy)
   // const isWalkIn = !booking?.customerId;
 
+  // Fetch pricing info with birthday discount
+  useEffect(() => {
+    const fetchPricingInfo = async () => {
+      if (!selectedRoom || !checkIn || !checkOut) {
+        setPricingInfo(null);
+        return;
+      }
+
+      // Nếu không có guest nào hoặc guest chưa có dateOfBirth, không tính giá
+      if (guests.length === 0 || !guests[0]?.dateOfBirth) {
+        setPricingInfo(null);
+        return;
+      }
+
+      try {
+        const customerId = form.getFieldValue('customerId');
+        const response = await axios.get("http://localhost:8080/api/v1/bookings/price/calculate", {
+          params: {
+            roomId: selectedRoom._id,
+            checkIn: checkIn.toISOString(),
+            checkOut: checkOut.toISOString(),
+            customerId: customerId || undefined,
+            guests: JSON.stringify(guests)
+          }
+        });
+        setPricingInfo(response.data?.data || null);
+      } catch (error) {
+        console.error('Error fetching pricing info:', error);
+        setPricingInfo(null);
+      }
+    };
+
+    fetchPricingInfo();
+  }, [selectedRoom, checkIn, checkOut, guests, form]);
+
   const roomPrice = useMemo(() => {
     if (!selectedRoom || !checkIn || !checkOut) return 0;
+    
+    // Nếu có pricing info từ API, sử dụng giá đã tính có giảm giá
+    if (pricingInfo) {
+      return pricingInfo.totalPrice;
+    }
+    
+    // Nếu không, tính giá bình thường
     const nights = checkOut.diff(checkIn, "day") || 1;
     return nights * (selectedRoom.typeId?.pricePerNight || 0);
-  }, [selectedRoom, checkIn, checkOut]);
+  }, [selectedRoom, checkIn, checkOut, pricingInfo]);
 
   const extraHourPrice = useMemo(
     () => selectedRoom?.typeId?.extraHourPrice || 0,
@@ -150,7 +198,7 @@ export default function BookingForm({
         fullName: existingGuest?.fullName || "",
         phoneNumber: existingGuest?.phoneNumber || "",
         idNumber: existingGuest?.idNumber || "",
-        age: existingGuest?.age || 0,
+        dateOfBirth: existingGuest?.dateOfBirth || "",
         email: existingGuest?.email || "",
         isMainGuest: index === 0,
       };
@@ -162,7 +210,7 @@ export default function BookingForm({
           guest.fullName !== guests[index]?.fullName ||
           guest.phoneNumber !== guests[index]?.phoneNumber ||
           guest.idNumber !== guests[index]?.idNumber ||
-          guest.age !== guests[index]?.age ||
+          guest.dateOfBirth !== guests[index]?.dateOfBirth ||
           guest.email !== guests[index]?.email
         )) {
       setGuests(newGuests);
@@ -250,6 +298,17 @@ export default function BookingForm({
       const values = await form.validateFields();
       if (!selectedRoom || !checkIn || !checkOut)
         return message.error("Vui lòng chọn phòng");
+
+      // Validate độ tuổi >= 18 cho tất cả khách
+      for (let i = 0; i < guests.length; i++) {
+        const guest = guests[i];
+        if (guest.dateOfBirth) {
+          const age = Math.floor((new Date().getTime() - new Date(guest.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+          if (age < 18) {
+            return message.error(`Khách ${i + 1} (${guest.fullName}) phải từ 18 tuổi trở lên để đặt phòng`);
+          }
+        }
+      }
 
       // Quy định check-in sớm:
       // - Nếu đặt phòng 14h mà khách tới sớm hơn 4h (tức là trước 10h) thì cho vào miễn phí nếu có phòng trống.
@@ -437,20 +496,24 @@ export default function BookingForm({
                 <Col span={8}>
                   <div>
                     <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
-                      Tuổi *
+                      Ngày sinh *
                     </label>
-                    <InputNumber
-                      value={guest.age}
-                      onChange={(value) => {
+                    <DatePicker
+                      value={guest.dateOfBirth ? dayjs(guest.dateOfBirth) : null}
+                      onChange={(date) => {
                         const newGuests = [...guests];
-                        newGuests[index].age = value || 0;
+                        newGuests[index].dateOfBirth = date ? date.toISOString() : '';
                         setGuests(newGuests);
                       }}
-                      min={0}
-                      max={120}
                       style={{ width: "100%" }}
-                      placeholder="Tuổi"
+                      placeholder="Chọn ngày sinh"
+                      format="DD/MM/YYYY"
                     />
+                    {guest.dateOfBirth && (
+                      <p style={{ fontSize: '11px', color: '#8c8c8c', marginTop: 4 }}>
+                        Tuổi: {Math.floor((new Date().getTime() - new Date(guest.dateOfBirth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))} tuổi
+                      </p>
+                    )}
                   </div>
                 </Col>
                 <Col span={8}>
@@ -702,8 +765,11 @@ export default function BookingForm({
               <Select.Option value="pending">
                 <Tag color="orange" style={{ display: 'flex', justifyContent: 'center' }}>Chờ thanh toán</Tag>
               </Select.Option>
+              <Select.Option value="partial_paid">
+                <Tag color="blue" style={{ display: 'flex', justifyContent: 'center' }}>Thanh toán 50%</Tag>
+              </Select.Option>
               <Select.Option value="paid">
-                <Tag color="green" style={{ display: 'flex', justifyContent: 'center' }}>Đã thanh toán</Tag>
+                <Tag color="green" style={{ display: 'flex', justifyContent: 'center' }}>Đã thanh toán đủ</Tag>
               </Select.Option>
               <Select.Option value="failed">
                 <Tag color="red" style={{ display: 'flex', justifyContent: 'center' }}>Thanh toán thất bại</Tag>
@@ -715,6 +781,41 @@ export default function BookingForm({
             </Form.Item>
           
           <Divider style={{ margin: '16px 0' }} />
+          
+          {/* Thông tin thanh toán chi tiết */}
+          {booking && (
+            <Row style={{ marginBottom: 16, padding: '12px', backgroundColor: '#f5f5f5', borderRadius: '6px' }}>
+              <Col span={24}>
+                <Typography.Text strong style={{ color: '#1890ff', fontSize: '14px' }}>
+                  Thông tin thanh toán chi tiết:
+                </Typography.Text>
+                <div style={{ marginTop: 8 }}>
+                  <Row style={{ marginBottom: 4 }}>
+                    <Col span={12}>Tổng giá trị:</Col>
+                    <Col span={12} style={{ textAlign: 'right' }}>
+                      <Typography.Text strong>{formatPrice(booking.totalPrice || 0)}</Typography.Text>
+                    </Col>
+                  </Row>
+                  <Row style={{ marginBottom: 4 }}>
+                    <Col span={12}>Đã thanh toán:</Col>
+                    <Col span={12} style={{ textAlign: 'right' }}>
+                      <Typography.Text strong style={{ color: '#52c41a' }}>
+                        {formatPrice(booking.paidAmount || 0)}
+                      </Typography.Text>
+                    </Col>
+                  </Row>
+                  <Row>
+                    <Col span={12}>Còn lại:</Col>
+                    <Col span={12} style={{ textAlign: 'right' }}>
+                      <Typography.Text strong style={{ color: '#fa8c16' }}>
+                        {formatPrice(booking.remainingAmount || 0)}
+                      </Typography.Text>
+                    </Col>
+                  </Row>
+                </div>
+              </Col>
+            </Row>
+          )}
           
           <Row style={{ marginBottom: 8 }}>
             <Col span={12}>
@@ -752,6 +853,22 @@ export default function BookingForm({
               </Col>
               <Col span={12} style={{ textAlign: "right" }}>
                 <Typography.Text strong>{formatPrice(extraHours * extraHourPrice)}</Typography.Text>
+              </Col>
+            </Row>
+          )}
+          
+          {pricingInfo && pricingInfo.discountApplied && (
+            <Row style={{ marginBottom: 8, padding: '8px', backgroundColor: '#f6ffed', borderRadius: '6px', border: '1px solid #b7eb8f' }}>
+              <Col span={12}>
+                <Space>
+                  <InfoCircleOutlined style={{ color: '#52c41a' }} />
+                  <span style={{ fontWeight: 500, color: '#52c41a' }}>Giảm giá sinh nhật (50%):</span>
+                </Space>
+              </Col>
+              <Col span={12} style={{ textAlign: "right" }}>
+                <Typography.Text strong style={{ color: '#52c41a' }}>
+                  -{formatPrice(pricingInfo.discountAmount)}
+                </Typography.Text>
               </Col>
             </Row>
           )}

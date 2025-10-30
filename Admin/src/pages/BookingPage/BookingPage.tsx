@@ -460,6 +460,8 @@ export default function BookingPage() {
                 color={
                   detailItem.paymentStatus === "pending"
                     ? "orange"
+                    : detailItem.paymentStatus === "partial_paid"
+                    ? "blue"
                     : detailItem.paymentStatus === "paid"
                     ? "green"
                     : detailItem.paymentStatus === "failed"
@@ -467,7 +469,10 @@ export default function BookingPage() {
                     : "blue"
                 }
               >
-                {detailItem.paymentStatus}
+                {detailItem.paymentStatus === "partial_paid" ? "Thanh toán 50%" : 
+                 detailItem.paymentStatus === "paid" ? "Đã thanh toán đủ" :
+                 detailItem.paymentStatus === "pending" ? "Chờ thanh toán" :
+                 detailItem.paymentStatus}
               </Tag>
             </Descriptions.Item>
             {(() => {

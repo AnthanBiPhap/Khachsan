@@ -17,10 +17,9 @@ const bookingSchema = new Schema(
           type: String,
           required: [true, "Số CMND/CCCD là bắt buộc"],
         },
-        age: {
-          type: Number,
-          required: [true, "Tuổi là bắt buộc"],
-          min: [0, "Tuổi không hợp lệ"],
+        dateOfBirth: {
+          type: Date,
+          required: [true, "Ngày sinh là bắt buộc"],
         },
         phoneNumber: {
           type: String,
@@ -78,9 +77,17 @@ const bookingSchema = new Schema(
       required: [true, "Tổng tiền là bắt buộc"],
       min: 0,
     },
+    paidAmount: {
+      type: Number,
+      default: 0,
+    },
+    remainingAmount: {
+      type: Number,
+      default: 0,
+    },
     paymentStatus: {
       type: String,
-      enum: ["pending", "paid", "failed", "refunded", "refund_requested", "cancelled"],
+      enum: ["pending", "partial_paid", "paid", "failed", "refunded", "refund_requested", "cancelled"],
       default: "pending",
     },
     notes: {

@@ -1,0 +1,54 @@
+### ============================================
+### TEST BIRTHDAY DISCOUNT FEATURE
+### ============================================
+
+### 1. Lấy danh sách rooms để lấy roomId
+GET http://localhost:8080/api/v1/rooms
+Content-Type: application/json
+
+### 2. Test tính giá CÓ giảm giá sinh nhật
+# Ngày sinh: 15/01, đặt phòng từ 14/01 đến 16/01 => giảm giá ngày 15/01
+# Thay ROOM_ID bằng ID thật từ response trên
+GET http://localhost:8080/api/v1/bookings/price/calculate?roomId=ROOM_ID&checkIn=2025-01-14T00:00:00.000Z&checkOut=2025-01-16T00:00:00.000Z&guests=[{"fullName":"Nguyễn Văn A","phoneNumber":"0901234567","idNumber":"123456789","dateOfBirth":"1990-01-15T00:00:00.000Z","email":"test@gmail.com","isMainGuest":true}]
+Content-Type: application/json
+
+### 3. Test tính giá KHÔNG có giảm giá sinh nhật  
+# Ngày sinh: 15/01, đặt phòng từ 20/01 đến 23/01 => KHÔNG giảm giá
+GET http://localhost:8080/api/v1/bookings/price/calculate?roomId=ROOM_ID&checkIn=2025-01-20T00:00:00.000Z&checkOut=2025-01-23T00:00:00.000Z&guests=[{"fullName":"Nguyễn Văn A","phoneNumber":"0901234567","idNumber":"123456789","dateOfBirth":"1990-01-15T00:00:00.000Z","email":"test@gmail.com","isMainGuest":true}]
+Content-Type: application/json
+
+### 4. Test tạo booking mới với ngày sinh
+# Thay ROOM_ID bằng ID thật
+POST http://localhost:8080/api/v1/bookings
+Content-Type: application/json
+
+{
+  "guests": [
+    {
+      "fullName": "Nguyễn Văn A",
+      "phoneNumber": "0901234567",
+      "idNumber": "123456789",
+      "dateOfBirth": "1990-01-15T00:00:00.000Z",
+      "email": "test@gmail.com",
+      "isMainGuest": true
+    }
+  ],
+  "guestCount": 1,
+  "roomId": "ROOM_ID",
+  "checkIn": "2025-01-14T14:00:00.000Z",
+  "checkOut": "2025-01-16T12:00:00.000Z",
+  "services": [],
+  "source": "walk_in",
+  "totalPrice": 1500000,
+  "paymentStatus": "pending",
+  "notes": "Test booking với giảm giá sinh nhật"
+}
+
+### ============================================
+### NOTES:
+### - Đã thay đổi từ "age" sang "dateOfBirth" trong guests
+### - Ngày sinh của khách: 15/01 (MM-DD)
+### - Request 2 sẽ có giảm giá 50% cho ngày 15/01
+### - Request 3 KHÔNG có giảm giá vì không trùng ngày sinh
+### ============================================
+

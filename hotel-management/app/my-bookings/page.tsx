@@ -21,7 +21,7 @@ type GuestInfo = {
   fullName: string;
   phoneNumber: string;
   idNumber?: string;
-  age?: number;
+  dateOfBirth?: string;
   email?: string;
   isMainGuest?: boolean;
   _id?: string;

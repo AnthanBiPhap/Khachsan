@@ -30,6 +30,9 @@ export interface InvoiceItem {
   bookingId: BookingRef;
   customerId?: CustomerRef;
   totalAmount: number;
+  paidAmount?: number;
+  remainingAmount?: number;
+  paymentStatus?: 'pending' | 'partial_paid' | 'paid' | 'failed' | 'refunded' | 'refund_requested' | 'cancelled';
   status: InvoiceStatus;
   issuedAt?: string;
   createdAt?: string;

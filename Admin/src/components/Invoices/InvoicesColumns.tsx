@@ -98,16 +98,24 @@ export const invoicesColumns = (
     title: (
       <Space>
         <DollarOutlined style={{ color: '#fa8c16' }} />
-        <span>Tổng tiền</span>
+        <span>Thanh toán</span>
       </Space>
     ),
-    key: "totalAmount",
+    key: "payment",
     render: (_, r) => (
-      <Space>
-        <DollarOutlined style={{ color: '#fa8c16' }} />
-        <Typography.Text strong style={{ color: '#fa8c16' }}>
-          {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(r.totalAmount)}
-        </Typography.Text>
+      <Space direction="vertical" size={0} style={{ alignItems: 'flex-start' }}>
+        <Space>
+          <DollarOutlined style={{ color: '#fa8c16' }} />
+          <Typography.Text strong style={{ color: '#fa8c16' }}>
+            {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(r.totalAmount)}
+          </Typography.Text>
+        </Space>
+        {r.paidAmount !== undefined && r.remainingAmount !== undefined && (
+          <Space direction="vertical" size={0} style={{ fontSize: '11px', color: '#666' }}>
+            <div>Đã thanh toán: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(r.paidAmount)}</div>
+            <div>Còn lại: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(r.remainingAmount)}</div>
+          </Space>
+        )}
       </Space>
     ),
   },
@@ -128,6 +136,33 @@ export const invoicesColumns = (
         refunded: { color: 'blue', text: 'Hoàn tiền', icon: <RollbackOutlined /> },
       };
       const v = map[status] || { color: 'default', text: status, icon: null };
+      return (
+        <Tag color={v.color} icon={v.icon}>
+          {v.text}
+        </Tag>
+      );
+    }
+  },
+  {
+    title: (
+      <Space>
+        <FileTextOutlined style={{ color: '#1890ff' }} />
+        <span>Thanh toán</span>
+      </Space>
+    ),
+    dataIndex: "paymentStatus",
+    key: "paymentStatus",
+    render: (s: string) => {
+      const map: Record<string, { color: string; text: string; icon: React.ReactNode }> = {
+        pending: { color: 'orange', text: 'Chờ thanh toán', icon: <ClockCircleOutlined /> },
+        partial_paid: { color: 'blue', text: 'Thanh toán 50%', icon: <CheckCircleOutlined /> },
+        paid: { color: 'green', text: 'Đã thanh toán đủ', icon: <CheckCircleOutlined /> },
+        failed: { color: 'red', text: 'Thất bại', icon: <CloseCircleOutlined /> },
+        refunded: { color: 'blue', text: 'Hoàn tiền', icon: <RollbackOutlined /> },
+        refund_requested: { color: 'purple', text: 'Yêu cầu hoàn tiền', icon: <FileTextOutlined /> },
+        cancelled: { color: 'red', text: 'Đã hủy', icon: <CloseCircleOutlined /> },
+      };
+      const v = map[s] || { color: 'default', text: s || 'N/A', icon: null };
       return (
         <Tag color={v.color} icon={v.icon}>
           {v.text}

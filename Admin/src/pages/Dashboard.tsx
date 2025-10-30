@@ -492,7 +492,8 @@ const Dashboard: React.FC = () => {
       key: "status",
       render: (status: string) => {
         const statusMap: Record<string, { color: string; text: string }> = {
-          paid: { color: "green", text: "Đã thanh toán" },
+          paid: { color: "green", text: "Đã thanh toán đủ" },
+          partial_paid: { color: "blue", text: "Thanh toán 50%" },
           pending: { color: "orange", text: "Chờ thanh toán" },
           cancelled: { color: "red", text: "Đã hủy" },
           refunded: { color: "blue", text: "Đã hoàn tiền" },

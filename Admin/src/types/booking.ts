@@ -8,7 +8,7 @@ export interface GuestInfo {
   fullName: string;
   phoneNumber: string;
   idNumber: string;
-  age: number;
+  dateOfBirth: string | Date;
   email?: string;
   isMainGuest?: boolean;
   actualCheckIn?: string;  // thêm vào
@@ -32,7 +32,9 @@ export interface Booking {
   checkOut: string;
   services?: BookingService[];
   totalPrice: number;
-  paymentStatus: 'pending' | 'paid' | 'refunded' | 'failed';
+  paidAmount?: number;
+  remainingAmount?: number;
+  paymentStatus: 'pending' | 'partial_paid' | 'paid' | 'refunded' | 'failed' | 'refund_requested' | 'cancelled';
   notes?: string;
   status?: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   specialRequests?: string;

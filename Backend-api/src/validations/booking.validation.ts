@@ -4,7 +4,7 @@ import * as yup from "yup";
 const guestSchema = yup.object({
   fullName: yup.string().min(2).max(100).required("Tên khách hàng là bắt buộc"),
   idNumber: yup.string().min(9).max(20).required("Số CMND/CCCD là bắt buộc"),
-  age: yup.number().min(0).max(120).required("Tuổi là bắt buộc"),
+  dateOfBirth: yup.date().required("Ngày sinh là bắt buộc"),
   phoneNumber: yup.string().min(6).max(20).required("Số điện thoại là bắt buộc"),
   email: yup.string().email("Email không hợp lệ").optional(),
   isMainGuest: yup.boolean().optional(),

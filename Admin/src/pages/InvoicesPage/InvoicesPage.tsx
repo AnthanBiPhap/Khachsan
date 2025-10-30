@@ -360,6 +360,26 @@ export default function InvoicesPage() {
                 currency: "VND",
               }).format(detailItem.totalAmount)}
             </Descriptions.Item>
+            {detailItem.paidAmount !== undefined && detailItem.remainingAmount !== undefined && (
+              <>
+                <Descriptions.Item label="Đã thanh toán">
+                  <Typography.Text strong style={{ color: '#52c41a' }}>
+                    {new Intl.NumberFormat("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    }).format(detailItem.paidAmount)}
+                  </Typography.Text>
+                </Descriptions.Item>
+                <Descriptions.Item label="Còn lại">
+                  <Typography.Text strong style={{ color: '#fa8c16' }}>
+                    {new Intl.NumberFormat("vi-VN", {
+                      style: "currency",
+                      currency: "VND",
+                    }).format(detailItem.remainingAmount)}
+                  </Typography.Text>
+                </Descriptions.Item>
+              </>
+            )}
             <Descriptions.Item label="Trạng thái">
               <Tag
                 color={
@@ -375,6 +395,28 @@ export default function InvoicesPage() {
                 {detailItem.status}
               </Tag>
             </Descriptions.Item>
+            {detailItem.paymentStatus && (
+              <Descriptions.Item label="Trạng thái thanh toán">
+                <Tag
+                  color={
+                    detailItem.paymentStatus === "pending"
+                      ? "orange"
+                      : detailItem.paymentStatus === "partial_paid"
+                      ? "blue"
+                      : detailItem.paymentStatus === "paid"
+                      ? "green"
+                      : detailItem.paymentStatus === "failed"
+                      ? "red"
+                      : "blue"
+                  }
+                >
+                  {detailItem.paymentStatus === "partial_paid" ? "Thanh toán 50%" : 
+                   detailItem.paymentStatus === "paid" ? "Đã thanh toán đủ" :
+                   detailItem.paymentStatus === "pending" ? "Chờ thanh toán" :
+                   detailItem.paymentStatus}
+                </Tag>
+              </Descriptions.Item>
+            )}
             <Descriptions.Item label="Phát hành">
               {detailItem.issuedAt
                 ? new Date(detailItem.issuedAt).toLocaleString("vi-VN")

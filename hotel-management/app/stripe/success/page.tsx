@@ -54,7 +54,7 @@ export default function StripeSuccessPage() {
         guests: bookingInfo.guests,
         totalPrice: bookingInfo.totalPrice,
         status: 'pending',
-        paymentStatus: 'paid',
+        paymentStatus: 'partial_paid', // Chỉ thanh toán 50%
         services: bookingInfo.services || [],
         customerId: bookingInfo.customerId,
         stripeSessionId: sessionId,

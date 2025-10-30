@@ -6,6 +6,9 @@ const router = express.Router();
 router.get("/bookings", bookingController.getAll);
 //Get user by id
 router.get("/bookings/:id", bookingController.getById);
+//Calculate price
+router.get("/bookings/price/calculate", bookingController.calculatePrice);
+router.patch("/bookings/:id/payment", bookingController.updatePaymentStatus);
 //Create user
 router.post("/bookings", bookingController.Create);
 //Update user
