@@ -12,6 +12,7 @@ import serviceBookingRoute from "./router/v1/serviceBookings.route";
 import reviewRoute from "./router/v1/reviews.route";
 import bookingStatusRoute from "./router/v1/bookingStatus.route";
 import paymentRoute from "./router/v1/payments.route";
+import groupBookingRoute from "./router/v1/groupBookings.route";
 import cors from "cors";
 
 const app = express();
@@ -32,6 +33,7 @@ app.use("/api/v1", serviceBookingRoute);
 app.use("/api/v1", reviewRoute);
 app.use("/api/v1", bookingStatusRoute);
 app.use("/api/v1", paymentRoute);
+app.use("/api/v1", groupBookingRoute);
 app.use("/api/v1", streamRoute);
 // Hello World
 app.get("/", (req: Request, res: Response) => {

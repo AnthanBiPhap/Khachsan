@@ -47,6 +47,9 @@ export function Header() {
             <Link href="/" className="text-foreground hover:text-blue-600 font-medium border-b-2 border-blue-600 pb-1">
               Phòng & Giá
             </Link>
+            <Link href="/group-booking" className="text-muted-foreground hover:text-foreground font-medium">
+              Đặt phòng theo tour
+            </Link>
             <Link href="/contact" className="text-muted-foreground hover:text-foreground font-medium">
               Liên hệ
             </Link>

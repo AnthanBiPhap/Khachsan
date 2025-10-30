@@ -19,6 +19,7 @@ import LocationsPage from "./pages/LocationsPage/LocationsPage";
 import ReviewsPage from "./pages/ReviewsPage/ReviewsPage";
 import InvoicesPage from "./pages/InvoicesPage/InvoicesPage";
 import PaymentsPage from "./pages/PaymentPage/PaymentsPage";
+import GroupBookingsPage from "./pages/GroupBookingsPage/GroupBookingsPage";
 import AccessDenied from "./pages/AccessDenied";
 import { useAuthStore } from "./stores/authStore";
 
@@ -35,7 +36,7 @@ function hasAccessToRoute(userRole: string, path: string): boolean {
     return true; // Admin có quyền truy cập tất cả
   } else if (userRole === 'staff') {
     // Staff chỉ được truy cập các route cụ thể
-    const allowedPaths = ['/', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/users', '/invoices'];
+    const allowedPaths = ['/', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/users', '/invoices', '/group-bookings'];
     return allowedPaths.includes(path);
   } else {
     // User thường chỉ được truy cập dashboard
@@ -86,6 +87,7 @@ function App() {
           <Route path="reviews" element={<RoleProtectedRoute path="/reviews"><ReviewsPage /></RoleProtectedRoute>} />
           <Route path="invoices" element={<RoleProtectedRoute path="/invoices"><InvoicesPage /></RoleProtectedRoute>} />
           <Route path="payments" element={<RoleProtectedRoute path="/payments"><PaymentsPage /></RoleProtectedRoute>} />
+          <Route path="group-bookings" element={<RoleProtectedRoute path="/group-bookings"><GroupBookingsPage /></RoleProtectedRoute>} />
         </Route>
 
         {/* Layout rỗng cho login */}

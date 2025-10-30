@@ -1,0 +1,234 @@
+import createError from "http-errors";
+import GroupBooking from "../models/groupBooking.model";
+import Room from "../models/rooms.model";
+import Booking from "../models/bookings.model";
+
+type CreateGroupBookingPayload = {
+  requesterId?: string;
+  requesterName: string;
+  requesterPhone: string;
+  requesterEmail?: string;
+  checkIn: string | Date;
+  checkOut: string | Date;
+  peopleCount: number;
+  roomCount: number;
+  notes?: string;
+};
+
+const create = async (payload: CreateGroupBookingPayload) => {
+  const gb = await GroupBooking.create({
+    ...payload,
+    status: "pending_approval",
+  });
+  return gb;
+};
+
+const getById = async (id: string) => {
+  const gb = await GroupBooking.findById(id)
+    .populate({ path: "allocatedRoomIds", select: "roomNumber typeId", populate: { path: "typeId", select: "pricePerNight name" } })
+    .populate("requesterId", "fullName email phoneNumber");
+  if (!gb) throw createError(404, "Group booking not found");
+  return gb;
+};
+
+const list = async (query: any = {}) => {
+  const q: any = {};
+  if (query.status) q.status = query.status;
+  if (query.from || query.to) {
+    q.createdAt = {} as any;
+    if (query.from) q.createdAt.$gte = new Date(query.from);
+    if (query.to) q.createdAt.$lte = new Date(query.to);
+  }
+  const items = await GroupBooking.find(q)
+    .sort({ createdAt: -1 })
+    .populate("allocatedRoomIds", "roomNumber typeId");
+  return items;
+};
+
+const checkAvailability = async (checkIn: Date, checkOut: Date) => {
+  // Load rooms with type info (price/capacity)
+  const rooms = await Room.find({}).populate('typeId', 'pricePerNight capacity name');
+  const allRoomIds = rooms.map((r) => r._id);
+
+  // Find bookings overlapping interval
+  const bookings = await Booking.find({
+    roomId: { $in: allRoomIds },
+    paymentStatus: { $ne: "cancelled" },
+    checkIn: { $lt: new Date(checkOut) },
+    checkOut: { $gt: new Date(checkIn) },
+  }).select("roomId checkIn checkOut paymentStatus");
+
+  const bookedSet = new Set<string>(bookings.map((b: any) => String(b.roomId)));
+  const availableRooms = rooms.filter((r: any) => !bookedSet.has(String(r._id)));
+  return availableRooms as any[];
+};
+
+function chooseOptimalRooms(
+  rooms: Array<any>,
+  requiredRooms: number,
+  requiredPeople: number
+): Array<any> | null {
+  // Sort by price ascending to help pruning
+  const sorted = [...rooms].sort((a: any, b: any) => (
+    Number(a?.typeId?.pricePerNight || 0) - Number(b?.typeId?.pricePerNight || 0)
+  ));
+
+  let bestCombo: Array<any> | null = null;
+  let bestPrice = Infinity;
+
+  const n = sorted.length;
+
+  const dfs = (start: number, picked: Array<any>, capSum: number, priceSum: number) => {
+    if (picked.length === requiredRooms) {
+      if (capSum >= requiredPeople && priceSum < bestPrice) {
+        bestPrice = priceSum;
+        bestCombo = [...picked];
+      }
+      return;
+    }
+
+    // If even picking all remaining cannot reach requiredRooms, stop
+    if (n - start < requiredRooms - picked.length) return;
+
+    for (let i = start; i < n; i++) {
+      const room = sorted[i];
+      const price = Number(room?.typeId?.pricePerNight || 0);
+      const capacity = Number(room?.typeId?.capacity || 0);
+
+      // Prune: if current price already exceeds best
+      if (priceSum + price >= bestPrice) continue;
+
+      picked.push(room);
+      dfs(i + 1, picked, capSum + capacity, priceSum + price);
+      picked.pop();
+    }
+  };
+
+  dfs(0, [], 0, 0);
+  return bestCombo;
+}
+
+const approve = async (id: string) => {
+  const gb = await GroupBooking.findById(id);
+  if (!gb) throw createError(404, "Group booking not found");
+  if (gb.status !== "pending_approval")
+    throw createError(400, "Only pending_approval can be approved");
+
+  const availableRooms = await checkAvailability(gb.checkIn, gb.checkOut);
+  if (availableRooms.length < gb.roomCount)
+    throw createError(400, "Not enough rooms available for approval");
+
+  // Choose cost-optimized allocation meeting capacity and room count
+  const optimal = chooseOptimalRooms(availableRooms, gb.roomCount, gb.peopleCount);
+  if (!optimal) {
+    throw createError(400, "Cannot find a room combination that meets capacity requirements");
+  }
+  gb.allocatedRoomIds = optimal.map((r: any) => r._id);
+  gb.status = "approved";
+  await gb.save();
+  return gb;
+};
+
+const uploadMembers = async (id: string, members: any[]) => {
+  const gb = await GroupBooking.findById(id);
+  if (!gb) throw createError(404, "Group booking not found");
+  if (gb.status !== "approved")
+    throw createError(400, "Members can only be uploaded after approval");
+
+  gb.members = Array.isArray(members) ? members : [];
+  gb.status = "info_uploaded";
+  await gb.save();
+  return gb;
+};
+
+const quote = async (
+  id: string,
+  quoteAmount: number,
+  paymentLink?: string
+) => {
+  const gb = await GroupBooking.findById(id);
+  if (!gb) throw createError(404, "Group booking not found");
+  if (gb.status !== "info_uploaded" && gb.status !== "approved")
+    throw createError(400, "Can only quote after info uploaded or approval");
+
+  gb.quoteAmount = quoteAmount;
+  gb.paymentLink = paymentLink;
+  gb.status = paymentLink ? "awaiting_payment" : "quoted";
+  await gb.save();
+  return gb;
+};
+
+const markPaid = async (id: string) => {
+  const gb = await GroupBooking.findById(id);
+  if (!gb) throw createError(404, "Group booking not found");
+  if (!gb.quoteAmount) throw createError(400, "Quote not set");
+  if (gb.status !== "awaiting_payment" && gb.status !== "quoted")
+    throw createError(400, "Invalid state to mark paid");
+  gb.status = "paid";
+  await gb.save();
+  return gb;
+};
+
+const confirm = async (id: string) => {
+  const gb = await GroupBooking.findById(id);
+  if (!gb) throw createError(404, "Group booking not found");
+  if (gb.status !== "paid")
+    throw createError(400, "Only paid bookings can be confirmed");
+  gb.status = "confirmed";
+  await gb.save();
+  return gb;
+};
+
+const cancel = async (id: string, reason?: string) => {
+  const gb = await GroupBooking.findById(id);
+  if (!gb) throw createError(404, "Group booking not found");
+  gb.status = "cancelled";
+  if (reason) gb.notes = (gb.notes ? gb.notes + "\n" : "") + `Cancelled: ${reason}`;
+  await gb.save();
+  return gb;
+};
+
+export default {
+  create,
+  getById,
+  list,
+  approve,
+  uploadMembers,
+  quote,
+  markPaid,
+  confirm,
+  cancel,
+};
+
+export const computeAutoQuote = async (id: string) => {
+  const gb: any = await getById(id);
+  if (!gb) throw createError(404, "Group booking not found");
+  if (!gb.allocatedRoomIds || gb.allocatedRoomIds.length === 0) {
+    throw createError(400, "No allocated rooms to compute quote");
+  }
+  const checkIn = new Date(gb.checkIn);
+  const checkOut = new Date(gb.checkOut);
+  const ms = checkOut.getTime() - checkIn.getTime();
+  const nights = Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+
+  let total = 0;
+  const breakdown: Array<{ roomId: string; roomNumber: string; typeName?: string; pricePerNight: number; nights: number; subtotal: number }> = [];
+  for (const room of gb.allocatedRoomIds) {
+    const pricePerNight = Number((room as any)?.typeId?.pricePerNight || 0);
+    const typeName = (room as any)?.typeId?.name;
+    const subtotal = pricePerNight * nights;
+    total += subtotal;
+    breakdown.push({
+      roomId: String((room as any)?._id || room),
+      roomNumber: (room as any)?.roomNumber || '',
+      typeName,
+      pricePerNight,
+      nights,
+      subtotal,
+    });
+  }
+
+  return { nights, rooms: gb.allocatedRoomIds.length, amount: total, breakdown };
+};
+
+

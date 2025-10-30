@@ -14,6 +14,7 @@ import {
   CreditCardOutlined,
   UserOutlined,
   LogoutOutlined,
+  DeploymentUnitOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Layout, Menu, theme, Button, Space } from 'antd';
@@ -57,6 +58,7 @@ const allMenuItems = [
   createMenuItem('Reviews', '/reviews', <StarOutlined />),
   createMenuItem('Invoices', '/invoices', <FileTextOutlined />),
   createMenuItem('Payments', '/payments', <CreditCardOutlined />),
+  createMenuItem('Group Bookings', '/group-bookings', <DeploymentUnitOutlined />),
   // createMenuItem('Invoice Items', '/invoiceitems', <FileTextOutlined />),
 ];
 
