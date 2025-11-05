@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import type { UploadProps } from 'antd';
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import { groupBookingService } from '@/services/groupBookingService';
+import { useAuth } from '@/contexts/AuthContext';
 
 type GroupBookingStatus =
   | 'pending_approval'
@@ -18,6 +19,7 @@ type GroupBookingStatus =
   | 'cancelled';
 
 export default function GroupBookingPage() {
+  const { user } = useAuth();
   const [loadingCreate, setLoadingCreate] = useState(false);
   const [requestId, setRequestId] = useState<string>("");
   const [createdId, setCreatedId] = useState<string>("");
@@ -45,6 +47,7 @@ export default function GroupBookingPage() {
     setLoadingCreate(true);
     try {
       const payload = {
+        requesterId: user?._id || undefined,
         requesterName,
         requesterPhone,
         requesterEmail: requesterEmail || undefined,
@@ -58,9 +61,10 @@ export default function GroupBookingPage() {
       const id = data?._id || "";
       setCreatedId(id);
       setRequestId(id);
-      // persist to localStorage to restore after reload
-      if (id) {
+      // persist to localStorage to restore after reload (with userId to prevent cross-user access)
+      if (id && user?._id) {
         localStorage.setItem('group_booking_request_id', id);
+        localStorage.setItem('group_booking_user_id', user._id);
       }
       message.success('Gửi yêu cầu thành công! Chờ admin duyệt.');
       // fetch initial status
@@ -90,16 +94,27 @@ export default function GroupBookingPage() {
     }
   };
 
-  // Restore existing request from localStorage on mount
+  // Restore existing request from localStorage on mount (only if belongs to current user)
   useEffect(() => {
+    if (!user?._id) return;
     const savedId = typeof window !== 'undefined' ? localStorage.getItem('group_booking_request_id') : null;
-    if (savedId) {
+    const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('group_booking_user_id') : null;
+    
+    // Clear if saved request doesn't belong to current user
+    if (savedUserId && savedUserId !== user._id) {
+      localStorage.removeItem('group_booking_request_id');
+      localStorage.removeItem('group_booking_user_id');
+      return;
+    }
+    
+    // Restore if belongs to current user
+    if (savedId && savedUserId === user._id) {
       setRequestId(savedId);
       setCreatedId(savedId);
       fetchStatus(savedId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user?._id]);
 
   // Auto poll status every 15s when we have a requestId
   useEffect(() => {
@@ -308,7 +323,7 @@ export default function GroupBookingPage() {
                       <div style={{ marginTop: 8 }}>
                         <Space>
                           <Button onClick={() => fetchStatus(requestId)} loading={isPolling}>Kiểm tra ngay</Button>
-                          <Button onClick={() => { localStorage.removeItem('group_booking_request_id'); setCreatedId(''); setCurrentStatus(''); setRequestId(''); }}>Xóa mã lưu</Button>
+                          <Button onClick={() => { localStorage.removeItem('group_booking_request_id'); localStorage.removeItem('group_booking_user_id'); setCreatedId(''); setCurrentStatus(''); setRequestId(''); }}>Xóa mã lưu</Button>
                         </Space>
                       </div>
                       {(currentStatus === 'quoted' || currentStatus === 'awaiting_payment') && (

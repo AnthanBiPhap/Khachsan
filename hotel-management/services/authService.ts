@@ -165,6 +165,8 @@ const authService = {
   logout: (): void => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem('group_booking_request_id');
+    localStorage.removeItem('group_booking_user_id');
     delete api.defaults.headers.common['Authorization'];
   },
 
