@@ -127,7 +127,7 @@ const approve = async (id: string) => {
 
   const availableRooms = await checkAvailability(gb.checkIn, gb.checkOut);
   if (availableRooms.length < gb.roomCount)
-    throw createError(400, "Not enough rooms available for approval");
+    throw createError(400, "Không đủ phòng trống để duyệt yêu cầu đặt đoàn");
 
   // Choose cost-optimized allocation meeting capacity and room count
   const optimal = chooseOptimalRooms(availableRooms, gb.roomCount, gb.peopleCount);
