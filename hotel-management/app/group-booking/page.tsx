@@ -5,7 +5,7 @@ import { DatePicker, Input, InputNumber, Button, message, Card, Space, Upload, T
 import dayjs from 'dayjs';
 import type { UploadProps } from 'antd';
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
-import { groupBookingService } from '@/services/groupBookingService';
+import { groupBookingService, type GroupBooking } from '@/services/groupBookingService';
 import { useAuth } from '@/contexts/AuthContext';
 
 type GroupBookingStatus =
@@ -33,6 +33,7 @@ export default function GroupBookingPage() {
   const [paymentLink, setPaymentLink] = useState<string | "">("");
   const [statusNote, setStatusNote] = useState<string>("");
   const [statusRejectedAt, setStatusRejectedAt] = useState<string | null>(null);
+  const [groupDetail, setGroupDetail] = useState<GroupBooking | null>(null);
 
   // Form state
   const [requesterName, setRequesterName] = useState("");
@@ -66,6 +67,7 @@ export default function GroupBookingPage() {
       const id = data?._id || "";
       setCreatedId(id);
       setRequestId(id);
+      setGroupDetail(data || null);
       // persist to localStorage to restore after reload (with userId to prevent cross-user access)
       if (id && user?._id) {
         localStorage.setItem('group_booking_request_id', id);
@@ -92,6 +94,7 @@ export default function GroupBookingPage() {
       setPaymentLink(data?.paymentLink || "");
       setStatusNote(String(data?.notes || ''));
       setStatusRejectedAt(data?.rejectedAt ? new Date(data.rejectedAt).toLocaleString('vi-VN') : null);
+      setGroupDetail(data || null);
       setLastUpdated(new Date().toLocaleTimeString());
     } catch (e) {
       // ignore errors in background polling but show a small hint
@@ -160,6 +163,30 @@ export default function GroupBookingPage() {
   rejected: 'Đã từ chối',
     '': '',
   };
+
+  const formatCurrency = (amount?: number | null) =>
+    typeof amount === 'number'
+      ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(amount)
+      : 'Đang cập nhật';
+
+  const formatDateTime = (value?: string | Date | null) =>
+    value ? new Date(value).toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' }) : '-';
+
+  const canProceedPayment = currentStatus === 'quoted' || currentStatus === 'awaiting_payment';
+  const stayNights =
+    groupDetail?.checkIn && groupDetail?.checkOut
+      ? Math.max(
+          1,
+          Math.ceil(
+            (new Date(groupDetail.checkOut).getTime() - new Date(groupDetail.checkIn).getTime()) /
+              (1000 * 60 * 60 * 24)
+          )
+        )
+      : null;
+  const stayRangeLabel =
+    groupDetail?.checkIn && groupDetail?.checkOut
+      ? `${formatDateTime(groupDetail.checkIn)} → ${formatDateTime(groupDetail.checkOut)}`
+      : '-';
 
   const currentStep = useMemo(() => {
     switch (currentStatus) {
@@ -368,11 +395,74 @@ export default function GroupBookingPage() {
                           <Button onClick={() => { localStorage.removeItem('group_booking_request_id'); localStorage.removeItem('group_booking_user_id'); setCreatedId(''); setCurrentStatus(''); setRequestId(''); }}>Xóa mã lưu</Button>
                         </Space>
                       </div>
-                      {(currentStatus === 'quoted' || currentStatus === 'awaiting_payment') && (
+                      {canProceedPayment && groupDetail && (
+                        <div
+                          style={{
+                            marginTop: 16,
+                            padding: 16,
+                            borderRadius: 8,
+                            border: '1px solid #bfdbfe',
+                            background: '#f8fbff',
+                          }}
+                        >
+                          <h4 style={{ margin: 0, fontWeight: 600, color: '#1d4ed8' }}>
+                            Xác nhận thông tin đặt đoàn trước khi thanh toán
+                          </h4>
+                          <div style={{ marginTop: 12, display: 'grid', gap: 8 }}>
+                            <div>
+                              <strong>Thời gian lưu trú:</strong> {stayRangeLabel}
+                              {typeof stayNights === 'number' ? ` • ${stayNights} đêm` : ''}
+                            </div>
+                            <div>
+                              <strong>Quy mô đoàn:</strong> {groupDetail.peopleCount} khách · {groupDetail.roomCount}{' '}
+                              phòng
+                            </div>
+                            <div>
+                              <strong>Tổng báo giá:</strong> {formatCurrency(groupDetail.quoteAmount ?? quoteAmount)}
+                            </div>
+                            {groupDetail.members && groupDetail.members.length > 0 && (
+                              <div>
+                                <strong>Trưởng đoàn:</strong>{' '}
+                                {groupDetail.members.find((m) => m.isLeader)?.fullName ||
+                                  groupDetail.members[0]?.fullName ||
+                                  '—'}
+                              </div>
+                            )}
+                          </div>
+                          {Array.isArray(groupDetail.allocatedRoomIds) && groupDetail.allocatedRoomIds.length > 0 && (
+                            <div style={{ marginTop: 12 }}>
+                              <strong>Phòng được giữ:</strong>
+                              <ul style={{ margin: '8px 0 0 18px' }}>
+                                {groupDetail.allocatedRoomIds.map((room) => (
+                                  <li key={room._id}>
+                                    Phòng {room.roomNumber}
+                                    {room.typeId?.name ? ` · ${room.typeId.name}` : ''}
+                                    {room.typeId?.pricePerNight
+                                      ? ` · ${formatCurrency(room.typeId.pricePerNight)} / đêm`
+                                      : ''}
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          <div style={{ marginTop: 12, fontSize: 13, color: '#1d4ed8' }}>
+                            Hãy kiểm tra kỹ thông tin trên. Việc thanh toán đồng nghĩa bạn xác nhận giữ phòng và tuân thủ
+                            chính sách hoàn tiền trong vòng 24 giờ kể từ khi tạo yêu cầu.
+                          </div>
+                        </div>
+                      )}
+                      {canProceedPayment && (
                         <div style={{ marginTop: 16, padding: 12, border: '1px dashed #d9d9d9', borderRadius: 6 }}>
-                          <div><b>Báo giá:</b> {quoteAmount != null ? `${quoteAmount.toLocaleString()} VND` : 'Đang cập nhật'}</div>
-                          <div style={{ marginTop: 8 }}>
-                            <Button type="primary" onClick={handlePayNow}>Thanh toán</Button>
+                          <div>
+                            <b>Báo giá:</b> {formatCurrency(quoteAmount)}
+                          </div>
+                          <div style={{ marginTop: 8, fontSize: 13, color: '#2563eb' }}>
+                            Nhấn “Thanh toán” để chuyển tới cổng Stripe và hoàn tất đặt đoàn.
+                          </div>
+                          <div style={{ marginTop: 12 }}>
+                            <Button type="primary" onClick={handlePayNow}>
+                              Thanh toán
+                            </Button>
                           </div>
                         </div>
                       )}
