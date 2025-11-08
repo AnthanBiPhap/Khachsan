@@ -4,7 +4,34 @@ import { CheckCircleOutlined, CloseCircleOutlined, ClockCircleOutlined } from '@
 
 interface Payment {
   _id: string;
-  bookingId: string;
+  bookingId?: string | any;
+  groupBookingId?: {
+    _id: string;
+    checkIn?: string;
+    checkOut?: string;
+    requesterName?: string;
+    requesterPhone?: string;
+    requesterEmail?: string;
+    peopleCount?: number;
+    roomCount?: number;
+    quoteAmount?: number;
+    status?: string;
+    allocatedRoomIds?: Array<{
+      _id: string;
+      roomNumber?: string;
+      typeId?: {
+        name?: string;
+        pricePerNight?: number;
+      };
+    }>;
+    members?: Array<{
+      fullName?: string;
+      idNumber?: string;
+      phoneNumber?: string;
+      email?: string;
+      isLeader?: boolean;
+    }>;
+  };
   customerId?: string;
   paymentMethod: 'stripe' | 'cash' | 'bank_transfer' | 'other';
   amount: number;
@@ -206,26 +233,101 @@ const PaymentDetails: React.FC<PaymentDetailsProps> = ({ payment, onClose }) => 
         </Card>
 
         {/* Thông tin khách hàng */}
-        {payment.customer && (
+        {(payment.customer || payment.groupBookingId) && (
           <Card title="Thông tin khách hàng">
             <Descriptions column={2} bordered>
-              <Descriptions.Item label="Tên">
-                {payment.customer.fullName}
-              </Descriptions.Item>
-              <Descriptions.Item label="Email">
-                {payment.customer.email}
-              </Descriptions.Item>
-              <Descriptions.Item label="Số điện thoại">
-                {payment.customer.phoneNumber}
-              </Descriptions.Item>
+              {payment.groupBookingId ? (
+                <>
+                  <Descriptions.Item label="Tên">
+                    {payment.groupBookingId.requesterName || '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Email">
+                    {payment.groupBookingId.requesterEmail || '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Số điện thoại">
+                    {payment.groupBookingId.requesterPhone || '-'}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Loại">
+                    <Tag color="purple">Đặt theo đoàn</Tag>
+                  </Descriptions.Item>
+                </>
+              ) : payment.customer ? (
+                <>
+                  <Descriptions.Item label="Tên">
+                    {payment.customer.fullName}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Email">
+                    {payment.customer.email}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Số điện thoại">
+                    {payment.customer.phoneNumber}
+                  </Descriptions.Item>
+                </>
+              ) : null}
             </Descriptions>
           </Card>
         )}
 
-        {/* Thông tin booking */}
-        {payment.booking && (
+        {/* Thông tin booking / group booking */}
+        {payment.groupBookingId ? (
+          <Card title="Thông tin đặt đoàn">
+            <Descriptions column={2} bordered>
+              <Descriptions.Item label="Mã đặt đoàn" span={2}>
+                <strong>{payment.groupBookingId._id}</strong>
+              </Descriptions.Item>
+              <Descriptions.Item label="Số phòng">
+                {payment.groupBookingId.roomCount || 0} phòng
+              </Descriptions.Item>
+              <Descriptions.Item label="Số người">
+                {payment.groupBookingId.peopleCount || 0} người
+              </Descriptions.Item>
+              <Descriptions.Item label="Nhận phòng">
+                {payment.groupBookingId.checkIn ? new Date(payment.groupBookingId.checkIn).toLocaleString('vi-VN') : '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Trả phòng">
+                {payment.groupBookingId.checkOut ? new Date(payment.groupBookingId.checkOut).toLocaleString('vi-VN') : '-'}
+              </Descriptions.Item>
+              {payment.groupBookingId.allocatedRoomIds && payment.groupBookingId.allocatedRoomIds.length > 0 && (
+                <Descriptions.Item label="Phòng đã phân bổ" span={2}>
+                  <div>
+                    {payment.groupBookingId.allocatedRoomIds.map((room: any, idx: number) => (
+                      <div key={idx} style={{ marginBottom: 4 }}>
+                        - Phòng {room.roomNumber || room._id} ({room.typeId?.name || '-'})
+                        {room.typeId?.pricePerNight && (
+                          <span style={{ color: '#666', fontSize: 12 }}>
+                            {' '}- {room.typeId.pricePerNight.toLocaleString()} VND/đêm
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </Descriptions.Item>
+              )}
+              {payment.groupBookingId.members && payment.groupBookingId.members.length > 0 && (
+                <Descriptions.Item label="Thành viên đoàn" span={2}>
+                  <div>
+                    {payment.groupBookingId.members.slice(0, 10).map((member: any, idx: number) => (
+                      <div key={idx} style={{ marginBottom: 4, fontSize: 12 }}>
+                        {idx + 1}. {member.fullName || '-'}{member.isLeader ? ' (Trưởng đoàn)' : ''}
+                        {member.phoneNumber && <span style={{ color: '#666' }}> - {member.phoneNumber}</span>}
+                      </div>
+                    ))}
+                    {payment.groupBookingId.members.length > 10 && (
+                      <div style={{ color: '#999', fontSize: 12 }}>
+                        ... và {payment.groupBookingId.members.length - 10} thành viên khác
+                      </div>
+                    )}
+                  </div>
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          </Card>
+        ) : payment.booking ? (
           <Card title="Thông tin đặt phòng">
             <Descriptions column={2} bordered>
+              <Descriptions.Item label="Mã booking">
+                <strong>{payment.booking._id}</strong>
+              </Descriptions.Item>
               <Descriptions.Item label="Phòng">
                 {payment.booking.roomId.roomNumber} - {payment.booking.roomId.typeId.name}
               </Descriptions.Item>
@@ -233,14 +335,14 @@ const PaymentDetails: React.FC<PaymentDetailsProps> = ({ payment, onClose }) => 
                 {payment.booking.guests} người
               </Descriptions.Item>
               <Descriptions.Item label="Nhận phòng">
-                {new Date(payment.booking.checkIn).toLocaleDateString('vi-VN')}
+                {new Date(payment.booking.checkIn).toLocaleString('vi-VN')}
               </Descriptions.Item>
               <Descriptions.Item label="Trả phòng">
-                {new Date(payment.booking.checkOut).toLocaleDateString('vi-VN')}
+                {new Date(payment.booking.checkOut).toLocaleString('vi-VN')}
               </Descriptions.Item>
             </Descriptions>
           </Card>
-        )}
+        ) : null}
 
         {/* Thông tin Stripe */}
         {payment.paymentMethod === 'stripe' && (

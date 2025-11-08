@@ -69,7 +69,12 @@ const quote = async (req: Request, res: Response) => {
 };
 
 const markPaid = async (req: Request, res: Response) => {
-  const gb = await groupBookingsService.markPaid(req.params.id);
+  const { stripeSessionId, stripePaymentIntentId, stripeCustomerId } = req.body;
+  const gb = await groupBookingsService.markPaid(req.params.id, {
+    stripeSessionId,
+    stripePaymentIntentId,
+    stripeCustomerId,
+  });
   res.json({ data: gb });
 };
 

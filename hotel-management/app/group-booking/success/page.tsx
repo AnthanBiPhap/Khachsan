@@ -14,12 +14,21 @@ export default function GroupBookingSuccessPage() {
 
   useEffect(() => {
     const gb = sp.get('gb');
+    const sessionId = sp.get('session_id');
     if (!gb) return;
     setGbId(gb);
     const API_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080').replace(/\/$/, '') + '/api/v1';
     const markPaid = async () => {
       try {
-        const res = await fetch(`${API_URL}/group-bookings/${gb}/paid`, { method: 'POST' });
+        const payload: any = {};
+        if (sessionId) {
+          payload.stripeSessionId = sessionId;
+        }
+        const res = await fetch(`${API_URL}/group-bookings/${gb}/paid`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
         if (!res.ok) {
           const t = await res.text();
           throw new Error(t);

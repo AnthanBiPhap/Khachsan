@@ -5,7 +5,12 @@ const paymentSchema = new Schema(
     bookingId: {
       type: Schema.Types.ObjectId,
       ref: "Booking",
-      required: [true, "Cần liên kết với booking"],
+      required: false, // Không bắt buộc nếu có groupBookingId
+    },
+    groupBookingId: {
+      type: Schema.Types.ObjectId,
+      ref: "GroupBooking",
+      required: false, // Không bắt buộc nếu có bookingId
     },
     customerId: {
       type: Schema.Types.ObjectId,
@@ -95,8 +100,18 @@ const paymentSchema = new Schema(
   }
 );
 
+// Validation: phải có ít nhất một trong hai (bookingId hoặc groupBookingId)
+paymentSchema.pre("save", function (next) {
+  if (!this.bookingId && !this.groupBookingId) {
+    next(new Error("Payment phải liên kết với Booking hoặc GroupBooking"));
+  } else {
+    next();
+  }
+});
+
 // Index để tối ưu truy vấn
 paymentSchema.index({ bookingId: 1 });
+paymentSchema.index({ groupBookingId: 1 });
 paymentSchema.index({ customerId: 1 });
 paymentSchema.index({ status: 1 });
 paymentSchema.index({ paymentMethod: 1 });

@@ -1,5 +1,6 @@
 import Payment from "../models/payments.model";
 import Booking from "../models/bookings.model";
+import GroupBooking from "../models/groupBooking.model";
 import createError from 'http-errors';
 
 // Lấy tất cả payments
@@ -23,6 +24,7 @@ const getAll = async (filters: any = {}) => {
   if (paymentMethod) query.paymentMethod = paymentMethod;
   if (customerId) query.customerId = customerId;
   if (bookingId) query.bookingId = bookingId;
+  if (filters.groupBookingId) query.groupBookingId = filters.groupBookingId;
 
   if (startDate || endDate) {
     query.createdAt = {};
@@ -44,6 +46,15 @@ const getAll = async (filters: any = {}) => {
           path: "typeId",
           select: "name"
         }
+      }
+    })
+    .populate({
+      path: "groupBookingId",
+      select: "_id checkIn checkOut requesterName requesterPhone requesterEmail peopleCount roomCount quoteAmount status allocatedRoomIds",
+      populate: {
+        path: "allocatedRoomIds",
+        select: "roomNumber typeId",
+        populate: { path: "typeId", select: "name pricePerNight" }
       }
     })
     .populate("customerId", "fullName email phoneNumber")
@@ -69,7 +80,7 @@ const getById = async (id: string) => {
   const payment = await Payment.findById(id)
     .populate({
       path: "bookingId",
-      select: "roomId checkIn checkOut guests totalPrice",
+      select: "roomId checkIn checkOut guests totalPrice source createdAt updatedAt",
       populate: {
         path: "roomId",
         select: "roomNumber typeId",
@@ -77,6 +88,15 @@ const getById = async (id: string) => {
           path: "typeId",
           select: "name"
         }
+      }
+    })
+    .populate({
+      path: "groupBookingId",
+      select: "_id checkIn checkOut requesterName requesterPhone requesterEmail peopleCount roomCount quoteAmount status allocatedRoomIds members",
+      populate: {
+        path: "allocatedRoomIds",
+        select: "roomNumber typeId",
+        populate: { path: "typeId", select: "name pricePerNight" }
       }
     })
     .populate("customerId", "fullName email phoneNumber");
@@ -89,6 +109,7 @@ const getById = async (id: string) => {
 const create = async (payload: any) => {
   const {
     bookingId,
+    groupBookingId,
     customerId,
     paymentMethod,
     amount,
@@ -104,18 +125,32 @@ const create = async (payload: any) => {
     expiresAt,
   } = payload;
 
-  // Kiểm tra booking có tồn tại không
-  const booking = await Booking.findById(bookingId);
-  if (!booking) throw createError(404, "Booking not found");
+  // Kiểm tra booking hoặc groupBooking có tồn tại không
+  if (bookingId) {
+    const booking = await Booking.findById(bookingId);
+    if (!booking) throw createError(404, "Booking not found");
 
-  // Kiểm tra xem đã có payment cho booking này chưa
-  const existingPayment = await Payment.findOne({ bookingId });
-  if (existingPayment && existingPayment.status !== "failed") {
-    throw createError(400, "Payment already exists for this booking");
+    // Kiểm tra xem đã có payment cho booking này chưa
+    const existingPayment = await Payment.findOne({ bookingId });
+    if (existingPayment && existingPayment.status !== "failed") {
+      throw createError(400, "Payment already exists for this booking");
+    }
+  } else if (groupBookingId) {
+    const groupBooking = await GroupBooking.findById(groupBookingId);
+    if (!groupBooking) throw createError(404, "Group booking not found");
+
+    // Kiểm tra xem đã có payment cho group booking này chưa
+    const existingPayment = await Payment.findOne({ groupBookingId });
+    if (existingPayment && existingPayment.status !== "failed") {
+      throw createError(400, "Payment already exists for this group booking");
+    }
+  } else {
+    throw createError(400, "Either bookingId or groupBookingId is required");
   }
 
   const payment = new Payment({
     bookingId,
+    groupBookingId,
     customerId,
     paymentMethod,
     amount,
@@ -134,18 +169,31 @@ const create = async (payload: any) => {
 
   try {
     const savedPayment = await payment.save();
-    await savedPayment.populate({
-      path: "bookingId",
-      select: "roomId checkIn checkOut guests totalPrice",
-      populate: {
-        path: "roomId",
-        select: "roomNumber typeId",
+    if (savedPayment.bookingId) {
+      await savedPayment.populate({
+        path: "bookingId",
+        select: "roomId checkIn checkOut guests totalPrice source createdAt updatedAt",
         populate: {
-          path: "typeId",
-          select: "name"
+          path: "roomId",
+          select: "roomNumber typeId",
+          populate: {
+            path: "typeId",
+            select: "name"
+          }
         }
-      }
-    });
+      });
+    }
+    if (savedPayment.groupBookingId) {
+      await savedPayment.populate({
+        path: "groupBookingId",
+        select: "_id checkIn checkOut requesterName requesterPhone requesterEmail peopleCount roomCount quoteAmount status allocatedRoomIds",
+        populate: {
+          path: "allocatedRoomIds",
+          select: "roomNumber typeId",
+          populate: { path: "typeId", select: "name pricePerNight" }
+        }
+      });
+    }
     await savedPayment.populate("customerId", "fullName email phoneNumber");
 
     return savedPayment;
@@ -171,9 +219,23 @@ const updateById = async (id: string, payload: any) => {
     id,
     updateData,
     { new: true, runValidators: true }
-  )
-    .populate("bookingId", "roomId checkIn checkOut guests totalPrice source")
-    .populate("customerId", "fullName email phoneNumber");
+  );
+  
+  if (updatedPayment.bookingId) {
+    await updatedPayment.populate("bookingId", "roomId checkIn checkOut guests totalPrice source");
+  }
+  if (updatedPayment.groupBookingId) {
+    await updatedPayment.populate({
+      path: "groupBookingId",
+      select: "_id checkIn checkOut requesterName requesterPhone requesterEmail peopleCount roomCount quoteAmount status allocatedRoomIds",
+      populate: {
+        path: "allocatedRoomIds",
+        select: "roomNumber typeId",
+        populate: { path: "typeId", select: "name pricePerNight" }
+      }
+    });
+  }
+  await updatedPayment.populate("customerId", "fullName email phoneNumber");
 
   return updatedPayment;
 };
@@ -196,9 +258,23 @@ const updateStatus = async (id: string, status: string, additionalData: any = {}
     id,
     { ...updateData, ...additionalData, updatedAt: new Date() },
     { new: true, runValidators: true }
-  )
-    .populate("bookingId", "roomId checkIn checkOut guests totalPrice")
-    .populate("customerId", "fullName email phoneNumber");
+  );
+  
+  if (updatedPayment.bookingId) {
+    await updatedPayment.populate("bookingId", "roomId checkIn checkOut guests totalPrice");
+  }
+  if (updatedPayment.groupBookingId) {
+    await updatedPayment.populate({
+      path: "groupBookingId",
+      select: "_id checkIn checkOut requesterName requesterPhone requesterEmail peopleCount roomCount quoteAmount status allocatedRoomIds",
+      populate: {
+        path: "allocatedRoomIds",
+        select: "roomNumber typeId",
+        populate: { path: "typeId", select: "name pricePerNight" }
+      }
+    });
+  }
+  await updatedPayment.populate("customerId", "fullName email phoneNumber");
 
   // Cập nhật trạng thái booking tương ứng với payment status
   if (payment.bookingId) {
@@ -222,6 +298,22 @@ const updateStatus = async (id: string, status: string, additionalData: any = {}
       updatedAt: new Date()
     });
   }
+  
+  // Cập nhật trạng thái group booking tương ứng với payment status
+  if (payment.groupBookingId) {
+    // Map payment status sang group booking status
+    if (status === "completed") {
+      await GroupBooking.findByIdAndUpdate(payment.groupBookingId, {
+        status: "paid",
+        updatedAt: new Date()
+      });
+    } else if (status === "refunded") {
+      await GroupBooking.findByIdAndUpdate(payment.groupBookingId, {
+        status: "cancelled",
+        updatedAt: new Date()
+      });
+    }
+  }
 
   return updatedPayment;
 };
@@ -243,6 +335,33 @@ const deleteById = async (id: string) => {
 // Lấy payments theo booking
 const getByBookingId = async (bookingId: string) => {
   const payments = await Payment.find({ bookingId })
+    .populate({
+      path: "bookingId",
+      select: "roomId checkIn checkOut guests totalPrice source",
+      populate: {
+        path: "roomId",
+        select: "roomNumber typeId",
+        populate: { path: "typeId", select: "name" }
+      }
+    })
+    .populate("customerId", "fullName email phoneNumber")
+    .sort({ createdAt: -1 });
+
+  return payments;
+};
+
+// Lấy payments theo group booking
+const getByGroupBookingId = async (groupBookingId: string) => {
+  const payments = await Payment.find({ groupBookingId })
+    .populate({
+      path: "groupBookingId",
+      select: "_id checkIn checkOut requesterName requesterPhone requesterEmail peopleCount roomCount quoteAmount status allocatedRoomIds",
+      populate: {
+        path: "allocatedRoomIds",
+        select: "roomNumber typeId",
+        populate: { path: "typeId", select: "name pricePerNight" }
+      }
+    })
     .populate("customerId", "fullName email phoneNumber")
     .sort({ createdAt: -1 });
 
@@ -414,6 +533,7 @@ export default {
   updateStatus,
   deleteById,
   getByBookingId,
+  getByGroupBookingId,
   getByCustomerId,
   getStats,
   syncWithBookings,

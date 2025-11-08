@@ -19,7 +19,27 @@ import PaymentSearchFilter from './PaymentSearchFilter';
 
 interface Payment {
   _id: string;
-  bookingId: any;
+  bookingId?: any;
+  groupBookingId?: {
+    _id: string;
+    checkIn?: string;
+    checkOut?: string;
+    requesterName?: string;
+    requesterPhone?: string;
+    requesterEmail?: string;
+    peopleCount?: number;
+    roomCount?: number;
+    quoteAmount?: number;
+    status?: string;
+    allocatedRoomIds?: Array<{
+      _id: string;
+      roomNumber?: string;
+      typeId?: {
+        name?: string;
+        pricePerNight?: number;
+      };
+    }>;
+  };
   customerId: any;
   paymentMethod: 'stripe' | 'cash' | 'bank_transfer' | 'other';
   amount: number;
@@ -156,12 +176,14 @@ const PaymentsList: React.FC = () => {
     if (searchText) {
       const searchLower = searchText.toLowerCase();
       filtered = filtered.filter(payment => {
-        const customerName = payment.customer?.fullName || '';
+        const customerName = payment.customer?.fullName || payment.groupBookingId?.requesterName || '';
         const bookingId = payment.bookingId?._id || '';
+        const groupBookingId = payment.groupBookingId?._id || '';
         const transactionId = payment.transactionId || '';
         
         return customerName.toLowerCase().includes(searchLower) ||
                bookingId.toLowerCase().includes(searchLower) ||
+               groupBookingId.toLowerCase().includes(searchLower) ||
                transactionId.toLowerCase().includes(searchLower);
       });
     }
@@ -293,6 +315,31 @@ const PaymentsList: React.FC = () => {
       title: "Khách hàng",
       key: 'customer',
       render: (record: Payment) => {
+        // Kiểm tra group booking trước
+        if (record.groupBookingId) {
+          const gb = record.groupBookingId;
+          return (
+            <div>
+              <Tag color="purple" style={{ marginBottom: 4 }}>Đặt đoàn</Tag>
+              <Typography.Text strong>{gb.requesterName || 'Guest'}</Typography.Text>
+              <br />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {gb.requesterPhone ? `📱 ${gb.requesterPhone}` : ''}
+                {gb.requesterPhone && gb.requesterEmail ? ' | ' : ''}
+                {gb.requesterEmail || ''}
+              </Typography.Text>
+              {gb.peopleCount && (
+                <div>
+                  <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                    {gb.peopleCount} người, {gb.roomCount || 0} phòng
+                  </Typography.Text>
+                </div>
+              )}
+            </div>
+          );
+        }
+        
+        // Booking thông thường
         // Ưu tiên lấy tên từ booking.guests (cho cả walk-in và online)
         if (record.bookingId?.guests && record.bookingId.guests.length > 0) {
           const mainGuest = record.bookingId.guests.find((guest: any) => guest.isMainGuest) || record.bookingId.guests[0];
@@ -328,11 +375,44 @@ const PaymentsList: React.FC = () => {
       title: (
         <Space>
           <HomeOutlined style={{ color: '#fa8c16' }} />
-          <span>Phòng</span>
+          <span>Phòng / Đặt đoàn</span>
         </Space>
       ),
       key: 'room',
       render: (record: Payment) => {
+        // Kiểm tra group booking trước
+        if (record.groupBookingId) {
+          const gb = record.groupBookingId;
+          const rooms = gb.allocatedRoomIds || [];
+          return (
+            <Space direction="vertical" size={0}>
+              <Space size={4}>
+                <HomeOutlined style={{ color: '#fa8c16', fontSize: 12 }} />
+                <Tag color="purple" style={{ margin: 0 }}>Đặt đoàn</Tag>
+              </Space>
+              <div style={{ marginTop: 4 }}>
+                {rooms.length > 0 ? (
+                  <>
+                    <Typography.Text strong style={{ fontSize: 12 }}>
+                      {rooms.map((r: any) => r.roomNumber || r._id).slice(0, 3).join(', ')}
+                      {rooms.length > 3 ? ` +${rooms.length - 3}` : ''}
+                    </Typography.Text>
+                    <br />
+                    <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                      {gb.checkIn ? new Date(gb.checkIn).toLocaleDateString('vi-VN') : '-'} - {gb.checkOut ? new Date(gb.checkOut).toLocaleDateString('vi-VN') : '-'}
+                    </Typography.Text>
+                  </>
+                ) : (
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    Chưa phân bổ phòng
+                  </Typography.Text>
+                )}
+              </div>
+            </Space>
+          );
+        }
+        
+        // Booking thông thường
         const roomNumber = record.bookingId?.roomId?.roomNumber || record.booking?.roomId?.roomNumber || 'N/A';
         const roomType = record.bookingId?.roomId?.typeId?.name || record.booking?.roomId?.typeId?.name || 'N/A';
         return (
@@ -407,11 +487,11 @@ const PaymentsList: React.FC = () => {
       dataIndex: 'paidAt',
       key: 'paidAt',
       render: (paidAt: string, record: Payment) => {
-        // Sử dụng ngày tạo booking làm ngày thanh toán
-        const bookingDate = record.bookingId?.createdAt || record.createdAt;
+        // Sử dụng paidAt nếu có, nếu không thì dùng ngày tạo booking/group booking
+        const paymentDate = paidAt || record.bookingId?.createdAt || record.groupBookingId?._id ? record.createdAt : record.createdAt;
         
-        if (bookingDate) {
-          const date = new Date(bookingDate);
+        if (paymentDate) {
+          const date = new Date(paymentDate);
           return (
             <Space>
               <CalendarOutlined style={{ color: '#13c2c2', fontSize: 12 }} />

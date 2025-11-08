@@ -2,7 +2,9 @@ import createError from "http-errors";
 import GroupBooking from "../models/groupBooking.model";
 import Room from "../models/rooms.model";
 import Booking from "../models/bookings.model";
+import Payment from "../models/payments.model";
 import invoicesService from "./invoices.service";
+import paymentsService from "./payments.service";
 
 type CreateGroupBookingPayload = {
   requesterId?: string;
@@ -159,7 +161,7 @@ const quote = async (
   return gb;
 };
 
-const markPaid = async (id: string) => {
+const markPaid = async (id: string, options?: { stripeSessionId?: string; stripePaymentIntentId?: string; stripeCustomerId?: string }) => {
   const gb = await GroupBooking.findById(id);
   if (!gb) throw createError(404, "Group booking not found");
   if (!gb.quoteAmount) throw createError(400, "Quote not set");
@@ -185,6 +187,43 @@ const markPaid = async (id: string) => {
     console.error(`❌ Lỗi tạo invoice cho group booking ${gb._id}:`, invoiceError);
     // Không throw error để không làm crash API, vì group booking đã được đánh dấu paid
     // Nhưng log lại để admin biết và có thể tạo invoice thủ công sau
+  }
+
+  // Tạo payment record cho group booking khi thanh toán
+  try {
+    // Kiểm tra xem đã có payment chưa
+    const existingPayment = await Payment.findOne({ groupBookingId: gb._id });
+    if (!existingPayment) {
+      // Tạo payment record mới
+      const payment = await paymentsService.create({
+        groupBookingId: gb._id.toString(),
+        customerId: gb.requesterId || undefined,
+        paymentMethod: "stripe", // Mặc định là stripe vì thanh toán online
+        amount: gb.quoteAmount,
+        currency: "VND",
+        stripeSessionId: options?.stripeSessionId,
+        stripePaymentIntentId: options?.stripePaymentIntentId,
+        stripeCustomerId: options?.stripeCustomerId,
+        status: "completed",
+        paidAt: new Date(),
+        notes: `Payment for group booking ${gb._id}`,
+      });
+      console.log(`✅ Đã tạo payment mới cho group booking ${gb._id}: paymentId=${payment._id}, amount=${gb.quoteAmount}`);
+    } else {
+      // Cập nhật payment hiện có nếu có thông tin Stripe mới
+      if (options?.stripeSessionId || options?.stripePaymentIntentId) {
+        const updateData: any = {};
+        if (options.stripeSessionId) updateData.stripeSessionId = options.stripeSessionId;
+        if (options.stripePaymentIntentId) updateData.stripePaymentIntentId = options.stripePaymentIntentId;
+        if (options.stripeCustomerId) updateData.stripeCustomerId = options.stripeCustomerId;
+        await paymentsService.updateById(existingPayment._id.toString(), updateData);
+        console.log(`✅ Đã cập nhật payment ${existingPayment._id} với thông tin Stripe`);
+      }
+      console.log(`ℹ️ Payment đã tồn tại cho group booking ${gb._id}: paymentId=${existingPayment._id}`);
+    }
+  } catch (paymentError: any) {
+    console.error(`❌ Lỗi tạo payment cho group booking ${gb._id}:`, paymentError);
+    // Không throw error để không làm crash API
   }
 
   return gb;
