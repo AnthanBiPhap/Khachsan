@@ -15,6 +15,54 @@ export interface CreateGroupBookingPayload {
   notes?: string;
 }
 
+export interface GroupBooking {
+  _id: string;
+  requesterId?: {
+    _id: string;
+    fullName: string;
+    email?: string;
+    phoneNumber?: string;
+  };
+  requesterName: string;
+  requesterPhone: string;
+  requesterEmail?: string;
+  checkIn: string;
+  checkOut: string;
+  peopleCount: number;
+  roomCount: number;
+  notes?: string;
+  status:
+    | 'pending_approval'
+    | 'approved'
+    | 'info_uploaded'
+    | 'quoted'
+    | 'awaiting_payment'
+    | 'paid'
+    | 'confirmed'
+    | 'cancelled';
+  allocatedRoomIds?: Array<{
+    _id: string;
+    roomNumber: string;
+    typeId?: {
+      _id: string;
+      name: string;
+      pricePerNight: number;
+    };
+  }>;
+  members?: Array<{
+    fullName: string;
+    idNumber?: string;
+    dateOfBirth?: string;
+    phoneNumber?: string;
+    email?: string;
+    isLeader?: boolean;
+  }>;
+  quoteAmount?: number;
+  paymentLink?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export const groupBookingService = {
   async createRequest(payload: CreateGroupBookingPayload) {
     try {
@@ -30,6 +78,11 @@ export const groupBookingService = {
   async getById(id: string) {
     const res = await axios.get(`${API_URL}/group-bookings/${id}`);
     return res.data?.data;
+  },
+
+  async list(params?: Record<string, unknown>): Promise<GroupBooking[]> {
+    const res = await axios.get(`${API_URL}/group-bookings`, { params });
+    return res.data?.data || [];
   },
 
   async downloadTemplate(id: string): Promise<Blob> {

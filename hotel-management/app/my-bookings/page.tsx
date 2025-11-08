@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { message } from 'antd';
@@ -13,9 +13,12 @@ import {
   Clock as ClockIcon,
   XCircle,
   Loader2,
+  Copy,
+  ClipboardCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { bookingService } from '@/services/bookingService';
+import { groupBookingService, type GroupBooking } from '@/services/groupBookingService';
 
 type GuestInfo = {
   fullName: string;
@@ -59,9 +62,44 @@ type Booking = {
 export default function MyBookingsPage() {
   const { user, isLoading } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [groupBookings, setGroupBookings] = useState<GroupBooking[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [copiedGroupId, setCopiedGroupId] = useState<string | null>(null);
+
+  const fetchBookings = useCallback(async () => {
+    if (!user?._id) return;
+
+    try {
+      setLoading(true);
+      setError(null);
+
+      const bookingUrl = `http://localhost:8080/api/v1/bookings?customerId=${user._id}`;
+      const [bookingResponse, groupResults] = await Promise.all([
+        fetch(bookingUrl, { cache: 'no-store' }),
+        groupBookingService.list({ requesterId: user._id }),
+      ]);
+
+      if (!bookingResponse.ok) {
+        throw new Error('Không thể tải thông tin đặt phòng');
+      }
+
+      const bookingJson = await bookingResponse.json();
+      const allBookings = bookingJson.data.bookings || [];
+      const userBookings = allBookings.filter(
+        (b: any) => b.customerId?._id === user._id
+      );
+
+      setBookings(userBookings);
+      setGroupBookings(groupResults || []);
+    } catch (err) {
+      console.error('Lỗi khi tải đặt phòng:', err);
+      setError('Đã xảy ra lỗi khi tải thông tin đặt phòng');
+    } finally {
+      setLoading(false);
+    }
+  }, [user?._id]);
 
   // ✅ Chờ AuthContext load xong (tránh báo lỗi nhầm khi chưa có user)
   useEffect(() => {
@@ -73,37 +111,8 @@ export default function MyBookingsPage() {
       return;
     }
 
-    const fetchBookings = async () => {
-      try {
-        setLoading(true);
-        // ✅ đổi userId -> customerId (backend chuẩn)
-        const response = await fetch(
-          `http://localhost:8080/api/v1/bookings?customerId=${user._id}`
-        );
-
-        if (!response.ok) {
-          throw new Error('Không thể tải thông tin đặt phòng');
-        }
-
-        const data = await response.json();
-        const allBookings = data.data.bookings || [];
-
-        // ✅ Nếu backend chưa filter, lọc client-side
-        const userBookings = allBookings.filter(
-          (b: any) => b.customerId?._id === user._id
-        );
-
-        setBookings(userBookings);
-      } catch (err) {
-        console.error('Lỗi khi tải đặt phòng:', err);
-        setError('Đã xảy ra lỗi khi tải thông tin đặt phòng');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchBookings();
-  }, [user, isLoading]);
+  }, [user?._id, isLoading, fetchBookings]);
 
   const formatDate = (dateString: string) => {
     const options: Intl.DateTimeFormatOptions = {
@@ -139,6 +148,65 @@ export default function MyBookingsPage() {
     const hoursSinceCreated = (now.getTime() - created.getTime()) / (1000 * 60 * 60);
     const hoursRemaining = 24 - hoursSinceCreated;
     return Math.max(0, Math.ceil(hoursRemaining)); // Làm tròn lên, không âm
+  };
+
+  const renderGroupStatusBadge = (status: GroupBooking['status']) => {
+    switch (status) {
+      case 'pending_approval':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+            Chờ duyệt
+          </span>
+        );
+      case 'approved':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+            Đã duyệt
+          </span>
+        );
+      case 'info_uploaded':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 text-indigo-800">
+            Đã cập nhật danh sách
+          </span>
+        );
+      case 'quoted':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
+            Đã báo giá
+          </span>
+        );
+      case 'awaiting_payment':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
+            Chờ thanh toán
+          </span>
+        );
+      case 'paid':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+            Đã thanh toán
+          </span>
+        );
+      case 'confirmed':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-cyan-100 text-cyan-800">
+            Đã xác nhận
+          </span>
+        );
+      case 'cancelled':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+            Đã hủy
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700">
+            Đang xử lý
+          </span>
+        );
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -222,7 +290,7 @@ export default function MyBookingsPage() {
     );
   }
 
-  if (bookings.length === 0) {
+  if (bookings.length === 0 && groupBookings.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center p-6 max-w-md">
@@ -513,9 +581,7 @@ export default function MyBookingsPage() {
                             note: 'Khách hàng hủy đặt phòng',
                           });
                           // cập nhật lại danh sách
-                          const res = await fetch(`http://localhost:8080/api/v1/bookings?customerId=${user?._id}`);
-                          const data = await res.json();
-                          setBookings((data.data.bookings || []).filter((b: any) => b.customerId?._id === user?._id));
+                          await fetchBookings();
                           message.success('Đã hủy đặt phòng thành công!');
                         } catch (e) {
                           console.error(e);
@@ -556,12 +622,7 @@ export default function MyBookingsPage() {
                           console.log('✅ Yêu cầu hủy phòng và hoàn tiền thành công:', response);
                           
                           // Refresh danh sách bookings
-                          const res = await fetch(`http://localhost:8080/api/v1/bookings?customerId=${user?._id}`);
-                          if (!res.ok) {
-                            throw new Error(`HTTP error! status: ${res.status}`);
-                          }
-                          const data = await res.json();
-                          setBookings((data.data.bookings || []).filter((b: any) => b.customerId?._id === user?._id));
+                          await fetchBookings();
                           
                           // Thông báo thành công
                           message.success('Yêu cầu hủy phòng và hoàn tiền đã được gửi thành công!', 5);
@@ -600,6 +661,161 @@ export default function MyBookingsPage() {
             </div>
           ))}
         </div>
+        {groupBookings.length > 0 && (
+          <div className="mt-12 space-y-6">
+            <div className="text-center">
+              <h2 className="text-2xl font-semibold text-gray-900">Đặt đoàn của bạn</h2>
+              <p className="text-gray-600">Theo dõi tiến độ xử lý các yêu cầu đặt đoàn</p>
+            </div>
+            {groupBookings.map((group) => (
+              <div
+                key={group._id}
+                className="bg-white rounded-lg shadow-md overflow-hidden"
+              >
+                <div className="p-6">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                    <div className="mb-4 sm:mb-0">
+                      <h2 className="text-xl font-semibold text-gray-900">
+                        Đặt đoàn {String(group._id || '').slice(-8).toUpperCase()}
+                      </h2>
+                      <div className="mt-2">
+                        {renderGroupStatusBadge(group.status)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center justify-end space-x-2">
+                        <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                          {group._id}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(group._id);
+                              setCopiedGroupId(group._id);
+                              message.success('Đã sao chép mã yêu cầu đặt đoàn');
+                              setTimeout(() => setCopiedGroupId(null), 2000);
+                            } catch (copyError) {
+                              console.error(copyError);
+                              message.error('Không thể sao chép mã, vui lòng thử lại');
+                            }
+                          }}
+                        >
+                          {copiedGroupId === group._id ? (
+                            <ClipboardCheck className="h-4 w-4" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Ngày tạo: {formatDate(group.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-2 text-xs text-gray-500">
+                    <p>Cập nhật lần cuối: {formatDate(group.updatedAt)}</p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">Thông tin đoàn</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-start">
+                          <Users className="h-5 w-5 text-gray-400 mr-3 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm text-gray-500">Số khách</p>
+                            <p className="font-medium">{group.peopleCount} người</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start">
+                          <Users className="h-5 w-5 text-gray-400 mr-3 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm text-gray-500">Số phòng yêu cầu</p>
+                            <p className="font-medium">{group.roomCount} phòng</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start">
+                          <Calendar className="h-5 w-5 text-gray-400 mr-3 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm text-gray-500">Nhận phòng</p>
+                            <p className="font-medium">{formatDate(group.checkIn)}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start">
+                          <Calendar className="h-5 w-5 text-gray-400 mr-3 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="text-sm text-gray-500">Trả phòng</p>
+                            <p className="font-medium">{formatDate(group.checkOut)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">Chi tiết báo giá</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Tổng báo giá</span>
+                          <span>{formatCurrency(Number(group.quoteAmount) || 0)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-600">Trạng thái thanh toán</span>
+                          <span className="font-medium">
+                            {group.status === 'paid'
+                              ? 'Đã thanh toán'
+                              : group.status === 'awaiting_payment'
+                                ? 'Chờ thanh toán'
+                                : group.status === 'quoted'
+                                  ? 'Đang chờ xác nhận'
+                                  : group.status === 'confirmed'
+                                    ? 'Hoàn tất'
+                                    : group.status === 'cancelled'
+                                      ? 'Đã hủy'
+                                      : 'Đang xử lý'}
+                          </span>
+                        </div>
+                        {group.paymentLink && (
+                          <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
+                            <p className="text-sm text-blue-700">
+                              Liên kết thanh toán: <a href={group.paymentLink} className="underline" target="_blank" rel="noopener noreferrer">Mở liên kết</a>
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {group.notes && (
+                    <div className="mt-4 p-3 bg-blue-50 rounded-md">
+                      <p className="text-sm text-blue-700">
+                        <span className="font-medium">Ghi chú:</span> {String(group.notes || '')}
+                      </p>
+                    </div>
+                  )}
+
+                  {group.allocatedRoomIds && group.allocatedRoomIds.length > 0 && (
+                    <div className="mt-6 pt-6 border-t border-gray-100">
+                      <h3 className="text-sm font-medium text-gray-500 mb-2">Phòng đã được phân bổ</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {group.allocatedRoomIds.map((room) => (
+                          <span
+                            key={room._id}
+                            className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700"
+                          >
+                            Phòng {room.roomNumber}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

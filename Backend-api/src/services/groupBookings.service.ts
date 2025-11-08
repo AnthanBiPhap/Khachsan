@@ -37,6 +37,7 @@ const getById = async (id: string) => {
 const list = async (query: any = {}) => {
   const q: any = {};
   if (query.status) q.status = query.status;
+  if (query.requesterId) q.requesterId = query.requesterId;
   if (query.from || query.to) {
     q.createdAt = {} as any;
     if (query.from) q.createdAt.$gte = new Date(query.from);
