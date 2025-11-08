@@ -18,6 +18,7 @@ const getAll = async (query: any) => {
   const where: Record<string, any> = {};
 
   if (query.bookingId) where.bookingId = query.bookingId;
+  if (query.groupBookingId) where.groupBookingId = query.groupBookingId;
   if (query.customerId) where.customerId = query.customerId;
   if (query.status) where.status = query.status;
 
@@ -30,6 +31,15 @@ const getAll = async (query: any) => {
 
   const invoices = await Invoice.find(where)
     .populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount totalPrice paidAmount remainingAmount paymentStatus")
+    .populate({
+      path: "groupBookingId",
+      select: "_id checkIn checkOut requesterName requesterPhone requesterEmail peopleCount roomCount quoteAmount status allocatedRoomIds members",
+      populate: {
+        path: "allocatedRoomIds",
+        select: "roomNumber typeId",
+        populate: { path: "typeId", select: "name pricePerNight" }
+      }
+    })
     .populate("customerId", "fullName email phoneNumber")
     .skip((page - 1) * limit)
     .limit(limit)
@@ -50,6 +60,15 @@ const getAll = async (query: any) => {
 const getById = async (id: string) => {
   const invoice = await Invoice.findById(id)
     .populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount")
+    .populate({
+      path: "groupBookingId",
+      select: "_id checkIn checkOut requesterName requesterPhone requesterEmail peopleCount roomCount quoteAmount status allocatedRoomIds members",
+      populate: {
+        path: "allocatedRoomIds",
+        select: "roomNumber typeId",
+        populate: { path: "typeId", select: "name pricePerNight" }
+      }
+    })
     .populate("customerId", "fullName email phoneNumber");
   if (!invoice) throw createError(404, "Invoice not found");
   return invoice;
@@ -58,6 +77,7 @@ const getById = async (id: string) => {
 const create = async (payload: any) => {
   const invoice = new Invoice({
     bookingId: payload.bookingId,
+    groupBookingId: payload.groupBookingId,
     customerId: payload.customerId,
     totalAmount: payload.totalAmount,
     paidAmount: payload.paidAmount || 0,
@@ -67,7 +87,20 @@ const create = async (payload: any) => {
     issuedAt: payload.issuedAt || Date.now(),
   });
   const savedInvoice = await invoice.save();
-  await savedInvoice.populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount totalPrice paidAmount remainingAmount paymentStatus");
+  if (savedInvoice.bookingId) {
+    await savedInvoice.populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount totalPrice paidAmount remainingAmount paymentStatus");
+  }
+  if (savedInvoice.groupBookingId) {
+    await savedInvoice.populate({
+      path: "groupBookingId",
+      select: "_id checkIn checkOut requesterName requesterPhone requesterEmail peopleCount roomCount quoteAmount status allocatedRoomIds members",
+      populate: {
+        path: "allocatedRoomIds",
+        select: "roomNumber typeId",
+        populate: { path: "typeId", select: "name pricePerNight" }
+      }
+    });
+  }
   await savedInvoice.populate("customerId", "fullName email phoneNumber");
   return savedInvoice;
 };
@@ -83,7 +116,20 @@ const updateById = async (id: string, payload: any) => {
 
   Object.assign(invoice, cleanUpdates);
   const updatedInvoice = await invoice.save();
-  await updatedInvoice.populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount");
+  if (updatedInvoice.bookingId) {
+    await updatedInvoice.populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount");
+  }
+  if (updatedInvoice.groupBookingId) {
+    await updatedInvoice.populate({
+      path: "groupBookingId",
+      select: "_id checkIn checkOut requesterName requesterPhone requesterEmail peopleCount roomCount quoteAmount status allocatedRoomIds members",
+      populate: {
+        path: "allocatedRoomIds",
+        select: "roomNumber typeId",
+        populate: { path: "typeId", select: "name pricePerNight" }
+      }
+    });
+  }
   await updatedInvoice.populate("customerId", "fullName email phoneNumber");
   return updatedInvoice;
 };
@@ -94,12 +140,21 @@ const deleteById = async (id: string) => {
   return invoice;
 };
 const printInvoice = async (invoiceId: string) => {
-  // Lấy invoice, populate booking, customer, services
+  // Lấy invoice, populate booking hoặc groupBooking, customer, services
   const invoice = await Invoice.findById(invoiceId)
     .populate({
       path: "bookingId",
       select: "_id checkIn checkOut roomId services guestInfo source guests guestCount totalPrice paidAmount remainingAmount paymentStatus",
       populate: { path: "roomId", select: "roomNumber" },
+    })
+    .populate({
+      path: "groupBookingId",
+      select: "_id checkIn checkOut requesterName requesterPhone requesterEmail peopleCount roomCount quoteAmount status allocatedRoomIds members",
+      populate: {
+        path: "allocatedRoomIds",
+        select: "roomNumber typeId",
+        populate: { path: "typeId", select: "name pricePerNight" }
+      }
     })
     .populate("customerId", "fullName email phoneNumber");
 
@@ -117,6 +172,7 @@ const printInvoice = async (invoiceId: string) => {
 
   const customer = invoice.customerId as { fullName?: string; email?: string; phoneNumber?: string };
   const booking = invoice.bookingId as any;
+  const groupBooking = invoice.groupBookingId as any;
 
   // --- Header ---
   doc
@@ -138,93 +194,166 @@ const printInvoice = async (invoiceId: string) => {
   // --- Customer info ---
   doc.fontSize(14).text("THÔNG TIN KHÁCH HÀNG", { underline: true });
   
-  // Logic mới với mảng guests
-  if (customer?.fullName) {
-    // Khách online (có tài khoản)
-    doc.fontSize(12).text(`Tên: ${customer.fullName}`);
-    doc.text(`Email: ${customer.email || "-"}`);
-    doc.text(`Điện thoại: ${customer.phoneNumber || "-"}`);
-  } else if (booking?.guests && booking.guests.length > 0) {
-    // Khách hàng walk_in - lấy thông tin khách chính
-    const mainGuest = booking.guests.find((guest: any) => guest.isMainGuest) || booking.guests[0];
-    doc.fontSize(12).text(`Tên: ${mainGuest?.fullName || "-"}`);
-    doc.text(`Số CMND/CCCD: ${mainGuest?.idNumber || "-"}`);
-    doc.text(`Tuổi: ${mainGuest?.age || "-"}`);
-    doc.text(`Điện thoại: ${mainGuest?.phoneNumber || "-"}`);
-    // Không hiển thị email cho khách walk_in
+  // Xử lý cho Group Booking
+  if (groupBooking) {
+    doc.fontSize(12).text(`Tên người yêu cầu: ${groupBooking.requesterName || "-"}`);
+    doc.text(`Điện thoại: ${groupBooking.requesterPhone || "-"}`);
+    doc.text(`Email: ${groupBooking.requesterEmail || "-"}`);
+    doc.text(`Số người: ${groupBooking.peopleCount || "-"}`);
+    doc.text(`Số phòng: ${groupBooking.roomCount || "-"}`);
+    doc.moveDown(0.5);
     
-    // Hiển thị thông tin khách phụ nếu có
-    if (booking.guests.length > 1) {
-      doc.text(`Số khách: ${booking.guestCount || booking.guests.length} người`);
-      const otherGuests = booking.guests.filter((guest: any) => !guest.isMainGuest);
-      if (otherGuests.length > 0) {
-        doc.text(`Khách phụ: ${otherGuests.map((g: any) => g.fullName).join(", ")}`);
-      }
+    // --- Booking info cho Group Booking ---
+    doc.fontSize(14).text("THÔNG TIN ĐẶT PHÒNG", { underline: true });
+    doc.fontSize(12).text(`Loại: Đặt theo đoàn`);
+    
+    // Hiển thị danh sách phòng
+    if (groupBooking.allocatedRoomIds && groupBooking.allocatedRoomIds.length > 0) {
+      doc.text(`Phòng: ${groupBooking.allocatedRoomIds.map((r: any) => r.roomNumber || "-").join(", ")}`);
+      doc.moveDown(0.3);
+      doc.fontSize(11).text("Chi tiết phòng:");
+      groupBooking.allocatedRoomIds.forEach((room: any, idx: number) => {
+        const roomNum = room.roomNumber || "-";
+        const typeName = room.typeId?.name || "-";
+        const pricePerNight = room.typeId?.pricePerNight || 0;
+        doc.text(`  ${idx + 1}. Phòng ${roomNum} (${typeName}): ${new Intl.NumberFormat("vi-VN").format(pricePerNight)} VND/đêm`);
+      });
+    } else {
+      doc.text(`Phòng: Chưa phân bổ`);
     }
-  } else if (booking?.guestInfo) {
-    // Fallback cho dữ liệu cũ
-    doc.fontSize(12).text(`Tên: ${booking.guestInfo.fullName || "-"}`);
-    doc.text(`Số CMND/CCCD: ${booking.guestInfo.idNumber || "-"}`);
-    doc.text(`Tuổi: ${booking.guestInfo.age || "-"}`);
-    doc.text(`Điện thoại: ${booking.guestInfo.phoneNumber || "-"}`);
-    // Không hiển thị email cho khách walk_in
-  } else {
-    // Không có thông tin
-    doc.fontSize(12).text("Không có thông tin khách hàng");
-  }
-  doc.moveDown(0.5);
-
-  // --- Booking info ---
-  doc.fontSize(14).text("THÔNG TIN ĐẶT PHÒNG", { underline: true });
-  doc.fontSize(12).text(`Phòng: ${booking?.roomId?.roomNumber || "-"}`);
-  doc.text(
-    `Ngày nhận phòng: ${
-      booking?.checkIn
-        ? moment(booking.checkIn).format("DD/MM/YYYY HH:mm")
-        : "-"
-    }`
-  );
-  doc.text(
-    `Ngày trả phòng: ${
-      booking?.checkOut
-        ? moment(booking.checkOut).format("DD/MM/YYYY HH:mm")
-        : "-"
-    }`
-  );
-  doc.moveDown(0.5);
-
-  // --- Services ---
-  doc.fontSize(14).text("DỊCH VỤ", { underline: true });
-  console.log(booking?.services);
-  
-  if (booking?.services && booking.services.length > 0) {
-    booking.services.forEach((s: any, idx: number) => {
-      const name = s?.name || "Unknown";
-      const price = s?.price || 0;
-      const quantity = s?.quantity || 1;
-      const totalPrice = price * quantity;
+    
+    doc.text(
+      `Ngày nhận phòng: ${
+        groupBooking.checkIn
+          ? moment(groupBooking.checkIn).format("DD/MM/YYYY HH:mm")
+          : "-"
+      }`
+    );
+    doc.text(
+      `Ngày trả phòng: ${
+        groupBooking.checkOut
+          ? moment(groupBooking.checkOut).format("DD/MM/YYYY HH:mm")
+          : "-"
+      }`
+    );
+    
+    // Tính số đêm
+    if (groupBooking.checkIn && groupBooking.checkOut) {
+      const nights = Math.ceil((new Date(groupBooking.checkOut).getTime() - new Date(groupBooking.checkIn).getTime()) / (1000 * 60 * 60 * 24));
+      doc.text(`Số đêm: ${nights} đêm`);
+    }
+    
+    doc.moveDown(0.5);
+    
+    // --- Members info ---
+    if (groupBooking.members && groupBooking.members.length > 0) {
+      doc.fontSize(14).text("THÀNH VIÊN ĐOÀN", { underline: true });
+      doc.fontSize(11);
+      groupBooking.members.forEach((member: any, idx: number) => {
+        const isLeader = member.isLeader ? " (Trưởng đoàn)" : "";
+        doc.text(`${idx + 1}. ${member.fullName || "-"}${isLeader}`);
+        if (member.idNumber) doc.text(`   CMND/CCCD: ${member.idNumber}`);
+        if (member.phoneNumber) doc.text(`   Điện thoại: ${member.phoneNumber}`);
+        if (member.email) doc.text(`   Email: ${member.email}`);
+        doc.moveDown(0.2);
+      });
+      doc.moveDown(0.3);
+    }
+    
+    doc.fontSize(12).text("Dịch vụ: Không có dịch vụ (đặt theo đoàn)");
+    doc.moveDown(0.5);
+  } else if (booking) {
+    // Logic cũ cho Booking thông thường
+    if (customer?.fullName) {
+      // Khách online (có tài khoản)
+      doc.fontSize(12).text(`Tên: ${customer.fullName}`);
+      doc.text(`Email: ${customer.email || "-"}`);
+      doc.text(`Điện thoại: ${customer.phoneNumber || "-"}`);
+    } else if (booking?.guests && booking.guests.length > 0) {
+      // Khách hàng walk_in - lấy thông tin khách chính
+      const mainGuest = booking.guests.find((guest: any) => guest.isMainGuest) || booking.guests[0];
+      doc.fontSize(12).text(`Tên: ${mainGuest?.fullName || "-"}`);
+      doc.text(`Số CMND/CCCD: ${mainGuest?.idNumber || "-"}`);
+      doc.text(`Tuổi: ${mainGuest?.age || "-"}`);
+      doc.text(`Điện thoại: ${mainGuest?.phoneNumber || "-"}`);
+      // Không hiển thị email cho khách walk_in
       
-      const priceFormatted = new Intl.NumberFormat("vi-VN").format(price);
-      const totalFormatted = new Intl.NumberFormat("vi-VN").format(totalPrice);
-      
-      doc.fontSize(12)
-        .text(
-          `${idx + 1}. ${name} x ${quantity}: ${priceFormatted} VND = ${totalFormatted} VND`
-        );
-    });
+      // Hiển thị thông tin khách phụ nếu có
+      if (booking.guests.length > 1) {
+        doc.text(`Số khách: ${booking.guestCount || booking.guests.length} người`);
+        const otherGuests = booking.guests.filter((guest: any) => !guest.isMainGuest);
+        if (otherGuests.length > 0) {
+          doc.text(`Khách phụ: ${otherGuests.map((g: any) => g.fullName).join(", ")}`);
+        }
+      }
+    } else if (booking?.guestInfo) {
+      // Fallback cho dữ liệu cũ
+      doc.fontSize(12).text(`Tên: ${booking.guestInfo.fullName || "-"}`);
+      doc.text(`Số CMND/CCCD: ${booking.guestInfo.idNumber || "-"}`);
+      doc.text(`Tuổi: ${booking.guestInfo.age || "-"}`);
+      doc.text(`Điện thoại: ${booking.guestInfo.phoneNumber || "-"}`);
+      // Không hiển thị email cho khách walk_in
+    } else {
+      // Không có thông tin
+      doc.fontSize(12).text("Không có thông tin khách hàng");
+    }
+    doc.moveDown(0.5);
+
+    // --- Booking info ---
+    doc.fontSize(14).text("THÔNG TIN ĐẶT PHÒNG", { underline: true });
+    doc.fontSize(12).text(`Phòng: ${booking?.roomId?.roomNumber || "-"}`);
+    doc.text(
+      `Ngày nhận phòng: ${
+        booking?.checkIn
+          ? moment(booking.checkIn).format("DD/MM/YYYY HH:mm")
+          : "-"
+      }`
+    );
+    doc.text(
+      `Ngày trả phòng: ${
+        booking?.checkOut
+          ? moment(booking.checkOut).format("DD/MM/YYYY HH:mm")
+          : "-"
+      }`
+    );
+    doc.moveDown(0.5);
+
+    // --- Services ---
+    doc.fontSize(14).text("DỊCH VỤ", { underline: true });
+    console.log(booking?.services);
+    
+    if (booking?.services && booking.services.length > 0) {
+      booking.services.forEach((s: any, idx: number) => {
+        const name = s?.name || "Unknown";
+        const price = s?.price || 0;
+        const quantity = s?.quantity || 1;
+        const totalPrice = price * quantity;
+        
+        const priceFormatted = new Intl.NumberFormat("vi-VN").format(price);
+        const totalFormatted = new Intl.NumberFormat("vi-VN").format(totalPrice);
+        
+        doc.fontSize(12)
+          .text(
+            `${idx + 1}. ${name} x ${quantity}: ${priceFormatted} VND = ${totalFormatted} VND`
+          );
+      });
+    } else {
+      doc.fontSize(12).text("Không có dịch vụ");
+    }
+    doc.moveDown(0.5);
   } else {
-    doc.fontSize(12).text("Không có dịch vụ");
+    doc.fontSize(12).text("Không có thông tin đặt phòng");
+    doc.moveDown(0.5);
   }
-  doc.moveDown(0.5);
 
   // --- Total & Payment Summary ---
   const nf = new Intl.NumberFormat("vi-VN");
   const totalFormatted = nf.format(invoice.totalAmount);
 
-  // Xác định số tiền đã thanh toán và còn lại (ưu tiên theo invoice, fallback theo booking)
-  const paidAmount = (invoice as any).paidAmount ?? booking?.paidAmount ?? 0;
-  const remainingAmount = (invoice as any).remainingAmount ?? booking?.remainingAmount ?? Math.max((invoice.totalAmount || 0) - (paidAmount || 0), 0);
-  const paymentStatus = (invoice as any).paymentStatus ?? booking?.paymentStatus ?? "pending";
+  // Xác định số tiền đã thanh toán và còn lại (ưu tiên theo invoice, fallback theo booking/groupBooking)
+  const paidAmount = (invoice as any).paidAmount ?? booking?.paidAmount ?? groupBooking?.quoteAmount ?? 0;
+  const remainingAmount = (invoice as any).remainingAmount ?? booking?.remainingAmount ?? (groupBooking ? 0 : Math.max((invoice.totalAmount || 0) - (paidAmount || 0), 0));
+  const paymentStatus = (invoice as any).paymentStatus ?? booking?.paymentStatus ?? (groupBooking?.status === "paid" ? "paid" : "pending");
 
   // Nhãn trạng thái thanh toán
   let paymentLabel = "Chờ thanh toán";

@@ -2,6 +2,7 @@ import createError from "http-errors";
 import GroupBooking from "../models/groupBooking.model";
 import Room from "../models/rooms.model";
 import Booking from "../models/bookings.model";
+import invoicesService from "./invoices.service";
 
 type CreateGroupBookingPayload = {
   requesterId?: string;
@@ -166,6 +167,26 @@ const markPaid = async (id: string) => {
     throw createError(400, "Invalid state to mark paid");
   gb.status = "paid";
   await gb.save();
+
+  // Tạo invoice cho group booking khi thanh toán
+  try {
+    const invoice = await invoicesService.create({
+      groupBookingId: gb._id,
+      customerId: gb.requesterId || undefined,
+      totalAmount: gb.quoteAmount,
+      paidAmount: gb.quoteAmount, // Đã thanh toán đủ
+      remainingAmount: 0,
+      paymentStatus: "paid",
+      status: "paid",
+      issuedAt: new Date(),
+    });
+    console.log(`✅ Đã tạo invoice mới cho group booking ${gb._id}: invoiceId=${invoice._id}, totalAmount=${gb.quoteAmount}`);
+  } catch (invoiceError: any) {
+    console.error(`❌ Lỗi tạo invoice cho group booking ${gb._id}:`, invoiceError);
+    // Không throw error để không làm crash API, vì group booking đã được đánh dấu paid
+    // Nhưng log lại để admin biết và có thể tạo invoice thủ công sau
+  }
+
   return gb;
 };
 

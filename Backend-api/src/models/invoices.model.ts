@@ -5,7 +5,12 @@ const invoiceSchema = new Schema(
     bookingId: {
       type: Schema.Types.ObjectId,
       ref: "Booking",
-      required: [true, "Cần liên kết với booking"],
+      required: false, // Không bắt buộc nếu có groupBookingId
+    },
+    groupBookingId: {
+      type: Schema.Types.ObjectId,
+      ref: "GroupBooking",
+      required: false, // Không bắt buộc nếu có bookingId
     },
     customerId: {
       type: Schema.Types.ObjectId,
@@ -44,5 +49,14 @@ const invoiceSchema = new Schema(
     versionKey: false,
   }
 );
+
+// Validation: phải có ít nhất một trong hai (bookingId hoặc groupBookingId)
+invoiceSchema.pre("save", function (next) {
+  if (!this.bookingId && !this.groupBookingId) {
+    next(new Error("Invoice phải liên kết với Booking hoặc GroupBooking"));
+  } else {
+    next();
+  }
+});
 
 export default model("Invoice", invoiceSchema);
