@@ -23,44 +23,126 @@ export const invoicesColumns = (
     title: "Booking",
     key: "booking",
     render: (_, r) => {
-      const content = (
-        <div>
-          <Typography.Text strong>
-            Mã: {r.bookingId?._id?.slice(0,8)}...
-          </Typography.Text>
-          <br />
-          <Space direction="vertical" size={0} style={{ alignItems: 'flex-start' }}>
-            <Space size={4} style={{ alignItems: 'center' }}>
-              <CalendarOutlined style={{ color: '#52c41a', fontSize: 12, width: 12 }} />
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                Nhận: {r.bookingId?.checkIn ? new Date(r.bookingId.checkIn).toLocaleString('vi-VN') : '-'}
+      // Kiểm tra nếu có groupBookingId (đặt theo đoàn)
+      if (r.groupBookingId) {
+        const gb = r.groupBookingId;
+        const content = (
+          <div>
+            <Space size={4} style={{ marginBottom: 4 }}>
+              <Tag color="purple" style={{ margin: 0 }}>
+                Đặt đoàn
+              </Tag>
+              <Typography.Text strong copyable={{ text: gb._id }}>
+                {gb._id}
               </Typography.Text>
             </Space>
-            <Space size={4} style={{ alignItems: 'center' }}>
-              <CalendarOutlined style={{ color: '#ff4d4f', fontSize: 12, width: 12 }} />
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                Trả: {r.bookingId?.checkOut ? new Date(r.bookingId.checkOut).toLocaleString('vi-VN') : '-'}
+            <br />
+            <Space direction="vertical" size={0} style={{ alignItems: 'flex-start' }}>
+              <Space size={4} style={{ alignItems: 'center' }}>
+                <CalendarOutlined style={{ color: '#52c41a', fontSize: 12, width: 12 }} />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Nhận: {gb.checkIn ? new Date(gb.checkIn).toLocaleString('vi-VN') : '-'}
+                </Typography.Text>
+              </Space>
+              <Space size={4} style={{ alignItems: 'center' }}>
+                <CalendarOutlined style={{ color: '#ff4d4f', fontSize: 12, width: 12 }} />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Trả: {gb.checkOut ? new Date(gb.checkOut).toLocaleString('vi-VN') : '-'}
+                </Typography.Text>
+              </Space>
+              {gb.roomCount && (
+                <Space size={4} style={{ alignItems: 'center' }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {gb.roomCount} phòng, {gb.peopleCount || 0} người
+                  </Typography.Text>
+                </Space>
+              )}
+            </Space>
+          </div>
+        );
+        return handleDetail ? (
+          <Button 
+            type="link" 
+            onClick={() => handleDetail(r)}
+            style={{ padding: 0, height: 'auto' }}
+          >
+            {content}
+          </Button>
+        ) : content;
+      }
+      
+      // Booking thông thường
+      if (r.bookingId) {
+        const booking = r.bookingId;
+        const content = (
+          <div>
+            <Space size={4} style={{ marginBottom: 4 }}>
+              <Tag color="blue" style={{ margin: 0 }}>
+                Đặt phòng
+              </Tag>
+              <Typography.Text strong copyable={{ text: booking._id }}>
+                {booking._id}
               </Typography.Text>
             </Space>
-          </Space>
-        </div>
+            <br />
+            <Space direction="vertical" size={0} style={{ alignItems: 'flex-start' }}>
+              <Space size={4} style={{ alignItems: 'center' }}>
+                <CalendarOutlined style={{ color: '#52c41a', fontSize: 12, width: 12 }} />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Nhận: {booking.checkIn ? new Date(booking.checkIn).toLocaleString('vi-VN') : '-'}
+                </Typography.Text>
+              </Space>
+              <Space size={4} style={{ alignItems: 'center' }}>
+                <CalendarOutlined style={{ color: '#ff4d4f', fontSize: 12, width: 12 }} />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Trả: {booking.checkOut ? new Date(booking.checkOut).toLocaleString('vi-VN') : '-'}
+                </Typography.Text>
+              </Space>
+            </Space>
+          </div>
+        );
+        return handleDetail ? (
+          <Button 
+            type="link" 
+            onClick={() => handleDetail(r)}
+            style={{ padding: 0, height: 'auto' }}
+          >
+            {content}
+          </Button>
+        ) : content;
+      }
+      
+      // Không có booking hoặc group booking
+      return (
+        <Typography.Text type="secondary">-</Typography.Text>
       );
-      return handleDetail ? (
-        <Button 
-          type="link" 
-          onClick={() => handleDetail(r)}
-          style={{ padding: 0, height: 'auto' }}
-        >
-          {content}
-        </Button>
-      ) : content;
     }
   },
   {
     title: "Khách hàng",
     key: "customer",
     render: (_, r) => {
-      // Logic mới với mảng guests
+      // Kiểm tra group booking trước
+      if (r.groupBookingId) {
+        const gb = r.groupBookingId;
+        return (
+          <div>
+            <Typography.Text strong>{gb.requesterName || "-"}</Typography.Text>
+            {(gb.requesterPhone || gb.requesterEmail) && (
+              <>
+                <br />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {gb.requesterPhone || ""}
+                  {gb.requesterPhone && gb.requesterEmail ? " | " : ""}
+                  {gb.requesterEmail || ""}
+                </Typography.Text>
+              </>
+            )}
+          </div>
+        );
+      }
+      
+      // Booking thông thường
       let customerName = "-";
       let customerContact = "";
       

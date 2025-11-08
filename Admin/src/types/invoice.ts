@@ -16,6 +16,34 @@ export interface BookingRef {
   }>;
 }
 
+export interface GroupBookingRef {
+  _id: string;
+  checkIn?: string;
+  checkOut?: string;
+  requesterName?: string;
+  requesterPhone?: string;
+  requesterEmail?: string;
+  peopleCount?: number;
+  roomCount?: number;
+  quoteAmount?: number;
+  status?: string;
+  allocatedRoomIds?: Array<{
+    _id: string;
+    roomNumber?: string;
+    typeId?: {
+      name?: string;
+      pricePerNight?: number;
+    };
+  }>;
+  members?: Array<{
+    fullName?: string;
+    idNumber?: string;
+    phoneNumber?: string;
+    email?: string;
+    isLeader?: boolean;
+  }>;
+}
+
 export interface CustomerRef {
   _id: string;
   fullName?: string;
@@ -27,7 +55,8 @@ export type InvoiceStatus = "pending" | "paid" | "failed" | "refunded" | string;
 
 export interface InvoiceItem {
   _id: string;
-  bookingId: BookingRef;
+  bookingId?: BookingRef;
+  groupBookingId?: GroupBookingRef;
   customerId?: CustomerRef;
   totalAmount: number;
   paidAmount?: number;

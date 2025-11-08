@@ -310,20 +310,98 @@ export default function InvoicesPage() {
           <Descriptions column={1} bordered size="middle">
             {/* <Descriptions.Item label="ID">{detailItem._id}</Descriptions.Item> */}
             <Descriptions.Item label="Booking">
-              {detailItem.bookingId?._id?.slice(0, 8)}... | Nhận:{" "}
-              {detailItem.bookingId?.checkIn
-                ? new Date(detailItem.bookingId.checkIn).toLocaleString("vi-VN")
-                : "-"}{" "}
-              | Trả:{" "}
-              {detailItem.bookingId?.checkOut
-                ? new Date(detailItem.bookingId.checkOut).toLocaleString(
-                    "vi-VN"
-                  )
-                : "-"}
+              {(() => {
+                // Kiểm tra group booking trước
+                if (detailItem.groupBookingId) {
+                  const gb = detailItem.groupBookingId;
+                  return (
+                    <div>
+                      <Tag color="purple" style={{ marginBottom: 8 }}>Đặt theo đoàn</Tag>
+                      <div><strong>Mã:</strong> {gb._id}</div>
+                      <div><strong>Người yêu cầu:</strong> {gb.requesterName || "-"}</div>
+                      <div><strong>Nhận phòng:</strong> {gb.checkIn ? new Date(gb.checkIn).toLocaleString("vi-VN") : "-"}</div>
+                      <div><strong>Trả phòng:</strong> {gb.checkOut ? new Date(gb.checkOut).toLocaleString("vi-VN") : "-"}</div>
+                      {gb.roomCount && (
+                        <div><strong>Số phòng:</strong> {gb.roomCount} phòng</div>
+                      )}
+                      {gb.peopleCount && (
+                        <div><strong>Số người:</strong> {gb.peopleCount} người</div>
+                      )}
+                      {gb.allocatedRoomIds && gb.allocatedRoomIds.length > 0 && (
+                        <div style={{ marginTop: 8 }}>
+                          <strong>Phòng đã phân bổ:</strong>
+                          <div style={{ marginLeft: 16, marginTop: 4 }}>
+                            {gb.allocatedRoomIds.map((room: any, idx: number) => (
+                              <div key={idx} style={{ fontSize: 12 }}>
+                                - Phòng {room.roomNumber || room._id} ({room.typeId?.name || "-"})
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                
+                // Booking thông thường
+                if (detailItem.bookingId) {
+                  const booking = detailItem.bookingId;
+                  return (
+                    <div>
+                      <Tag color="blue" style={{ marginBottom: 8 }}>Đặt phòng</Tag>
+                      <div><strong>Mã:</strong> {booking._id}</div>
+                      <div><strong>Nhận phòng:</strong> {booking.checkIn ? new Date(booking.checkIn).toLocaleString("vi-VN") : "-"}</div>
+                      <div><strong>Trả phòng:</strong> {booking.checkOut ? new Date(booking.checkOut).toLocaleString("vi-VN") : "-"}</div>
+                      {booking.source && (
+                        <div><strong>Nguồn:</strong> {booking.source === "online" ? "Online" : "Walk-in"}</div>
+                      )}
+                    </div>
+                  );
+                }
+                
+                return <div>-</div>;
+              })()}
             </Descriptions.Item>
             <Descriptions.Item label="Khách hàng">
               {(() => {
-                // Logic mới với mảng guests
+                // Kiểm tra group booking trước
+                if (detailItem.groupBookingId) {
+                  const gb = detailItem.groupBookingId;
+                  return (
+                    <div>
+                      <div><strong>{gb.requesterName || "-"}</strong></div>
+                      {gb.requesterPhone && (
+                        <div style={{ color: "#888", fontSize: 12 }}>
+                          Điện thoại: {gb.requesterPhone}
+                        </div>
+                      )}
+                      {gb.requesterEmail && (
+                        <div style={{ color: "#888", fontSize: 12 }}>
+                          Email: {gb.requesterEmail}
+                        </div>
+                      )}
+                      {gb.members && gb.members.length > 0 && (
+                        <div style={{ marginTop: 8 }}>
+                          <strong>Thành viên đoàn ({gb.members.length}):</strong>
+                          <div style={{ marginLeft: 16, marginTop: 4 }}>
+                            {gb.members.slice(0, 5).map((member: any, idx: number) => (
+                              <div key={idx} style={{ fontSize: 12 }}>
+                                - {member.fullName || "-"}{member.isLeader ? " (Trưởng đoàn)" : ""}
+                              </div>
+                            ))}
+                            {gb.members.length > 5 && (
+                              <div style={{ fontSize: 12, color: "#888" }}>
+                                ... và {gb.members.length - 5} thành viên khác
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                
+                // Booking thông thường
                 let customerName = "-";
                 let customerContact = "";
                 
