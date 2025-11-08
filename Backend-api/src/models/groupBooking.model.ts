@@ -37,6 +37,8 @@ const groupBookingSchema = new Schema(
         "awaiting_payment",
         "paid",
         "confirmed",
+        "refund_requested",
+        "refunded",
         "cancelled",
       ],
       default: "pending_approval",
@@ -48,6 +50,9 @@ const groupBookingSchema = new Schema(
 
     quoteAmount: { type: Number, required: false, min: 0 },
     paymentLink: { type: String, required: false },
+    refundRequestedAt: { type: Date, required: false },
+    refundProcessedAt: { type: Date, required: false },
+    refundAmount: { type: Number, required: false, min: 0 },
   },
   { timestamps: true, versionKey: false }
 );

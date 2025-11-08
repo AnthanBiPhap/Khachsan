@@ -78,6 +78,15 @@ const markPaid = async (req: Request, res: Response) => {
   res.json({ data: gb });
 };
 
+const refund = async (req: Request, res: Response) => {
+  const { amount, note } = req.body || {};
+  const gb = await groupBookingsService.markRefunded(req.params.id, {
+    amount,
+    note,
+  });
+  res.json({ data: gb });
+};
+
 const confirm = async (req: Request, res: Response) => {
   const gb = await groupBookingsService.confirm(req.params.id);
   res.json({ data: gb });
@@ -99,6 +108,7 @@ export default {
   // New export endpoint is added below
   quote,
   markPaid,
+  refund,
   confirm,
   cancel,
 };

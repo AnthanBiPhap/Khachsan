@@ -16,6 +16,8 @@ type GroupBookingStatus =
   | 'awaiting_payment'
   | 'paid'
   | 'confirmed'
+  | 'refund_requested'
+  | 'refunded'
   | 'cancelled';
 
 export default function GroupBookingPage() {
@@ -132,6 +134,8 @@ export default function GroupBookingPage() {
     awaiting_payment: 'gold',
     paid: 'green',
     confirmed: 'cyan',
+    refund_requested: 'orange',
+    refunded: 'green',
     cancelled: 'red',
     '': 'default',
   };
@@ -144,6 +148,8 @@ export default function GroupBookingPage() {
     awaiting_payment: 'Chờ thanh toán',
     paid: 'Đã thanh toán',
     confirmed: 'Đã xác nhận',
+    refund_requested: 'Đang xử lý hoàn tiền',
+    refunded: 'Đã hoàn tiền',
     cancelled: 'Đã hủy',
     '': '',
   };
@@ -163,6 +169,9 @@ export default function GroupBookingPage() {
         return 4;
       case 'confirmed':
         return 5;
+      case 'refund_requested':
+      case 'refunded':
+        return 4;
       case 'cancelled':
         return 0;
       default:

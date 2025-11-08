@@ -18,6 +18,7 @@ router.post(
 router.post("/group-bookings/:id/quote", groupBookingsController.quote);
 router.get("/group-bookings/:id/auto-quote", autoQuote);
 router.post("/group-bookings/:id/paid", groupBookingsController.markPaid);
+router.post("/group-bookings/:id/refund", groupBookingsController.refund);
 router.post("/group-bookings/:id/confirm", groupBookingsController.confirm);
 router.post("/group-bookings/:id/cancel", groupBookingsController.cancel);
 router.get("/group-bookings/:id/members.xlsx", exportMembers);

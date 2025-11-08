@@ -39,6 +39,8 @@ export interface GroupBooking {
     | 'awaiting_payment'
     | 'paid'
     | 'confirmed'
+    | 'refund_requested'
+    | 'refunded'
     | 'cancelled';
   allocatedRoomIds?: Array<{
     _id: string;
@@ -59,6 +61,9 @@ export interface GroupBooking {
   }>;
   quoteAmount?: number;
   paymentLink?: string;
+  refundRequestedAt?: string;
+  refundProcessedAt?: string;
+  refundAmount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -83,6 +88,11 @@ export const groupBookingService = {
   async list(params?: Record<string, unknown>): Promise<GroupBooking[]> {
     const res = await axios.get(`${API_URL}/group-bookings`, { params });
     return res.data?.data || [];
+  },
+
+  async cancel(id: string, payload?: { reason?: string }) {
+    const res = await axios.post(`${API_URL}/group-bookings/${id}/cancel`, payload);
+    return res.data?.data;
   },
 
   async downloadTemplate(id: string): Promise<Blob> {

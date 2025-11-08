@@ -194,6 +194,18 @@ export default function MyBookingsPage() {
             Đã xác nhận
           </span>
         );
+      case 'refund_requested':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+            Đang xử lý hoàn tiền
+          </span>
+        );
+      case 'refunded':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+            Đã hoàn tiền
+          </span>
+        );
       case 'cancelled':
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
@@ -667,153 +679,310 @@ export default function MyBookingsPage() {
               <h2 className="text-2xl font-semibold text-gray-900">Đặt đoàn của bạn</h2>
               <p className="text-gray-600">Theo dõi tiến độ xử lý các yêu cầu đặt đoàn</p>
             </div>
-            {groupBookings.map((group) => (
-              <div
-                key={group._id}
-                className="bg-white rounded-lg shadow-md overflow-hidden"
-              >
-                <div className="p-6">
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
-                    <div className="mb-4 sm:mb-0">
-                      <h2 className="text-xl font-semibold text-gray-900">
-                        Đặt đoàn {String(group._id || '').slice(-8).toUpperCase()}
-                      </h2>
-                      <div className="mt-2">
-                        {renderGroupStatusBadge(group.status)}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
-                          {group._id}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={async () => {
-                            try {
-                              await navigator.clipboard.writeText(group._id);
-                              setCopiedGroupId(group._id);
-                              message.success('Đã sao chép mã yêu cầu đặt đoàn');
-                              setTimeout(() => setCopiedGroupId(null), 2000);
-                            } catch (copyError) {
-                              console.error(copyError);
-                              message.error('Không thể sao chép mã, vui lòng thử lại');
-                            }
-                          }}
-                        >
-                          {copiedGroupId === group._id ? (
-                            <ClipboardCheck className="h-4 w-4" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Ngày tạo: {formatDate(group.createdAt)}
-                      </p>
-                    </div>
-                  </div>
+            {groupBookings.map((group) => {
+              const groupCanCancel = canCancel(group.createdAt);
+              const hoursRemaining = getHoursRemainingForCancel(group.createdAt);
+              const isPaid = group.status === 'paid';
+              const requiresRefund = ['paid', 'confirmed'].includes(group.status);
+              const isRefundRequested = group.status === 'refund_requested';
+              const isRefunded = group.status === 'refunded';
+              const cancellableStatuses = [
+                'pending_approval',
+                'approved',
+                'info_uploaded',
+                'quoted',
+                'awaiting_payment',
+              ];
+              const canCancelRequest = cancellableStatuses.includes(group.status);
+              const refundAmount = Number(group.refundAmount ?? group.quoteAmount ?? 0);
+              const paymentStatusLabel = (() => {
+                if (isRefundRequested) return 'Đang xử lý hoàn tiền';
+                if (isRefunded) return 'Đã hoàn tiền';
+                if (group.status === 'confirmed') return 'Hoàn tất';
+                if (group.status === 'paid') return 'Đã thanh toán';
+                if (group.status === 'awaiting_payment') return 'Chờ thanh toán';
+                if (group.status === 'quoted') return 'Đang chờ xác nhận';
+                if (group.status === 'cancelled') return 'Đã hủy';
+                return 'Đang xử lý';
+              })();
 
-                  <div className="mt-2 text-xs text-gray-500">
-                    <p>Cập nhật lần cuối: {formatDate(group.updatedAt)}</p>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 mb-2">Thông tin đoàn</h3>
-                      <div className="space-y-3">
-                        <div className="flex items-start">
-                          <Users className="h-5 w-5 text-gray-400 mr-3 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm text-gray-500">Số khách</p>
-                            <p className="font-medium">{group.peopleCount} người</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start">
-                          <Users className="h-5 w-5 text-gray-400 mr-3 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm text-gray-500">Số phòng yêu cầu</p>
-                            <p className="font-medium">{group.roomCount} phòng</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start">
-                          <Calendar className="h-5 w-5 text-gray-400 mr-3 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm text-gray-500">Nhận phòng</p>
-                            <p className="font-medium">{formatDate(group.checkIn)}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-start">
-                          <Calendar className="h-5 w-5 text-gray-400 mr-3 mt-0.5 flex-shrink-0" />
-                          <div>
-                            <p className="text-sm text-gray-500">Trả phòng</p>
-                            <p className="font-medium">{formatDate(group.checkOut)}</p>
-                          </div>
+              return (
+                <div
+                  key={group._id}
+                  className="bg-white rounded-lg shadow-md overflow-hidden"
+                >
+                  <div className="p-6">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
+                      <div className="mb-4 sm:mb-0">
+                        <h2 className="text-xl font-semibold text-gray-900">
+                          Đặt đoàn {String(group._id || '').slice(-8).toUpperCase()}
+                        </h2>
+                        <div className="mt-2">
+                          {renderGroupStatusBadge(group.status)}
                         </div>
                       </div>
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500 mb-2">Chi tiết báo giá</h3>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Tổng báo giá</span>
-                          <span>{formatCurrency(Number(group.quoteAmount) || 0)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Trạng thái thanh toán</span>
-                          <span className="font-medium">
-                            {group.status === 'paid'
-                              ? 'Đã thanh toán'
-                              : group.status === 'awaiting_payment'
-                                ? 'Chờ thanh toán'
-                                : group.status === 'quoted'
-                                  ? 'Đang chờ xác nhận'
-                                  : group.status === 'confirmed'
-                                    ? 'Hoàn tất'
-                                    : group.status === 'cancelled'
-                                      ? 'Đã hủy'
-                                      : 'Đang xử lý'}
+                      <div className="text-right">
+                        <div className="flex items-center justify-end space-x-2">
+                          <span className="font-mono text-sm bg-gray-100 px-2 py-1 rounded">
+                            {group._id}
                           </span>
-                        </div>
-                        {group.paymentLink && (
-                          <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
-                            <p className="text-sm text-blue-700">
-                              Liên kết thanh toán: <a href={group.paymentLink} className="underline" target="_blank" rel="noopener noreferrer">Mở liên kết</a>
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {group.notes && (
-                    <div className="mt-4 p-3 bg-blue-50 rounded-md">
-                      <p className="text-sm text-blue-700">
-                        <span className="font-medium">Ghi chú:</span> {String(group.notes || '')}
-                      </p>
-                    </div>
-                  )}
-
-                  {group.allocatedRoomIds && group.allocatedRoomIds.length > 0 && (
-                    <div className="mt-6 pt-6 border-t border-gray-100">
-                      <h3 className="text-sm font-medium text-gray-500 mb-2">Phòng đã được phân bổ</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {group.allocatedRoomIds.map((room) => (
-                          <span
-                            key={room._id}
-                            className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700"
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                await navigator.clipboard.writeText(group._id);
+                                setCopiedGroupId(group._id);
+                                message.success('Đã sao chép mã yêu cầu đặt đoàn');
+                                setTimeout(() => setCopiedGroupId(null), 2000);
+                              } catch (copyError) {
+                                console.error(copyError);
+                                message.error('Không thể sao chép mã, vui lòng thử lại');
+                              }
+                            }}
                           >
-                            Phòng {room.roomNumber}
-                          </span>
-                        ))}
+                            {copiedGroupId === group._id ? (
+                              <ClipboardCheck className="h-4 w-4" />
+                            ) : (
+                              <Copy className="h-4 w-4" />
+                            )}
+                          </Button>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Ngày tạo: {formatDate(group.createdAt)}
+                        </p>
                       </div>
                     </div>
-                  )}
+
+                    <div className="mt-2 text-xs text-gray-500">
+                      <p>Cập nhật lần cuối: {formatDate(group.updatedAt)}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 mb-2">Thông tin đoàn</h3>
+                        <div className="space-y-3">
+                          <div className="flex items-start">
+                            <Users className="h-5 w-5 text-gray-400 mr-3 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm text-gray-500">Số khách</p>
+                              <p className="font-medium">{group.peopleCount} người</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <Users className="h-5 w-5 text-gray-400 mr-3 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm text-gray-500">Số phòng yêu cầu</p>
+                              <p className="font-medium">{group.roomCount} phòng</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <Calendar className="h-5 w-5 text-gray-400 mr-3 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm text-gray-500">Nhận phòng</p>
+                              <p className="font-medium">{formatDate(group.checkIn)}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <Calendar className="h-5 w-5 text-gray-400 mr-3 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="text-sm text-gray-500">Trả phòng</p>
+                              <p className="font-medium">{formatDate(group.checkOut)}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-500 mb-2">Chi tiết báo giá</h3>
+                        <div className="space-y-2">
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Tổng báo giá</span>
+                            <span>{formatCurrency(Number(group.quoteAmount) || 0)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Trạng thái thanh toán</span>
+                            <span className="font-medium">{paymentStatusLabel}</span>
+                          </div>
+                          {group.paymentLink && (
+                            <div className="mt-3 p-3 bg-blue-50 rounded-md border border-blue-200">
+                              <p className="text-sm text-blue-700">
+                                Liên kết thanh toán: <a href={group.paymentLink} className="underline" target="_blank" rel="noopener noreferrer">Mở liên kết</a>
+                              </p>
+                            </div>
+                          )}
+                          <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
+                            <div className="space-y-2 text-sm text-blue-900">
+                              <div className="flex justify-between items-center">
+                                <span className="text-blue-700">Trạng thái hoàn tiền:</span>
+                                {isRefunded ? (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    <CheckCircle className="h-3 w-3 mr-1" /> Đã hoàn tiền
+                                  </span>
+                                ) : isRefundRequested ? (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                    <ClockIcon className="h-3 w-3 mr-1" /> Đang xử lý hoàn tiền
+                                  </span>
+                                ) : isPaid ? (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                    <CheckCircle className="h-3 w-3 mr-1" /> Đã thanh toán
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                    <ClockIcon className="h-3 w-3 mr-1" /> Chưa hoàn tiền
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-blue-700">Có thể hủy đoàn:</span>
+                                <span className={`font-medium ${groupCanCancel ? 'text-green-600' : 'text-red-600'}`}>
+                                  {groupCanCancel ? '✅ Có thể hủy/ hoàn tiền' : '❌ Không thể hủy (đã quá 24 giờ)'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-blue-700">Thời gian còn lại:</span>
+                                <span className="font-medium text-blue-900">
+                                  {groupCanCancel ? `${hoursRemaining} giờ` : 'Đã hết hạn'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-blue-700">Số tiền hoàn:</span>
+                                <span className="font-medium text-blue-900">
+                                  {isRefunded ? formatCurrency(refundAmount || 0) : requiresRefund ? formatCurrency(refundAmount || 0) : '0 VND'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-blue-700">Phương thức hoàn:</span>
+                                <span className="font-medium text-blue-900">
+                                  {requiresRefund || isRefunded ? 'Stripe / Thẻ tín dụng' : 'Chưa áp dụng'}
+                                </span>
+                              </div>
+                              <div className="flex justify-between items-center">
+                                <span className="text-blue-700">Thời gian hoàn:</span>
+                                <span className="font-medium text-blue-900">
+                                  {isRefunded
+                                    ? formatDate(group.refundProcessedAt || group.updatedAt)
+                                    : 'Chưa có'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="mt-3 p-2 bg-blue-50 rounded-md border border-blue-200 text-xs text-blue-700">
+                              📋 <strong>Chính sách:</strong> Chỉ có thể hủy/hoàn tiền trong 24 giờ đầu từ khi tạo yêu cầu đặt đoàn.
+                            </div>
+                            {isRefundRequested && (
+                              <div className="mt-3 p-2 bg-yellow-50 rounded-md border border-yellow-200 text-xs text-yellow-700">
+                                ⏳ Yêu cầu hoàn tiền đang được xử lý. Chúng tôi sẽ liên hệ ngay khi hoàn tất.
+                              </div>
+                            )}
+                            {isRefunded && (
+                              <div className="mt-3 p-2 bg-green-50 rounded-md border border-green-200 text-xs text-green-700">
+                                ✅ Tiền hoàn đã được khởi tạo. Vui lòng chờ 3-7 ngày làm việc để ngân hàng xử lý.
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {group.notes && (
+                      <div className="mt-4 p-3 bg-blue-50 rounded-md">
+                        <p className="text-sm text-blue-700">
+                          <span className="font-medium">Ghi chú:</span> {String(group.notes || '')}
+                        </p>
+                      </div>
+                    )}
+
+                    {group.allocatedRoomIds && group.allocatedRoomIds.length > 0 && (
+                      <div className="mt-6 pt-6 border-t border-gray-100">
+                        <h3 className="text-sm font-medium text-gray-500 mb-2">Phòng đã được phân bổ</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {group.allocatedRoomIds.map((room) => (
+                            <span
+                              key={room._id}
+                              className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-700"
+                            >
+                              Phòng {room.roomNumber}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-6 pt-6 border-t border-gray-100 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+                      {canCancelRequest && (
+                        groupCanCancel ? (
+                          <Button
+                            variant="outline"
+                            className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
+                            disabled={actionLoadingId === group._id}
+                            onClick={async () => {
+                              try {
+                                setActionLoadingId(group._id);
+                                await groupBookingService.cancel(group._id, {
+                                  reason: 'Khách hàng hủy yêu cầu đặt đoàn',
+                                });
+                                await fetchBookings();
+                                message.success('Đã hủy yêu cầu đặt đoàn thành công!');
+                              } catch (e: any) {
+                                console.error('❌ Lỗi hủy đặt đoàn:', e);
+                                message.error(e?.message || 'Hủy đặt đoàn thất bại');
+                              } finally {
+                                setActionLoadingId(null);
+                              }
+                            }}
+                          >
+                            {actionLoadingId === group._id ? 'Đang xử lý...' : 'Hủy yêu cầu đặt đoàn'}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            className="text-gray-400 border-gray-200 cursor-not-allowed w-full sm:w-auto"
+                            disabled
+                          >
+                            Không thể hủy (đã quá 24 giờ)
+                          </Button>
+                        )
+                      )}
+
+                      {requiresRefund && (
+                        groupCanCancel ? (
+                          <Button
+                            variant="outline"
+                            className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
+                            disabled={actionLoadingId === group._id}
+                            onClick={async () => {
+                              try {
+                                setActionLoadingId(group._id);
+                                await groupBookingService.cancel(group._id, {
+                                  reason: 'khách hàng yêu cầu hoàn tiền đặt đoàn',
+                                });
+                                await fetchBookings();
+                                message.success('Đã gửi yêu cầu hoàn tiền đặt đoàn!');
+                              } catch (e: any) {
+                                console.error('❌ Lỗi yêu cầu hoàn tiền đặt đoàn:', e);
+                                message.error(e?.message || 'Yêu cầu hoàn tiền thất bại');
+                              } finally {
+                                setActionLoadingId(null);
+                              }
+                            }}
+                          >
+                            {actionLoadingId === group._id ? 'Đang xử lý...' : 'Yêu cầu hoàn tiền đặt đoàn'}
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            className="text-gray-400 border-gray-200 cursor-not-allowed w-full sm:w-auto"
+                            disabled
+                          >
+                            Không thể hoàn tiền (đã quá 24 giờ)
+                          </Button>
+                        )
+                      )}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

@@ -309,6 +309,11 @@ const updateStatus = async (id: string, status: string, additionalData: any = {}
       });
     } else if (status === "refunded") {
       await GroupBooking.findByIdAndUpdate(payment.groupBookingId, {
+        status: "refunded",
+        updatedAt: new Date()
+      });
+    } else if (status === "cancelled") {
+      await GroupBooking.findByIdAndUpdate(payment.groupBookingId, {
         status: "cancelled",
         updatedAt: new Date()
       });

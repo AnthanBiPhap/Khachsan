@@ -13,6 +13,8 @@ type GroupBookingStatus =
   | 'awaiting_payment'
   | 'paid'
   | 'confirmed'
+  | 'refund_requested'
+  | 'refunded'
   | 'cancelled';
 
 interface GroupMember {
@@ -39,6 +41,9 @@ interface GroupBookingItem {
   paymentLink?: string;
   allocatedRoomIds?: Array<{ _id: string; roomNumber: string }>;
   members?: GroupMember[];
+  refundAmount?: number;
+  refundRequestedAt?: string;
+  refundProcessedAt?: string;
   createdAt: string;
 }
 
@@ -50,6 +55,8 @@ const statusColor: Record<GroupBookingStatus, string> = {
   awaiting_payment: 'gold',
   paid: 'green',
   confirmed: 'cyan',
+  refund_requested: 'orange',
+  refunded: 'green',
   cancelled: 'red',
 };
 
@@ -61,6 +68,8 @@ const statusLabel: Record<GroupBookingStatus, string> = {
   awaiting_payment: 'Chờ thanh toán',
   paid: 'Đã thanh toán',
   confirmed: 'Đã xác nhận',
+  refund_requested: 'Đang xử lý hoàn tiền',
+  refunded: 'Đã hoàn tiền',
   cancelled: 'Đã hủy',
 };
 
@@ -169,6 +178,25 @@ const GroupBookingsPage: React.FC = () => {
     } catch (e: any) {
       message.error(e?.response?.data?.message || e?.message || 'Không thể xác nhận');
     }
+  };
+
+  const markRefunded = async (id: string) => {
+    Modal.confirm({
+      title: 'Xác nhận hoàn tiền đặt đoàn',
+      content: 'Thao tác này sẽ đánh dấu hoàn tiền hoàn tất và cập nhật hóa đơn, thanh toán tương ứng.',
+      okText: 'Hoàn tiền',
+      cancelText: 'Hủy',
+      okButtonProps: { danger: true },
+      async onOk() {
+        try {
+          await axios.post(`${API_URL}/group-bookings/${id}/refund`);
+          message.success('Đã đánh dấu hoàn tiền thành công');
+          load();
+        } catch (e: any) {
+          message.error(e?.response?.data?.message || e?.message || 'Không thể hoàn tiền');
+        }
+      },
+    });
   };
 
   const filteredItems = useMemo(() => {
@@ -310,6 +338,13 @@ const GroupBookingsPage: React.FC = () => {
             <Descriptions.Item label="Báo giá">{viewItem.quoteAmount ? viewItem.quoteAmount.toLocaleString() : '-'}</Descriptions.Item>
             <Descriptions.Item label="Link thanh toán">{viewItem.paymentLink ? <a href={viewItem.paymentLink} target="_blank">{viewItem.paymentLink}</a> : '-'}</Descriptions.Item>
             <Descriptions.Item label="Ghi chú">{viewItem.notes || '-'}</Descriptions.Item>
+            <Descriptions.Item label="Hoàn tiền">
+              {viewItem.status === 'refund_requested'
+                ? 'Khách yêu cầu hoàn tiền'
+                : viewItem.status === 'refunded'
+                  ? `Đã hoàn ${viewItem.refundAmount?.toLocaleString() || viewItem.quoteAmount?.toLocaleString() || 0} VND`
+                  : '-'}
+            </Descriptions.Item>
             <Descriptions.Item label="Danh sách đoàn">
               {Array.isArray(viewItem.members) && viewItem.members.length > 0 ? (
                 <ul style={{ paddingLeft: 18 }}>
@@ -346,6 +381,11 @@ const GroupBookingsPage: React.FC = () => {
               </Tooltip>
               <Tooltip title="Xác nhận hoàn tất">
                 <Button disabled={viewItem.status !== 'paid'} type="dashed" icon={<CheckCircleOutlined />} onClick={() => confirm(viewItem._id)}>Xác nhận</Button>
+              </Tooltip>
+              <Tooltip title="Hoàn tiền cho khách">
+                <Button danger disabled={viewItem.status !== 'refund_requested'} onClick={() => markRefunded(viewItem._id)}>
+                  Hoàn tiền
+                </Button>
               </Tooltip>
             </Space>
           </>

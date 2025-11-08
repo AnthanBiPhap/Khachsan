@@ -3,6 +3,7 @@ import GroupBooking from "../models/groupBooking.model";
 import Room from "../models/rooms.model";
 import Booking from "../models/bookings.model";
 import Payment from "../models/payments.model";
+import Invoice from "../models/invoices.model";
 import invoicesService from "./invoices.service";
 import paymentsService from "./payments.service";
 
@@ -111,6 +112,12 @@ function chooseOptimalRooms(
   dfs(0, [], 0, 0);
   return bestCombo;
 }
+
+const appendNote = (gb: any, label: string, content?: string) => {
+  if (!content) return;
+  const entry = `${label}: ${content}`.trim();
+  gb.notes = gb.notes ? `${gb.notes}\n${entry}` : entry;
+};
 
 const approve = async (id: string) => {
   const gb = await GroupBooking.findById(id);
@@ -243,9 +250,92 @@ const confirm = async (id: string) => {
 const cancel = async (id: string, reason?: string) => {
   const gb = await GroupBooking.findById(id);
   if (!gb) throw createError(404, "Group booking not found");
-  gb.status = "cancelled";
-  if (reason) gb.notes = (gb.notes ? gb.notes + "\n" : "") + `Cancelled: ${reason}`;
+
+  if (["cancelled", "refund_requested", "refunded"].includes(gb.status)) {
+    throw createError(400, `Group booking is already ${gb.status}, không thể hủy thêm lần nữa`);
+  }
+
+  const now = new Date();
+  const trimmedReason = reason?.trim();
+
+  if (["paid", "confirmed"].includes(gb.status)) {
+    gb.status = "refund_requested";
+    gb.refundRequestedAt = now;
+    if (!gb.refundAmount && gb.quoteAmount) {
+      gb.refundAmount = gb.quoteAmount;
+    }
+    appendNote(gb, "Refund requested", trimmedReason || "Khách hàng yêu cầu hoàn tiền");
+  } else {
+    gb.status = "cancelled";
+    appendNote(gb, "Cancelled", trimmedReason || "Khách hàng hủy yêu cầu");
+
+    const invoice = await Invoice.findOne({ groupBookingId: gb._id });
+    if (invoice) {
+      await invoicesService.updateById(invoice._id.toString(), {
+        status: "failed",
+        paymentStatus: "cancelled",
+        remainingAmount: 0,
+      });
+    }
+
+    const payment = await Payment.findOne({ groupBookingId: gb._id });
+    if (payment) {
+      await paymentsService.updateStatus(payment._id.toString(), "cancelled");
+    }
+  }
+
   await gb.save();
+  return gb;
+};
+
+const markRefunded = async (
+  id: string,
+  options?: { amount?: number; note?: string }
+) => {
+  const gb = await GroupBooking.findById(id);
+  if (!gb) throw createError(404, "Group booking not found");
+
+  if (!["refund_requested", "paid", "confirmed"].includes(gb.status)) {
+    throw createError(400, "Chỉ có thể hoàn tiền cho đặt đoàn đã thanh toán hoặc đang chờ hoàn tiền");
+  }
+
+  const refundAmount = options?.amount ?? gb.quoteAmount ?? 0;
+  if (refundAmount < 0) {
+    throw createError(400, "Số tiền hoàn không hợp lệ");
+  }
+
+  const processedAt = new Date();
+  gb.status = "refunded";
+  gb.refundProcessedAt = processedAt;
+  gb.refundAmount = refundAmount;
+  appendNote(
+    gb,
+    "Refund processed",
+    options?.note || `Hoàn tiền ${refundAmount.toLocaleString("vi-VN")} VND`
+  );
+  await gb.save();
+
+  const payment = await Payment.findOne({ groupBookingId: gb._id });
+  if (payment) {
+    await paymentsService.updateStatus(payment._id.toString(), "refunded", {
+      refundInfo: {
+        refundAmount,
+        refundedAt: processedAt,
+        refundReason: options?.note || "Hoàn tiền đặt đoàn",
+      },
+    });
+  }
+
+  const invoice = await Invoice.findOne({ groupBookingId: gb._id });
+  if (invoice) {
+    await invoicesService.updateById(invoice._id.toString(), {
+      status: "refunded",
+      paymentStatus: "refunded",
+      paidAmount: 0,
+      remainingAmount: 0,
+    });
+  }
+
   return gb;
 };
 
@@ -259,6 +349,7 @@ export default {
   markPaid,
   confirm,
   cancel,
+  markRefunded,
 };
 
 export const computeAutoQuote = async (id: string) => {
