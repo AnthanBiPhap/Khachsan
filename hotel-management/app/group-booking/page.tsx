@@ -18,7 +18,8 @@ type GroupBookingStatus =
   | 'confirmed'
   | 'refund_requested'
   | 'refunded'
-  | 'cancelled';
+  | 'cancelled'
+  | 'rejected';
 
 export default function GroupBookingPage() {
   const { user } = useAuth();
@@ -30,6 +31,8 @@ export default function GroupBookingPage() {
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [quoteAmount, setQuoteAmount] = useState<number | null>(null);
   const [paymentLink, setPaymentLink] = useState<string | "">("");
+  const [statusNote, setStatusNote] = useState<string>("");
+  const [statusRejectedAt, setStatusRejectedAt] = useState<string | null>(null);
 
   // Form state
   const [requesterName, setRequesterName] = useState("");
@@ -87,6 +90,8 @@ export default function GroupBookingPage() {
       setCurrentStatus(status);
       setQuoteAmount(typeof data?.quoteAmount === 'number' ? data.quoteAmount : null);
       setPaymentLink(data?.paymentLink || "");
+      setStatusNote(String(data?.notes || ''));
+      setStatusRejectedAt(data?.rejectedAt ? new Date(data.rejectedAt).toLocaleString('vi-VN') : null);
       setLastUpdated(new Date().toLocaleTimeString());
     } catch (e) {
       // ignore errors in background polling but show a small hint
@@ -137,6 +142,7 @@ export default function GroupBookingPage() {
     refund_requested: 'orange',
     refunded: 'green',
     cancelled: 'red',
+  rejected: 'red',
     '': 'default',
   };
 
@@ -151,6 +157,7 @@ export default function GroupBookingPage() {
     refund_requested: 'Đang xử lý hoàn tiền',
     refunded: 'Đã hoàn tiền',
     cancelled: 'Đã hủy',
+  rejected: 'Đã từ chối',
     '': '',
   };
 
@@ -173,6 +180,7 @@ export default function GroupBookingPage() {
       case 'refunded':
         return 4;
       case 'cancelled':
+      case 'rejected':
         return 0;
       default:
         return 0;
@@ -256,7 +264,15 @@ export default function GroupBookingPage() {
         </div>
         {createdId || requestId ? (
           <Alert
-            type={currentStatus === 'cancelled' ? 'error' : 'info'}
+            type={
+              currentStatus === 'cancelled' || currentStatus === 'rejected'
+                ? 'error'
+                : currentStatus === 'refund_requested'
+                  ? 'warning'
+                  : currentStatus === 'paid' || currentStatus === 'confirmed'
+                    ? 'success'
+                    : 'info'
+            }
             showIcon
             style={{ marginBottom: 16 }}
             message={
@@ -267,7 +283,24 @@ export default function GroupBookingPage() {
                 )}
               </span>
             }
-            description={lastUpdated ? `Cập nhật: ${lastUpdated}${isPolling ? ' (đang kiểm tra...)' : ''}` : undefined}
+            description={
+              (lastUpdated || (currentStatus === 'rejected' && statusNote)) ? (
+                <div>
+                  {lastUpdated && (
+                    <div>
+                      Cập nhật: {lastUpdated}
+                      {isPolling ? ' (đang kiểm tra...)' : ''}
+                    </div>
+                  )}
+                  {currentStatus === 'rejected' && statusNote && (
+                    <div style={{ marginTop: 8, color: '#b91c1c' }}>
+                      Lý do từ chối: {statusNote}
+                      {statusRejectedAt ? ` (lúc ${statusRejectedAt})` : ''}
+                    </div>
+                  )}
+                </div>
+              ) : undefined
+            }
           />
         ) : null}
         <Divider style={{ margin: '16px 0' }} />
@@ -351,6 +384,23 @@ export default function GroupBookingPage() {
                       {currentStatus === 'confirmed' && (
                         <div style={{ marginTop: 16, padding: 12, border: '1px solid #1677ff', borderRadius: 6, color: '#0958d9' }}>
                           Đặt đoàn đã được xác nhận. Hẹn gặp quý khách!
+                        </div>
+                      )}
+                      {currentStatus === 'rejected' && statusNote && (
+                        <div style={{ marginTop: 16 }}>
+                          <Alert
+                            type="error"
+                            showIcon
+                            message="Yêu cầu đặt đoàn đã bị từ chối"
+                            description={
+                              <div>
+                                <div>{statusNote}</div>
+                                <div style={{ marginTop: 6, fontSize: 12 }}>
+                                  Vui lòng chỉnh sửa thời gian hoặc liên hệ bộ phận đặt phòng để được hỗ trợ thêm.
+                                </div>
+                              </div>
+                            }
+                          />
                         </div>
                       )}
                     </div>

@@ -40,6 +40,7 @@ const groupBookingSchema = new Schema(
         "refund_requested",
         "refunded",
         "cancelled",
+        "rejected",
       ],
       default: "pending_approval",
     },
@@ -53,6 +54,7 @@ const groupBookingSchema = new Schema(
     refundRequestedAt: { type: Date, required: false },
     refundProcessedAt: { type: Date, required: false },
     refundAmount: { type: Number, required: false, min: 0 },
+    rejectedAt: { type: Date, required: false },
   },
   { timestamps: true, versionKey: false }
 );

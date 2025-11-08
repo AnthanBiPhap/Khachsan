@@ -206,6 +206,12 @@ export default function MyBookingsPage() {
             Đã hoàn tiền
           </span>
         );
+      case 'rejected':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+            Đã từ chối
+          </span>
+        );
       case 'cancelled':
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
@@ -686,6 +692,7 @@ export default function MyBookingsPage() {
               const requiresRefund = ['paid', 'confirmed'].includes(group.status);
               const isRefundRequested = group.status === 'refund_requested';
               const isRefunded = group.status === 'refunded';
+              const isRejected = group.status === 'rejected';
               const cancellableStatuses = [
                 'pending_approval',
                 'approved',
@@ -698,6 +705,7 @@ export default function MyBookingsPage() {
               const paymentStatusLabel = (() => {
                 if (isRefundRequested) return 'Đang xử lý hoàn tiền';
                 if (isRefunded) return 'Đã hoàn tiền';
+                if (isRejected) return 'Bị từ chối';
                 if (group.status === 'confirmed') return 'Hoàn tất';
                 if (group.status === 'paid') return 'Đã thanh toán';
                 if (group.status === 'awaiting_payment') return 'Chờ thanh toán';
@@ -705,6 +713,7 @@ export default function MyBookingsPage() {
                 if (group.status === 'cancelled') return 'Đã hủy';
                 return 'Đang xử lý';
               })();
+              const showRefundCard = !['cancelled', 'rejected'].includes(group.status);
 
               return (
                 <div
@@ -811,6 +820,7 @@ export default function MyBookingsPage() {
                               </p>
                             </div>
                           )}
+                          {showRefundCard && (
                           <div className="mt-4 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg border border-blue-200">
                             <div className="space-y-2 text-sm text-blue-900">
                               <div className="flex justify-between items-center">
@@ -880,6 +890,20 @@ export default function MyBookingsPage() {
                               </div>
                             )}
                           </div>
+                          )}
+                          {isRejected && (
+                            <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                              <p className="font-semibold">Yêu cầu đặt đoàn đã bị từ chối do không đủ phòng trống trong thời gian bạn chọn.</p>
+                              {group.notes && (
+                                <p className="mt-2 text-red-600">
+                                  {String(group.notes || '')}
+                                </p>
+                              )}
+                              <p className="mt-2 text-xs text-red-500">
+                                Vui lòng chọn khoảng thời gian khác hoặc liên hệ lễ tân để được hỗ trợ sắp xếp.
+                              </p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>

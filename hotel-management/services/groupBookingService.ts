@@ -41,6 +41,7 @@ export interface GroupBooking {
     | 'confirmed'
     | 'refund_requested'
     | 'refunded'
+    | 'rejected'
     | 'cancelled';
   allocatedRoomIds?: Array<{
     _id: string;
@@ -64,6 +65,7 @@ export interface GroupBooking {
   refundRequestedAt?: string;
   refundProcessedAt?: string;
   refundAmount?: number;
+  rejectedAt?: string;
   createdAt: string;
   updatedAt: string;
 }

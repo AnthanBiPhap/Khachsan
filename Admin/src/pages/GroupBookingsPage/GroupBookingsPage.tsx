@@ -15,7 +15,8 @@ type GroupBookingStatus =
   | 'confirmed'
   | 'refund_requested'
   | 'refunded'
-  | 'cancelled';
+  | 'cancelled'
+  | 'rejected';
 
 interface GroupMember {
   fullName: string;
@@ -44,6 +45,7 @@ interface GroupBookingItem {
   refundAmount?: number;
   refundRequestedAt?: string;
   refundProcessedAt?: string;
+  rejectedAt?: string;
   createdAt: string;
 }
 
@@ -58,6 +60,7 @@ const statusColor: Record<GroupBookingStatus, string> = {
   refund_requested: 'orange',
   refunded: 'green',
   cancelled: 'red',
+  rejected: 'red',
 };
 
 const statusLabel: Record<GroupBookingStatus, string> = {
@@ -71,6 +74,7 @@ const statusLabel: Record<GroupBookingStatus, string> = {
   refund_requested: 'Đang xử lý hoàn tiền',
   refunded: 'Đã hoàn tiền',
   cancelled: 'Đã hủy',
+  rejected: 'Đã từ chối',
 };
 
 const GroupBookingsPage: React.FC = () => {

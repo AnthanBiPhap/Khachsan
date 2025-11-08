@@ -119,6 +119,20 @@ const appendNote = (gb: any, label: string, content?: string) => {
   gb.notes = gb.notes ? `${gb.notes}\n${entry}` : entry;
 };
 
+const formatDateRange = (checkIn: Date | string, checkOut: Date | string) => {
+  const formatter = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" });
+  const start = formatter.format(new Date(checkIn));
+  const end = formatter.format(new Date(checkOut));
+  return `${start} → ${end}`;
+};
+
+const rejectGroupBooking = async (gb: any, reason: string) => {
+  gb.status = "rejected";
+  gb.rejectedAt = new Date();
+  appendNote(gb, "Rejected", reason);
+  await gb.save();
+};
+
 const approve = async (id: string) => {
   const gb = await GroupBooking.findById(id);
   if (!gb) throw createError(404, "Group booking not found");
@@ -126,13 +140,24 @@ const approve = async (id: string) => {
     throw createError(400, "Only pending_approval can be approved");
 
   const availableRooms = await checkAvailability(gb.checkIn, gb.checkOut);
-  if (availableRooms.length < gb.roomCount)
+  if (availableRooms.length < gb.roomCount) {
+    const reason = `Không đủ phòng trống trong giai đoạn ${formatDateRange(
+      gb.checkIn,
+      gb.checkOut
+    )}. Yêu cầu ${gb.roomCount} phòng, khả dụng ${availableRooms.length} phòng.`;
+    await rejectGroupBooking(gb, reason);
     throw createError(400, "Không đủ phòng trống để duyệt yêu cầu đặt đoàn");
+  }
 
   // Choose cost-optimized allocation meeting capacity and room count
   const optimal = chooseOptimalRooms(availableRooms, gb.roomCount, gb.peopleCount);
   if (!optimal) {
-    throw createError(400, "Cannot find a room combination that meets capacity requirements");
+    const reason = `Không tìm được tổ hợp phòng đáp ứng ${gb.peopleCount} khách trong giai đoạn ${formatDateRange(
+      gb.checkIn,
+      gb.checkOut
+    )}.`;
+    await rejectGroupBooking(gb, reason);
+    throw createError(400, "Không thể tìm được tổ hợp phòng đáp ứng yêu cầu đoàn");
   }
   gb.allocatedRoomIds = optimal.map((r: any) => r._id);
   gb.status = "approved";
@@ -251,7 +276,7 @@ const cancel = async (id: string, reason?: string) => {
   const gb = await GroupBooking.findById(id);
   if (!gb) throw createError(404, "Group booking not found");
 
-  if (["cancelled", "refund_requested", "refunded"].includes(gb.status)) {
+  if (["cancelled", "refund_requested", "refunded", "rejected"].includes(gb.status)) {
     throw createError(400, `Group booking is already ${gb.status}, không thể hủy thêm lần nữa`);
   }
 
