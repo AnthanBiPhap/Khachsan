@@ -123,19 +123,22 @@ export default function MyBookingsPage() {
     }).format(amount);
   };
 
-  // Kiểm tra có thể hoàn tiền hay không dựa trên thời gian hủy
-  const canRefund = (checkInDate: string) => {
-    const checkIn = new Date(checkInDate);
+  // Kiểm tra có thể hủy phòng/hoàn tiền hay không dựa trên thời gian từ khi đặt phòng
+  // Chỉ cho phép hủy trong vòng 1 ngày (24 giờ) kể từ khi đặt phòng
+  const canCancel = (createdAt: string) => {
+    const created = new Date(createdAt);
     const now = new Date();
-    const daysUntilCheckIn = Math.ceil((checkIn.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    return daysUntilCheckIn >= 7;
+    const hoursSinceCreated = (now.getTime() - created.getTime()) / (1000 * 60 * 60); // Tính theo giờ
+    return hoursSinceCreated <= 24; // Cho phép hủy trong 24 giờ đầu
   };
 
-  // Tính số ngày còn lại đến ngày check-in
-  const getDaysUntilCheckIn = (checkInDate: string) => {
-    const checkIn = new Date(checkInDate);
+  // Tính số giờ còn lại để có thể hủy phòng (từ khi đặt phòng)
+  const getHoursRemainingForCancel = (createdAt: string) => {
+    const created = new Date(createdAt);
     const now = new Date();
-    return Math.ceil((checkIn.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+    const hoursSinceCreated = (now.getTime() - created.getTime()) / (1000 * 60 * 60);
+    const hoursRemaining = 24 - hoursSinceCreated;
+    return Math.max(0, Math.ceil(hoursRemaining)); // Làm tròn lên, không âm
   };
 
   const getStatusBadge = (status: string) => {
@@ -391,16 +394,19 @@ export default function MyBookingsPage() {
                               </div>
                               
                               <div className="flex justify-between items-center">
-                                <span className="text-sm text-blue-700">Có thể hoàn tiền:</span>
-                                <span className={`text-sm font-medium ${canRefund(booking.checkIn) ? 'text-green-600' : 'text-red-600'}`}>
-                                  {canRefund(booking.checkIn) ? '✅ Có thể hoàn tiền' : '❌ Không thể hoàn tiền'}
+                                <span className="text-sm text-blue-700">Có thể hủy phòng:</span>
+                                <span className={`text-sm font-medium ${canCancel(booking.createdAt) ? 'text-green-600' : 'text-red-600'}`}>
+                                  {canCancel(booking.createdAt) ? '✅ Có thể hủy phòng' : '❌ Không thể hủy phòng'}
                                 </span>
                               </div>
                               
                               <div className="flex justify-between items-center">
-                                <span className="text-sm text-blue-700">Thời gian còn lại:</span>
+                                <span className="text-sm text-blue-700">Thời gian còn lại để hủy:</span>
                                 <span className="text-sm font-medium text-blue-900">
-                                  {String(getDaysUntilCheckIn(booking.checkIn))} ngày
+                                  {canCancel(booking.createdAt) 
+                                    ? `${getHoursRemainingForCancel(booking.createdAt)} giờ`
+                                    : 'Đã hết hạn'
+                                  }
                                 </span>
                               </div>
                               
@@ -435,10 +441,10 @@ export default function MyBookingsPage() {
                               </div>
                             </div>
                             
-                            {/* Thông báo chính sách hoàn tiền */}
+                            {/* Thông báo chính sách hủy phòng */}
                             <div className="mt-3 p-2 bg-blue-50 rounded-md border border-blue-200">
                               <p className="text-xs text-blue-700">
-                                📋 <strong>Chính sách hoàn tiền:</strong> Chỉ hoàn tiền khi hủy trước 7 ngày check-in
+                                📋 <strong>Chính sách hủy phòng:</strong> Chỉ có thể hủy phòng trong vòng 24 giờ (1 ngày) kể từ khi đặt phòng. Sau thời gian này, không thể hủy phòng nữa.
                               </p>
                             </div>
                             
@@ -460,10 +466,10 @@ export default function MyBookingsPage() {
                               </div>
                             )}
                             
-                            {booking.paymentStatus === 'paid' && !canRefund(booking.checkIn) && (
+                            {booking.paymentStatus === 'paid' && !canCancel(booking.createdAt) && (
                               <div className="mt-3 p-2 bg-red-50 rounded-md border border-red-200">
                                 <p className="text-xs text-red-700">
-                                  ⚠️ Không thể hoàn tiền vì còn ít hơn 7 ngày đến ngày check-in
+                                  ⚠️ Không thể hủy phòng vì đã quá 24 giờ kể từ khi đặt phòng. Thời gian hủy phòng đã hết hạn.
                                 </p>
                               </div>
                             )}
@@ -494,7 +500,7 @@ export default function MyBookingsPage() {
                       Liên hệ hỗ trợ
                     </Button>
                   </Link>
-                  {booking.paymentStatus === 'pending' && (
+                  {booking.paymentStatus === 'pending' && canCancel(booking.createdAt) && (
                     <Button
                       variant="outline"
                       className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
@@ -503,14 +509,14 @@ export default function MyBookingsPage() {
                         try {
                           setActionLoadingId(booking._id);
                           await bookingService.updateBooking(booking._id, {
-                            paymentStatus: 'failed',
-                            status: 'cancelled',
+                            paymentStatus: 'cancelled',
                             note: 'Khách hàng hủy đặt phòng',
                           });
                           // cập nhật lại danh sách
                           const res = await fetch(`http://localhost:8080/api/v1/bookings?customerId=${user?._id}`);
                           const data = await res.json();
                           setBookings((data.data.bookings || []).filter((b: any) => b.customerId?._id === user?._id));
+                          message.success('Đã hủy đặt phòng thành công!');
                         } catch (e) {
                           console.error(e);
                           alert('Hủy đặt phòng thất bại');
@@ -522,22 +528,32 @@ export default function MyBookingsPage() {
                       {actionLoadingId === booking._id ? 'Đang hủy...' : 'Hủy đặt phòng'}
                     </Button>
                   )}
-                  {booking.paymentStatus === 'paid' && canRefund(booking.checkIn) && (
+                  
+                  {booking.paymentStatus === 'pending' && !canCancel(booking.createdAt) && (
                     <Button
                       variant="outline"
-                      className="text-blue-600 border-blue-200 hover:bg-blue-50 w-full sm:w-auto"
+                      className="text-gray-400 border-gray-200 cursor-not-allowed w-full sm:w-auto"
+                      disabled={true}
+                    >
+                      Không thể hủy phòng (đã quá 24 giờ)
+                    </Button>
+                  )}
+                  {booking.paymentStatus === 'paid' && canCancel(booking.createdAt) && (
+                    <Button
+                      variant="outline"
+                      className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
                       disabled={actionLoadingId === booking._id}
                       onClick={async () => {
                         try {
                           setActionLoadingId(booking._id);
-                          console.log('🔄 Bắt đầu yêu cầu hoàn tiền cho booking:', booking._id);
+                          console.log('🔄 Bắt đầu yêu cầu hủy phòng và hoàn tiền cho booking:', booking._id);
                           
                           const response = await bookingService.updateBooking(booking._id, {
                             paymentStatus: 'refund_requested',
-                            note: 'Khách hàng yêu cầu hoàn tiền',
+                            note: 'Khách hàng yêu cầu hủy phòng và hoàn tiền',
                           });
                           
-                          console.log('✅ Yêu cầu hoàn tiền thành công:', response);
+                          console.log('✅ Yêu cầu hủy phòng và hoàn tiền thành công:', response);
                           
                           // Refresh danh sách bookings
                           const res = await fetch(`http://localhost:8080/api/v1/bookings?customerId=${user?._id}`);
@@ -548,10 +564,10 @@ export default function MyBookingsPage() {
                           setBookings((data.data.bookings || []).filter((b: any) => b.customerId?._id === user?._id));
                           
                           // Thông báo thành công
-                          message.success('Yêu cầu hoàn tiền đã được gửi thành công!', 5);
+                          message.success('Yêu cầu hủy phòng và hoàn tiền đã được gửi thành công!', 5);
                           
                         } catch (e: any) {
-                          console.error('❌ Lỗi yêu cầu hoàn tiền:', e);
+                          console.error('❌ Lỗi yêu cầu hủy phòng và hoàn tiền:', e);
                           console.error('Error details:', {
                             message: e.message,
                             status: e.status,
@@ -559,24 +575,24 @@ export default function MyBookingsPage() {
                           });
                           
                           // Hiển thị lỗi cụ thể hơn
-                          const errorMessage = e.message || 'Yêu cầu hoàn tiền thất bại';
+                          const errorMessage = e.message || 'Yêu cầu hủy phòng thất bại';
                           alert(`Lỗi: ${errorMessage}`);
                         } finally {
                           setActionLoadingId(null);
                         }
                       }}
                     >
-                      {actionLoadingId === booking._id ? 'Đang gửi yêu cầu...' : 'Yêu cầu hoàn tiền'}
+                      {actionLoadingId === booking._id ? 'Đang xử lý...' : 'Hủy phòng & Hoàn tiền'}
                     </Button>
                   )}
                   
-                  {booking.paymentStatus === 'paid' && !canRefund(booking.checkIn) && (
+                  {booking.paymentStatus === 'paid' && !canCancel(booking.createdAt) && (
                     <Button
                       variant="outline"
                       className="text-gray-400 border-gray-200 cursor-not-allowed w-full sm:w-auto"
                       disabled={true}
                     >
-                      Không thể hoàn tiền (còn {String(getDaysUntilCheckIn(booking.checkIn))} ngày)
+                      Không thể hủy phòng (đã quá 24 giờ)
                     </Button>
                   )}
                 </div>
