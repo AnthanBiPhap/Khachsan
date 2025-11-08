@@ -37,6 +37,7 @@ export interface GroupBooking {
     | 'info_uploaded'
     | 'quoted'
     | 'awaiting_payment'
+    | 'deposit_paid'
     | 'paid'
     | 'confirmed'
     | 'refund_requested'
@@ -66,6 +67,8 @@ export interface GroupBooking {
   refundProcessedAt?: string;
   refundAmount?: number;
   rejectedAt?: string;
+  paidAmount?: number;
+  remainingAmount?: number;
   createdAt: string;
   updatedAt: string;
 }

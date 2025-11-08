@@ -3,6 +3,13 @@ import Booking from "../models/bookings.model";
 import GroupBooking from "../models/groupBooking.model";
 import createError from 'http-errors';
 
+const GROUP_DEPOSIT_RATE = Number(process.env.GROUP_DEPOSIT_RATE ?? 0.5);
+
+const calculateDepositAmount = (quoteAmount: number): number => {
+  if (!quoteAmount || quoteAmount <= 0) return 0;
+  return Math.max(0, Math.round(quoteAmount * GROUP_DEPOSIT_RATE));
+};
+
 // Lấy tất cả payments
 const getAll = async (filters: any = {}) => {
   const {
@@ -301,10 +308,18 @@ const updateStatus = async (id: string, status: string, additionalData: any = {}
   
   // Cập nhật trạng thái group booking tương ứng với payment status
   if (payment.groupBookingId) {
-    // Map payment status sang group booking status
+    const groupBooking = await GroupBooking.findById(payment.groupBookingId);
+
     if (status === "completed") {
+      let newStatus = "paid";
+      if (groupBooking && groupBooking.quoteAmount) {
+        const depositAmount = calculateDepositAmount(groupBooking.quoteAmount);
+        if (depositAmount > 0 && payment.amount < groupBooking.quoteAmount) {
+          newStatus = "deposit_paid";
+        }
+      }
       await GroupBooking.findByIdAndUpdate(payment.groupBookingId, {
-        status: "paid",
+        status: newStatus,
         updatedAt: new Date()
       });
     } else if (status === "refunded") {

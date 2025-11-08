@@ -78,6 +78,16 @@ const markPaid = async (req: Request, res: Response) => {
   res.json({ data: gb });
 };
 
+const markFullPayment = async (req: Request, res: Response) => {
+  const { stripeSessionId, stripePaymentIntentId, stripeCustomerId } = req.body || {};
+  const gb = await groupBookingsService.markFullPayment(req.params.id, {
+    stripeSessionId,
+    stripePaymentIntentId,
+    stripeCustomerId,
+  });
+  res.json({ data: gb });
+};
+
 const refund = async (req: Request, res: Response) => {
   const { amount, note } = req.body || {};
   const gb = await groupBookingsService.markRefunded(req.params.id, {
@@ -108,6 +118,7 @@ export default {
   // New export endpoint is added below
   quote,
   markPaid,
+  markFullPayment,
   refund,
   confirm,
   cancel,

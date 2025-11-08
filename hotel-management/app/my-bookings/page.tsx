@@ -15,10 +15,24 @@ import {
   Loader2,
   Copy,
   ClipboardCheck,
+  FileText,
 } from 'lucide-react';
 import Link from 'next/link';
 import { bookingService } from '@/services/bookingService';
 import { groupBookingService, type GroupBooking } from '@/services/groupBookingService';
+
+const GROUP_DEPOSIT_RATE = Number(process.env.NEXT_PUBLIC_GROUP_DEPOSIT_RATE ?? 0.5);
+const GROUP_DEPOSIT_PERCENT_LABEL = `${Math.round(GROUP_DEPOSIT_RATE * 100)}%`;
+
+type InvoiceSummary = {
+  id: string;
+  bookingId?: string | null;
+  groupBookingId?: string | null;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  issuedAt?: string;
+};
 
 type GuestInfo = {
   fullName: string;
@@ -63,6 +77,8 @@ export default function MyBookingsPage() {
   const { user, isLoading } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [groupBookings, setGroupBookings] = useState<GroupBooking[]>([]);
+  const [bookingInvoices, setBookingInvoices] = useState<Record<string, InvoiceSummary>>({});
+  const [groupInvoices, setGroupInvoices] = useState<Record<string, InvoiceSummary>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
@@ -76,9 +92,11 @@ export default function MyBookingsPage() {
       setError(null);
 
       const bookingUrl = `http://localhost:8080/api/v1/bookings?customerId=${user._id}`;
-      const [bookingResponse, groupResults] = await Promise.all([
+      const invoicesUrl = `http://localhost:8080/api/v1/invoices?customerId=${user._id}`;
+      const [bookingResponse, groupResults, invoicesResponse] = await Promise.all([
         fetch(bookingUrl, { cache: 'no-store' }),
         groupBookingService.list({ requesterId: user._id }),
+        fetch(invoicesUrl, { cache: 'no-store' }).catch(() => null),
       ]);
 
       if (!bookingResponse.ok) {
@@ -91,8 +109,42 @@ export default function MyBookingsPage() {
         (b: any) => b.customerId?._id === user._id
       );
 
+      const nextBookingInvoices: Record<string, InvoiceSummary> = {};
+      const nextGroupInvoices: Record<string, InvoiceSummary> = {};
+
+      if (invoicesResponse && invoicesResponse.ok) {
+        try {
+          const invoiceJson = await invoicesResponse.json();
+          const invoices: any[] = invoiceJson?.data?.invoices || [];
+          invoices.forEach((inv) => {
+            const summary: InvoiceSummary = {
+              id: String(inv?._id || ''),
+              bookingId: inv?.bookingId?._id || inv?.bookingId || null,
+              groupBookingId: inv?.groupBookingId?._id || inv?.groupBookingId || null,
+              totalAmount: Number(inv?.totalAmount || 0),
+              paidAmount: Number(inv?.paidAmount || 0),
+              remainingAmount: Number(inv?.remainingAmount || 0),
+              issuedAt: inv?.issuedAt || inv?.updatedAt || inv?.createdAt,
+            };
+            const key = summary.bookingId || summary.groupBookingId;
+            if (!key || !summary.id) return;
+            const targetMap = summary.bookingId ? nextBookingInvoices : nextGroupInvoices;
+            const existing = targetMap[key];
+            const existingTime = existing?.issuedAt ? new Date(existing.issuedAt).getTime() : 0;
+            const currentTime = summary.issuedAt ? new Date(summary.issuedAt).getTime() : Date.now();
+            if (!existing || currentTime >= existingTime) {
+              targetMap[key] = summary;
+            }
+          });
+        } catch (invoiceErr) {
+          console.warn('Không thể phân tích dữ liệu hóa đơn:', invoiceErr);
+        }
+      }
+
       setBookings(userBookings);
       setGroupBookings(groupResults || []);
+      setBookingInvoices(nextBookingInvoices);
+      setGroupInvoices(nextGroupInvoices);
     } catch (err) {
       console.error('Lỗi khi tải đặt phòng:', err);
       setError('Đã xảy ra lỗi khi tải thông tin đặt phòng');
@@ -180,6 +232,12 @@ export default function MyBookingsPage() {
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-amber-100 text-amber-800">
             Chờ thanh toán
+          </span>
+        );
+      case 'deposit_paid':
+        return (
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-teal-100 text-teal-800">
+            {`Đã đặt cọc ${GROUP_DEPOSIT_PERCENT_LABEL}`}
           </span>
         );
       case 'paid':
@@ -564,6 +622,17 @@ export default function MyBookingsPage() {
                       </div>
                     </div>
                   </div>
+
+                  <div className="mt-6">
+                    <Button
+                      variant="outline"
+                      className="w-full sm:w-auto"
+                      onClick={() => window.open(`/api/invoices/${bookingInvoices[booking._id]?.id}/print`, '_blank')}
+                      disabled={!bookingInvoices[booking._id]?.id}
+                    >
+                      <FileText className="h-4 w-4 mr-2" /> Xem hóa đơn
+                    </Button>
+                  </div>
                 </div>
 
                 {booking.notes && (
@@ -688,8 +757,9 @@ export default function MyBookingsPage() {
             {groupBookings.map((group) => {
               const groupCanCancel = canCancel(group.createdAt);
               const hoursRemaining = getHoursRemainingForCancel(group.createdAt);
+              const isDepositPaid = group.status === 'deposit_paid';
               const isPaid = group.status === 'paid';
-              const requiresRefund = ['paid', 'confirmed'].includes(group.status);
+              const requiresRefund = ['paid', 'confirmed', 'deposit_paid'].includes(group.status);
               const isRefundRequested = group.status === 'refund_requested';
               const isRefunded = group.status === 'refunded';
               const isRejected = group.status === 'rejected';
@@ -701,11 +771,24 @@ export default function MyBookingsPage() {
                 'awaiting_payment',
               ];
               const canCancelRequest = cancellableStatuses.includes(group.status);
-              const refundAmount = Number(group.refundAmount ?? group.quoteAmount ?? 0);
+              const quotedAmount = Number(group.quoteAmount || 0);
+              const depositAmount = Math.max(0, Math.round(quotedAmount * GROUP_DEPOSIT_RATE));
+              const paidAmount = Number(
+                group.paidAmount ?? (isDepositPaid ? depositAmount : isPaid ? quotedAmount : 0)
+              );
+              const remainingAmount = Number(
+                group.remainingAmount ?? Math.max(0, quotedAmount - paidAmount)
+              );
+              const refundAmount = Number(
+                group.refundAmount ??
+                  (isDepositPaid ? depositAmount : quotedAmount) ??
+                  0
+              );
               const paymentStatusLabel = (() => {
                 if (isRefundRequested) return 'Đang xử lý hoàn tiền';
                 if (isRefunded) return 'Đã hoàn tiền';
                 if (isRejected) return 'Bị từ chối';
+                if (isDepositPaid) return `Đã thanh toán ${GROUP_DEPOSIT_PERCENT_LABEL} (đặt cọc)`;
                 if (group.status === 'confirmed') return 'Hoàn tất';
                 if (group.status === 'paid') return 'Đã thanh toán';
                 if (group.status === 'awaiting_payment') return 'Chờ thanh toán';
@@ -714,6 +797,7 @@ export default function MyBookingsPage() {
                 return 'Đang xử lý';
               })();
               const showRefundCard = !['cancelled', 'rejected'].includes(group.status);
+              const groupInvoice = groupInvoices[group._id];
 
               return (
                 <div
@@ -810,6 +894,14 @@ export default function MyBookingsPage() {
                             <span>{formatCurrency(Number(group.quoteAmount) || 0)}</span>
                           </div>
                           <div className="flex justify-between">
+                            <span className="text-gray-600">Đặt cọc {GROUP_DEPOSIT_PERCENT_LABEL}</span>
+                            <span>{formatCurrency(depositAmount)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Còn lại</span>
+                            <span>{formatCurrency(Math.max(0, quotedAmount - depositAmount))}</span>
+                          </div>
+                          <div className="flex justify-between">
                             <span className="text-gray-600">Trạng thái thanh toán</span>
                             <span className="font-medium">{paymentStatusLabel}</span>
                           </div>
@@ -836,6 +928,10 @@ export default function MyBookingsPage() {
                                 ) : isPaid ? (
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                     <CheckCircle className="h-3 w-3 mr-1" /> Đã thanh toán
+                                  </span>
+                                ) : isDepositPaid ? (
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800">
+                                    <CheckCircle className="h-3 w-3 mr-1" /> {`Đã đặt cọc ${GROUP_DEPOSIT_PERCENT_LABEL}`}
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
@@ -891,6 +987,19 @@ export default function MyBookingsPage() {
                             )}
                           </div>
                           )}
+                          {isDepositPaid && !isRefundRequested && !isRefunded && (
+                            <div className="mt-4 p-4 bg-slate-100 border border-slate-200 rounded-lg text-sm text-slate-700">
+                              <p>
+                                Đặt cọc đã thanh toán: <strong>{formatCurrency(paidAmount)}</strong>
+                              </p>
+                              <p>
+                                Số tiền còn lại: <strong>{formatCurrency(remainingAmount)}</strong>
+                              </p>
+                              <p className="mt-2 text-xs text-slate-500">
+                                Vui lòng hoàn tất phần còn lại trước ngày nhận phòng theo hướng dẫn của lễ tân.
+                              </p>
+                            </div>
+                          )}
                           {isRejected && (
                             <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
                               <p className="font-semibold">Yêu cầu đặt đoàn đã bị từ chối do không đủ phòng trống trong thời gian bạn chọn.</p>
@@ -933,6 +1042,7 @@ export default function MyBookingsPage() {
                     )}
 
                     <div className="mt-6 pt-6 border-t border-gray-100 flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3">
+
                       {canCancelRequest && (
                         groupCanCancel ? (
                           <Button
@@ -1001,6 +1111,16 @@ export default function MyBookingsPage() {
                             Không thể hoàn tiền (đã quá 24 giờ)
                           </Button>
                         )
+                      )}
+
+                      {groupInvoice?.id && (
+                        <Button
+                          variant="outline"
+                          className="w-full sm:w-auto"
+                          onClick={() => window.open(`/api/invoices/${groupInvoice.id}/print`, '_blank')}
+                        >
+                          <FileText className="h-4 w-4 mr-2" /> Xem hóa đơn
+                        </Button>
                       )}
                     </div>
                   </div>

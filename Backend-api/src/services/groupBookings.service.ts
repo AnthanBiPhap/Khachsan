@@ -7,6 +7,14 @@ import Invoice from "../models/invoices.model";
 import invoicesService from "./invoices.service";
 import paymentsService from "./payments.service";
 
+const GROUP_DEPOSIT_RATE = Number(process.env.GROUP_DEPOSIT_RATE ?? 0.5);
+const GROUP_DEPOSIT_PERCENT_LABEL = `${Math.round(GROUP_DEPOSIT_RATE * 100)}%`;
+
+const calculateDepositAmount = (quoteAmount: number): number => {
+  if (!quoteAmount || quoteAmount <= 0) return 0;
+  return Math.max(0, Math.round(quoteAmount * GROUP_DEPOSIT_RATE));
+};
+
 type CreateGroupBookingPayload = {
   requesterId?: string;
   requesterName: string;
@@ -194,13 +202,32 @@ const quote = async (
   return gb;
 };
 
-const markPaid = async (id: string, options?: { stripeSessionId?: string; stripePaymentIntentId?: string; stripeCustomerId?: string }) => {
+const markPaid = async (
+  id: string,
+  options?: { stripeSessionId?: string; stripePaymentIntentId?: string; stripeCustomerId?: string }
+) => {
   const gb = await GroupBooking.findById(id);
   if (!gb) throw createError(404, "Group booking not found");
   if (!gb.quoteAmount) throw createError(400, "Quote not set");
   if (gb.status !== "awaiting_payment" && gb.status !== "quoted")
     throw createError(400, "Invalid state to mark paid");
-  gb.status = "paid";
+
+  const depositAmount = calculateDepositAmount(gb.quoteAmount);
+  const paidAmount = depositAmount > 0 ? depositAmount : gb.quoteAmount;
+  const remainingAmount = Math.max(0, gb.quoteAmount - paidAmount);
+
+  gb.status = remainingAmount > 0 ? "deposit_paid" : "paid";
+  gb.paidAmount = paidAmount;
+  gb.remainingAmount = remainingAmount;
+  appendNote(
+    gb,
+    remainingAmount > 0 ? "Deposit" : "Payment",
+    remainingAmount > 0
+      ? `Khách đã thanh toán đặt cọc ${paidAmount.toLocaleString("vi-VN")} VND (${GROUP_DEPOSIT_PERCENT_LABEL}), còn lại ${remainingAmount.toLocaleString(
+          "vi-VN"
+        )} VND.`
+      : `Khách đã thanh toán đủ ${paidAmount.toLocaleString("vi-VN")} VND.`
+  );
   await gb.save();
 
   // Tạo invoice cho group booking khi thanh toán
@@ -209,13 +236,15 @@ const markPaid = async (id: string, options?: { stripeSessionId?: string; stripe
       groupBookingId: gb._id,
       customerId: gb.requesterId || undefined,
       totalAmount: gb.quoteAmount,
-      paidAmount: gb.quoteAmount, // Đã thanh toán đủ
-      remainingAmount: 0,
-      paymentStatus: "paid",
-      status: "paid",
+      paidAmount,
+      remainingAmount,
+      paymentStatus: remainingAmount > 0 ? "partial_paid" : "paid",
+      status: remainingAmount > 0 ? "pending" : "paid",
       issuedAt: new Date(),
     });
-    console.log(`✅ Đã tạo invoice mới cho group booking ${gb._id}: invoiceId=${invoice._id}, totalAmount=${gb.quoteAmount}`);
+    console.log(
+      `✅ Đã tạo invoice mới cho group booking ${gb._id}: invoiceId=${invoice._id}, total=${gb.quoteAmount}, paid=${paidAmount}, remain=${remainingAmount}`
+    );
   } catch (invoiceError: any) {
     console.error(`❌ Lỗi tạo invoice cho group booking ${gb._id}:`, invoiceError);
     // Không throw error để không làm crash API, vì group booking đã được đánh dấu paid
@@ -232,16 +261,26 @@ const markPaid = async (id: string, options?: { stripeSessionId?: string; stripe
         groupBookingId: gb._id.toString(),
         customerId: gb.requesterId || undefined,
         paymentMethod: "stripe", // Mặc định là stripe vì thanh toán online
-        amount: gb.quoteAmount,
+        amount: paidAmount,
         currency: "VND",
         stripeSessionId: options?.stripeSessionId,
         stripePaymentIntentId: options?.stripePaymentIntentId,
         stripeCustomerId: options?.stripeCustomerId,
         status: "completed",
         paidAt: new Date(),
-        notes: `Payment for group booking ${gb._id}`,
+        notes:
+          remainingAmount > 0
+            ? `Deposit ${GROUP_DEPOSIT_PERCENT_LABEL} cho group booking ${gb._id}`
+            : `Payment for group booking ${gb._id}`,
+        metadata: {
+          depositRate: GROUP_DEPOSIT_RATE,
+          paidAmount,
+          remainingAmount,
+        },
       });
-      console.log(`✅ Đã tạo payment mới cho group booking ${gb._id}: paymentId=${payment._id}, amount=${gb.quoteAmount}`);
+      console.log(
+        `✅ Đã tạo payment mới cho group booking ${gb._id}: paymentId=${payment._id}, amount=${paidAmount}, remaining=${remainingAmount}`
+      );
     } else {
       // Cập nhật payment hiện có nếu có thông tin Stripe mới
       if (options?.stripeSessionId || options?.stripePaymentIntentId) {
@@ -262,11 +301,95 @@ const markPaid = async (id: string, options?: { stripeSessionId?: string; stripe
   return gb;
 };
 
+const markFullPayment = async (
+  id: string,
+  options?: { stripeSessionId?: string; stripePaymentIntentId?: string; stripeCustomerId?: string }
+) => {
+  const gb = await GroupBooking.findById(id);
+  if (!gb) throw createError(404, "Group booking not found");
+  if (!gb.quoteAmount) throw createError(400, "Quote not set");
+
+  if (!["deposit_paid", "awaiting_payment", "quoted", "confirmed"].includes(gb.status)) {
+    throw createError(400, "Chỉ có thể tất toán sau khi đã nhận đặt cọc");
+  }
+
+  const currentPaid = Number(gb.paidAmount || 0);
+  const outstanding = Math.max(0, gb.quoteAmount - currentPaid);
+  if (outstanding <= 0) {
+    throw createError(400, "Không còn số tiền cần tất toán");
+  }
+
+  gb.paidAmount = gb.quoteAmount;
+  gb.remainingAmount = 0;
+  gb.status = "paid";
+  appendNote(
+    gb,
+    "Payment",
+    `Admin xác nhận đã thu đủ ${gb.quoteAmount.toLocaleString("vi-VN")} VND.`
+  );
+  await gb.save();
+
+  try {
+    const invoice = await Invoice.findOne({ groupBookingId: gb._id });
+    if (invoice) {
+      await invoicesService.updateById(invoice._id.toString(), {
+        totalAmount: gb.quoteAmount,
+        paidAmount: gb.quoteAmount,
+        remainingAmount: 0,
+        paymentStatus: "paid",
+        status: "paid",
+      });
+    }
+  } catch (invoiceError) {
+    console.error(`❌ Lỗi cập nhật invoice khi tất toán group booking ${gb._id}:`, invoiceError);
+  }
+
+  try {
+    const payment = await Payment.findOne({ groupBookingId: gb._id });
+    if (payment) {
+      await Payment.findByIdAndUpdate(payment._id, {
+        amount: gb.quoteAmount,
+        status: "completed",
+        metadata: {
+          ...(payment.metadata || {}),
+          depositRate: GROUP_DEPOSIT_RATE,
+          fullyPaid: true,
+        },
+        stripeSessionId: options?.stripeSessionId || payment.stripeSessionId,
+        stripePaymentIntentId: options?.stripePaymentIntentId || payment.stripePaymentIntentId,
+        stripeCustomerId: options?.stripeCustomerId || payment.stripeCustomerId,
+      });
+    } else {
+      await paymentsService.create({
+        groupBookingId: gb._id.toString(),
+        customerId: gb.requesterId || undefined,
+        paymentMethod: "other",
+        amount: gb.quoteAmount,
+        currency: "VND",
+        status: "completed",
+        paidAt: new Date(),
+        notes: `Full payment for group booking ${gb._id}`,
+        metadata: {
+          depositRate: GROUP_DEPOSIT_RATE,
+          fullyPaid: true,
+        },
+        stripeSessionId: options?.stripeSessionId,
+        stripePaymentIntentId: options?.stripePaymentIntentId,
+        stripeCustomerId: options?.stripeCustomerId,
+      });
+    }
+  } catch (paymentError) {
+    console.error(`❌ Lỗi cập nhật payment khi tất toán group booking ${gb._id}:`, paymentError);
+  }
+
+  return gb;
+};
+
 const confirm = async (id: string) => {
   const gb = await GroupBooking.findById(id);
   if (!gb) throw createError(404, "Group booking not found");
-  if (gb.status !== "paid")
-    throw createError(400, "Only paid bookings can be confirmed");
+  if (!["paid", "deposit_paid"].includes(gb.status))
+    throw createError(400, "Chỉ có thể xác nhận đặt đoàn sau khi đã nhận đặt cọc");
   gb.status = "confirmed";
   await gb.save();
   return gb;
@@ -283,12 +406,19 @@ const cancel = async (id: string, reason?: string) => {
   const now = new Date();
   const trimmedReason = reason?.trim();
 
-  if (["paid", "confirmed"].includes(gb.status)) {
+  const wasDepositPaid = gb.status === "deposit_paid";
+  const wasFullyPaid = gb.status === "paid" || gb.status === "confirmed";
+
+  if (wasDepositPaid || wasFullyPaid) {
     gb.status = "refund_requested";
     gb.refundRequestedAt = now;
-    if (!gb.refundAmount && gb.quoteAmount) {
-      gb.refundAmount = gb.quoteAmount;
+    const defaultRefund = wasDepositPaid
+      ? calculateDepositAmount(gb.quoteAmount || 0)
+      : gb.quoteAmount || 0;
+    if (!gb.refundAmount) {
+      gb.refundAmount = defaultRefund;
     }
+    gb.remainingAmount = Math.max(0, (gb.quoteAmount || 0) - (gb.paidAmount || 0));
     appendNote(gb, "Refund requested", trimmedReason || "Khách hàng yêu cầu hoàn tiền");
   } else {
     gb.status = "cancelled";
@@ -320,11 +450,14 @@ const markRefunded = async (
   const gb = await GroupBooking.findById(id);
   if (!gb) throw createError(404, "Group booking not found");
 
-  if (!["refund_requested", "paid", "confirmed"].includes(gb.status)) {
+  if (!["refund_requested", "paid", "confirmed", "deposit_paid"].includes(gb.status)) {
     throw createError(400, "Chỉ có thể hoàn tiền cho đặt đoàn đã thanh toán hoặc đang chờ hoàn tiền");
   }
 
-  const refundAmount = options?.amount ?? gb.quoteAmount ?? 0;
+  const suggestedDeposit = calculateDepositAmount(gb.quoteAmount || 0);
+  const defaultRefund =
+    gb.status === "deposit_paid" && suggestedDeposit > 0 ? suggestedDeposit : gb.quoteAmount || 0;
+  const refundAmount = options?.amount ?? defaultRefund;
   if (refundAmount < 0) {
     throw createError(400, "Số tiền hoàn không hợp lệ");
   }
@@ -333,6 +466,8 @@ const markRefunded = async (
   gb.status = "refunded";
   gb.refundProcessedAt = processedAt;
   gb.refundAmount = refundAmount;
+  gb.paidAmount = Math.max(0, (gb.paidAmount || 0) - refundAmount);
+  gb.remainingAmount = Math.max(0, (gb.quoteAmount || 0) - gb.paidAmount);
   appendNote(
     gb,
     "Refund processed",
@@ -372,6 +507,7 @@ export default {
   uploadMembers,
   quote,
   markPaid,
+  markFullPayment,
   confirm,
   cancel,
   markRefunded,

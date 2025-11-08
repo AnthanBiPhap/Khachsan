@@ -8,6 +8,9 @@ import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
 import { groupBookingService, type GroupBooking } from '@/services/groupBookingService';
 import { useAuth } from '@/contexts/AuthContext';
 
+const GROUP_DEPOSIT_RATE = Number(process.env.NEXT_PUBLIC_GROUP_DEPOSIT_RATE ?? 0.5);
+const GROUP_DEPOSIT_PERCENT_LABEL = `${Math.round(GROUP_DEPOSIT_RATE * 100)}%`;
+
 type GroupBookingStatus =
   | 'pending_approval'
   | 'approved'
@@ -140,6 +143,7 @@ export default function GroupBookingPage() {
     info_uploaded: 'purple',
     quoted: 'orange',
     awaiting_payment: 'gold',
+    deposit_paid: 'teal',
     paid: 'green',
     confirmed: 'cyan',
     refund_requested: 'orange',
@@ -155,6 +159,7 @@ export default function GroupBookingPage() {
     info_uploaded: 'Đã upload danh sách',
     quoted: 'Đã báo giá',
     awaiting_payment: 'Chờ thanh toán',
+    deposit_paid: `Đã nhận đặt cọc ${GROUP_DEPOSIT_PERCENT_LABEL}`,
     paid: 'Đã thanh toán',
     confirmed: 'Đã xác nhận',
     refund_requested: 'Đang xử lý hoàn tiền',
@@ -187,6 +192,34 @@ export default function GroupBookingPage() {
     groupDetail?.checkIn && groupDetail?.checkOut
       ? `${formatDateTime(groupDetail.checkIn)} → ${formatDateTime(groupDetail.checkOut)}`
       : '-';
+  const effectiveQuote =
+    typeof groupDetail?.quoteAmount === 'number'
+      ? groupDetail.quoteAmount
+      : typeof quoteAmount === 'number'
+        ? quoteAmount
+        : null;
+  const computedDeposit =
+    typeof effectiveQuote === 'number'
+      ? Math.max(1, Math.round(effectiveQuote * GROUP_DEPOSIT_RATE))
+      : null;
+  const paidAmount =
+    typeof groupDetail?.paidAmount === 'number'
+      ? groupDetail.paidAmount
+      : currentStatus === 'deposit_paid'
+        ? computedDeposit ?? 0
+        : currentStatus === 'paid' || currentStatus === 'confirmed'
+          ? effectiveQuote ?? 0
+          : 0;
+  let outstandingAmount: number | null;
+  if (currentStatus === 'quoted' || currentStatus === 'awaiting_payment') {
+    outstandingAmount = computedDeposit ?? effectiveQuote ?? null;
+  } else if (typeof groupDetail?.remainingAmount === 'number') {
+    outstandingAmount = groupDetail.remainingAmount;
+  } else if (typeof effectiveQuote === 'number') {
+    outstandingAmount = Math.max(0, effectiveQuote - paidAmount);
+  } else {
+    outstandingAmount = null;
+  }
 
   const currentStep = useMemo(() => {
     switch (currentStatus) {
@@ -199,6 +232,7 @@ export default function GroupBookingPage() {
       case 'quoted':
       case 'awaiting_payment':
         return 3;
+      case 'deposit_paid':
       case 'paid':
         return 4;
       case 'confirmed':
@@ -418,7 +452,13 @@ export default function GroupBookingPage() {
                               phòng
                             </div>
                             <div>
-                              <strong>Tổng báo giá:</strong> {formatCurrency(groupDetail.quoteAmount ?? quoteAmount)}
+                              <strong>Tổng báo giá:</strong> {formatCurrency(effectiveQuote)}
+                            </div>
+                            <div>
+                              <strong>Đã thanh toán:</strong> {formatCurrency(paidAmount)}
+                            </div>
+                            <div>
+                              <strong>Còn lại:</strong> {formatCurrency(outstandingAmount)}
                             </div>
                             {groupDetail.members && groupDetail.members.length > 0 && (
                               <div>
@@ -454,16 +494,21 @@ export default function GroupBookingPage() {
                       {canProceedPayment && (
                         <div style={{ marginTop: 16, padding: 12, border: '1px dashed #d9d9d9', borderRadius: 6 }}>
                           <div>
-                            <b>Báo giá:</b> {formatCurrency(quoteAmount)}
+                            <b>Số tiền cần thanh toán lần này:</b> {formatCurrency(outstandingAmount)}
                           </div>
                           <div style={{ marginTop: 8, fontSize: 13, color: '#2563eb' }}>
-                            Nhấn “Thanh toán” để chuyển tới cổng Stripe và hoàn tất đặt đoàn.
+                            Nhấn “Thanh toán” để chuyển tới cổng Stripe và thanh toán khoản đặt cọc.
                           </div>
                           <div style={{ marginTop: 12 }}>
                             <Button type="primary" onClick={handlePayNow}>
                               Thanh toán
                             </Button>
                           </div>
+                          {(currentStatus === 'quoted' || currentStatus === 'awaiting_payment') && (
+                            <div style={{ marginTop: 8, fontSize: 12, color: '#2563eb' }}>
+                              {`Khoản cọc = ${GROUP_DEPOSIT_PERCENT_LABEL} tổng báo giá`}
+                            </div>
+                          )}
                         </div>
                       )}
                       {currentStatus === 'paid' && (

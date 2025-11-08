@@ -3,6 +3,28 @@ import { Table, Tag, Space, Button, message, Tooltip, Modal, Descriptions, Input
 import { CheckCircleOutlined, UploadOutlined, DollarOutlined, FileExcelOutlined, ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
+const GROUP_DEPOSIT_RATE = 0.5;
+const GROUP_DEPOSIT_PERCENT_LABEL = `${Math.round(GROUP_DEPOSIT_RATE * 100)}%`;
+
+const computeFinancials = (item: GroupBookingItem) => {
+  const total = Number(item.quoteAmount || item.invoice?.totalAmount || 0);
+  const paid = Number(
+    item.paidAmount ??
+      item.invoice?.paidAmount ??
+      (item.status === 'deposit_paid'
+        ? Math.round(total * GROUP_DEPOSIT_RATE)
+        : item.status === 'paid'
+          ? total
+          : 0)
+  );
+  const remain = Number(
+    item.remainingAmount ??
+      item.invoice?.remainingAmount ??
+      Math.max(0, total - paid)
+  );
+  return { total, paid, remain };
+};
+
 const API_URL = 'http://localhost:8080/api/v1';
 
 type GroupBookingStatus =
@@ -11,6 +33,7 @@ type GroupBookingStatus =
   | 'info_uploaded'
   | 'quoted'
   | 'awaiting_payment'
+  | 'deposit_paid'
   | 'paid'
   | 'confirmed'
   | 'refund_requested'
@@ -46,6 +69,14 @@ interface GroupBookingItem {
   refundRequestedAt?: string;
   refundProcessedAt?: string;
   rejectedAt?: string;
+  paidAmount?: number;
+  remainingAmount?: number;
+  invoice?: {
+    totalAmount?: number;
+    paidAmount?: number;
+    remainingAmount?: number;
+    paymentStatus?: string;
+  };
   createdAt: string;
 }
 
@@ -55,6 +86,7 @@ const statusColor: Record<GroupBookingStatus, string> = {
   info_uploaded: 'purple',
   quoted: 'orange',
   awaiting_payment: 'gold',
+  deposit_paid: 'teal',
   paid: 'green',
   confirmed: 'cyan',
   refund_requested: 'orange',
@@ -69,6 +101,7 @@ const statusLabel: Record<GroupBookingStatus, string> = {
   info_uploaded: 'Đã upload danh sách',
   quoted: 'Đã báo giá',
   awaiting_payment: 'Chờ thanh toán',
+  deposit_paid: 'Đã nhận đặt cọc 50%',
   paid: 'Đã thanh toán',
   confirmed: 'Đã xác nhận',
   refund_requested: 'Đang xử lý hoàn tiền',
@@ -174,6 +207,24 @@ const GroupBookingsPage: React.FC = () => {
     }
   };
 
+  const markFullPayment = async (id: string) => {
+    Modal.confirm({
+      title: 'Hoàn tất thanh toán',
+      content: 'Xác nhận đã nhận đủ tiền cho đặt đoàn này?',
+      okText: 'Hoàn tất',
+      cancelText: 'Hủy',
+      onOk: async () => {
+        try {
+          await axios.post(`${API_URL}/group-bookings/${id}/full-payment`);
+          message.success('Đã cập nhật thanh toán đầy đủ');
+          load();
+        } catch (e: any) {
+          message.error(e?.response?.data?.message || e?.message || 'Không thể hoàn tất thanh toán');
+        }
+      },
+    });
+  };
+
   const confirm = async (id: string) => {
     try {
       await axios.post(`${API_URL}/group-bookings/${id}/confirm`);
@@ -249,11 +300,21 @@ const GroupBookingsPage: React.FC = () => {
     { title: 'Khách', dataIndex: 'peopleCount', width: 80 },
     { title: 'Phòng', dataIndex: 'roomCount', width: 80 },
     {
-      title: 'Báo giá',
-      width: 140,
-      render: (_: any, r: GroupBookingItem) => (
-        r.quoteAmount != null ? `${r.quoteAmount.toLocaleString()} VND` : '-'
-      )
+      title: 'Báo giá / Thanh toán',
+      width: 200,
+      render: (_: any, r: GroupBookingItem) => {
+        const { total, paid, remain } = computeFinancials(r);
+        if (!total) return '-';
+        return (
+          <div>
+            <div><strong>Tổng:</strong> {total.toLocaleString()} VND</div>
+            <div style={{ color: '#15803d' }}><strong>Đã thanh toán:</strong> {paid.toLocaleString()} VND</div>
+            <div style={{ color: remain > 0 ? '#b91c1c' : '#0f766e' }}>
+              <strong>Còn lại:</strong> {remain.toLocaleString()} VND
+            </div>
+          </div>
+        );
+      }
     },
     {
       title: 'Trạng thái',
@@ -340,6 +401,22 @@ const GroupBookingsPage: React.FC = () => {
             <Descriptions.Item label="Số khách/phòng">{viewItem.peopleCount} / {viewItem.roomCount}</Descriptions.Item>
             <Descriptions.Item label="Trạng thái"><Tag color={statusColor[viewItem.status]}>{statusLabel[viewItem.status]}</Tag></Descriptions.Item>
             <Descriptions.Item label="Báo giá">{viewItem.quoteAmount ? viewItem.quoteAmount.toLocaleString() : '-'}</Descriptions.Item>
+            <Descriptions.Item label="Đã thanh toán">
+              {typeof viewItem.paidAmount === 'number'
+                ? `${viewItem.paidAmount.toLocaleString()} VND`
+                : viewItem.invoice?.paidAmount != null
+                  ? `${viewItem.invoice.paidAmount.toLocaleString()} VND`
+                  : '-'}
+            </Descriptions.Item>
+            <Descriptions.Item label="Còn lại">
+              {typeof viewItem.remainingAmount === 'number'
+                ? `${viewItem.remainingAmount.toLocaleString()} VND`
+                : viewItem.invoice?.remainingAmount != null
+                  ? `${viewItem.invoice.remainingAmount.toLocaleString()} VND`
+                  : viewItem.quoteAmount != null
+                    ? `${Math.max(0, viewItem.quoteAmount - Math.round(viewItem.quoteAmount * GROUP_DEPOSIT_RATE)).toLocaleString()} VND`
+                    : '-'}
+            </Descriptions.Item>
             <Descriptions.Item label="Link thanh toán">{viewItem.paymentLink ? <a href={viewItem.paymentLink} target="_blank">{viewItem.paymentLink}</a> : '-'}</Descriptions.Item>
             <Descriptions.Item label="Ghi chú">{viewItem.notes || '-'}</Descriptions.Item>
             <Descriptions.Item label="Hoàn tiền">
@@ -378,13 +455,51 @@ const GroupBookingsPage: React.FC = () => {
                 </Button>
               </Tooltip>
               <Tooltip title="Tải file danh sách đã upload">
-                <Button disabled={!(viewItem.status === 'info_uploaded' || viewItem.status === 'quoted' || viewItem.status === 'awaiting_payment' || viewItem.status === 'paid' || viewItem.status === 'confirmed')} icon={<DownloadOutlined />} onClick={() => window.open(`${API_URL}/group-bookings/${viewItem._id}/members.xlsx`, '_blank')}>Danh sách</Button>
+                <Button
+                  disabled={
+                    !(
+                      viewItem.status === 'info_uploaded' ||
+                      viewItem.status === 'quoted' ||
+                      viewItem.status === 'awaiting_payment' ||
+                      viewItem.status === 'deposit_paid' ||
+                      viewItem.status === 'paid' ||
+                      viewItem.status === 'confirmed'
+                    )
+                  }
+                  icon={<DownloadOutlined />}
+                  onClick={() => window.open(`${API_URL}/group-bookings/${viewItem._id}/members.xlsx`, '_blank')}
+                >
+                  Danh sách
+                </Button>
               </Tooltip>
               <Tooltip title="Đánh dấu đã thanh toán">
                 <Button disabled={!(viewItem.status === 'quoted' || viewItem.status === 'awaiting_payment')} icon={<DollarOutlined />} onClick={() => markPaid(viewItem._id)}>Đã TT</Button>
               </Tooltip>
+              <Tooltip title="Hoàn tất thanh toán toàn bộ">
+                <Button
+                  disabled={(() => {
+                    const { total, paid, remain } = computeFinancials(viewItem);
+                    return !(
+                      total > 0 &&
+                      remain > 0 &&
+                      (viewItem.status === 'deposit_paid' || viewItem.status === 'confirmed')
+                    );
+                  })()}
+                  icon={<CheckCircleOutlined />}
+                  onClick={() => markFullPayment(viewItem._id)}
+                >
+                  Thu đủ tiền
+                </Button>
+              </Tooltip>
               <Tooltip title="Xác nhận hoàn tất">
-                <Button disabled={viewItem.status !== 'paid'} type="dashed" icon={<CheckCircleOutlined />} onClick={() => confirm(viewItem._id)}>Xác nhận</Button>
+                <Button
+                  disabled={!(viewItem.status === 'paid' || viewItem.status === 'deposit_paid')}
+                  type="dashed"
+                  icon={<CheckCircleOutlined />}
+                  onClick={() => confirm(viewItem._id)}
+                >
+                  Xác nhận
+                </Button>
               </Tooltip>
               <Tooltip title="Hoàn tiền cho khách">
                 <Button danger disabled={viewItem.status !== 'refund_requested'} onClick={() => markRefunded(viewItem._id)}>
