@@ -118,7 +118,18 @@ const GroupBookingsPage: React.FC = () => {
   const [quoteTarget, setQuoteTarget] = useState<GroupBookingItem | null>(null);
   const [quoteAmount, setQuoteAmount] = useState<number | null>(null);
   const [paymentLink, setPaymentLink] = useState<string>("");
-  const [autoBreakdown, setAutoBreakdown] = useState<Array<{ roomId: string; roomNumber: string; typeName?: string; pricePerNight: number; nights: number; subtotal: number }>>([]);
+  const [autoBreakdown, setAutoBreakdown] = useState<Array<{ 
+    roomId: string; 
+    roomNumber: string; 
+    typeName?: string; 
+    pricePerNight: number; 
+    capacity?: number;
+    extraHourPrice?: number;
+    maxExtendHours?: number;
+    amenities?: string[];
+    nights: number; 
+    subtotal: number;
+  }>>([]);
 
   // Filters
   const [search, setSearch] = useState<string>("");
@@ -534,13 +545,37 @@ const GroupBookingsPage: React.FC = () => {
           {Array.isArray(autoBreakdown) && autoBreakdown.length > 0 && (
             <div style={{ background: '#fafafa', padding: 12, borderRadius: 6 }}>
               <b>Chi tiết tạm tính:</b>
-              <ul style={{ marginTop: 8, paddingLeft: 18 }}>
+              <div style={{ marginTop: 12 }}>
                 {autoBreakdown.map((b, idx) => (
-                  <li key={idx}>
-                    Phòng {b.roomNumber} ({b.typeName || ''}): {b.pricePerNight.toLocaleString()} × {b.nights} đêm = <b>{b.subtotal.toLocaleString()} VND</b>
-                  </li>
+                  <Card key={idx} size="small" style={{ marginBottom: 12, border: '1px solid #d9d9d9' }}>
+                    <div style={{ marginBottom: 8 }}>
+                      <strong>Phòng {b.roomNumber}</strong> - {b.typeName || 'N/A'}
+                    </div>
+                    <Descriptions size="small" column={2} bordered>
+                      <Descriptions.Item label="Số người tối đa">{b.capacity || '-'} người</Descriptions.Item>
+                      <Descriptions.Item label="Giá/đêm">{b.pricePerNight.toLocaleString()} VND</Descriptions.Item>
+                      <Descriptions.Item label="Số đêm">{b.nights} đêm</Descriptions.Item>
+                      <Descriptions.Item label="Tổng phụ"><strong>{b.subtotal.toLocaleString()} VND</strong></Descriptions.Item>
+                      {b.extraHourPrice && b.extraHourPrice > 0 && (
+                        <>
+                          <Descriptions.Item label="Giá giờ thêm">{b.extraHourPrice.toLocaleString()} VND/giờ</Descriptions.Item>
+                          <Descriptions.Item label="Số giờ tối đa">{b.maxExtendHours || '-'} giờ</Descriptions.Item>
+                        </>
+                      )}
+                    </Descriptions>
+                    {Array.isArray(b.amenities) && b.amenities.length > 0 && (
+                      <div style={{ marginTop: 8 }}>
+                        <strong>Tiện ích:</strong>
+                        <div style={{ marginTop: 4 }}>
+                          {b.amenities.map((a, aidx) => (
+                            <Tag key={aidx} style={{ marginBottom: 4 }}>{a}</Tag>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </Card>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
         </Form>

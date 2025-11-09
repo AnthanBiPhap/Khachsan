@@ -51,6 +51,10 @@ export interface GroupBooking {
       _id: string;
       name: string;
       pricePerNight: number;
+      capacity?: number;
+      extraHourPrice?: number;
+      maxExtendHours?: number;
+      amenities?: string[];
     };
   }>;
   members?: Array<{

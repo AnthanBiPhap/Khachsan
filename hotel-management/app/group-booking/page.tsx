@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { DatePicker, Input, InputNumber, Button, message, Card, Space, Upload, Tabs, Tag, Steps, Divider, Alert, Empty } from 'antd';
+import { DatePicker, Input, InputNumber, Button, message, Card, Space, Upload, Tabs, Tag, Steps, Divider, Alert, Empty, Descriptions } from 'antd';
 import dayjs from 'dayjs';
 import type { UploadProps } from 'antd';
 import { DownloadOutlined, UploadOutlined } from '@ant-design/icons';
@@ -472,17 +472,42 @@ export default function GroupBookingPage() {
                           {Array.isArray(groupDetail.allocatedRoomIds) && groupDetail.allocatedRoomIds.length > 0 && (
                             <div style={{ marginTop: 12 }}>
                               <strong>Phòng được giữ:</strong>
-                              <ul style={{ margin: '8px 0 0 18px' }}>
+                              <div style={{ marginTop: 8, display: 'flex', flexDirection: 'column', gap: 8 }}>
                                 {groupDetail.allocatedRoomIds.map((room) => (
-                                  <li key={room._id}>
-                                    Phòng {room.roomNumber}
-                                    {room.typeId?.name ? ` · ${room.typeId.name}` : ''}
-                                    {room.typeId?.pricePerNight
-                                      ? ` · ${formatCurrency(room.typeId.pricePerNight)} / đêm`
-                                      : ''}
-                                  </li>
+                                  <Card key={room._id} size="small" style={{ border: '1px solid #d9d9d9' }}>
+                                    <div style={{ marginBottom: 8 }}>
+                                      <strong>Phòng {room.roomNumber}</strong>
+                                      {room.typeId?.name ? ` - ${room.typeId.name}` : ''}
+                                    </div>
+                                    <Descriptions size="small" column={2} bordered>
+                                      {room.typeId?.capacity && (
+                                        <Descriptions.Item label="Số người tối đa">{room.typeId.capacity} người</Descriptions.Item>
+                                      )}
+                                      {room.typeId?.pricePerNight && (
+                                        <Descriptions.Item label="Giá/đêm">{formatCurrency(room.typeId.pricePerNight)}</Descriptions.Item>
+                                      )}
+                                      {room.typeId?.extraHourPrice && room.typeId.extraHourPrice > 0 && (
+                                        <>
+                                          <Descriptions.Item label="Giá giờ thêm">{formatCurrency(room.typeId.extraHourPrice)}/giờ</Descriptions.Item>
+                                          {room.typeId?.maxExtendHours && (
+                                            <Descriptions.Item label="Số giờ tối đa">{room.typeId.maxExtendHours} giờ</Descriptions.Item>
+                                          )}
+                                        </>
+                                      )}
+                                    </Descriptions>
+                                    {Array.isArray(room.typeId?.amenities) && room.typeId.amenities.length > 0 && (
+                                      <div style={{ marginTop: 8 }}>
+                                        <strong>Tiện ích:</strong>
+                                        <div style={{ marginTop: 4 }}>
+                                          {room.typeId.amenities.map((a, aidx) => (
+                                            <Tag key={aidx} style={{ marginBottom: 4 }}>{a}</Tag>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </Card>
                                 ))}
-                              </ul>
+                              </div>
                             </div>
                           )}
                           <div style={{ marginTop: 12, fontSize: 13, color: '#1d4ed8' }}>

@@ -37,7 +37,7 @@ const create = async (payload: CreateGroupBookingPayload) => {
 
 const getById = async (id: string) => {
   const gb = await GroupBooking.findById(id)
-    .populate({ path: "allocatedRoomIds", select: "roomNumber typeId", populate: { path: "typeId", select: "pricePerNight name" } })
+    .populate({ path: "allocatedRoomIds", select: "roomNumber typeId", populate: { path: "typeId", select: "pricePerNight name capacity extraHourPrice maxExtendHours amenities" } })
     .populate("requesterId", "fullName email phoneNumber");
   if (!gb) throw createError(404, "Group booking not found");
   return gb;
@@ -525,10 +525,25 @@ export const computeAutoQuote = async (id: string) => {
   const nights = Math.max(1, Math.ceil(ms / (1000 * 60 * 60 * 24)));
 
   let total = 0;
-  const breakdown: Array<{ roomId: string; roomNumber: string; typeName?: string; pricePerNight: number; nights: number; subtotal: number }> = [];
+  const breakdown: Array<{ 
+    roomId: string; 
+    roomNumber: string; 
+    typeName?: string; 
+    pricePerNight: number; 
+    capacity?: number;
+    extraHourPrice?: number;
+    maxExtendHours?: number;
+    amenities?: string[];
+    nights: number; 
+    subtotal: number;
+  }> = [];
   for (const room of gb.allocatedRoomIds) {
     const pricePerNight = Number((room as any)?.typeId?.pricePerNight || 0);
     const typeName = (room as any)?.typeId?.name;
+    const capacity = Number((room as any)?.typeId?.capacity || 0);
+    const extraHourPrice = Number((room as any)?.typeId?.extraHourPrice || 0);
+    const maxExtendHours = Number((room as any)?.typeId?.maxExtendHours || 0);
+    const amenities = Array.isArray((room as any)?.typeId?.amenities) ? (room as any).typeId.amenities : [];
     const subtotal = pricePerNight * nights;
     total += subtotal;
     breakdown.push({
@@ -536,6 +551,10 @@ export const computeAutoQuote = async (id: string) => {
       roomNumber: (room as any)?.roomNumber || '',
       typeName,
       pricePerNight,
+      capacity,
+      extraHourPrice,
+      maxExtendHours,
+      amenities,
       nights,
       subtotal,
     });
