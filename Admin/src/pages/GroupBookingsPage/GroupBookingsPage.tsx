@@ -48,6 +48,7 @@ interface GroupMember {
   phoneNumber?: string;
   email?: string;
   isLeader?: boolean;
+  roomNumber?: string;
 }
 
 interface GroupBookingItem {
@@ -114,6 +115,7 @@ const GroupBookingsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<GroupBookingItem[]>([]);
   const [viewItem, setViewItem] = useState<GroupBookingItem | null>(null);
+  const [membersDetailOpen, setMembersDetailOpen] = useState<boolean>(false);
   const [quoteOpen, setQuoteOpen] = useState<boolean>(false);
   const [quoteTarget, setQuoteTarget] = useState<GroupBookingItem | null>(null);
   const [quoteAmount, setQuoteAmount] = useState<number | null>(null);
@@ -392,7 +394,11 @@ const GroupBookingsPage: React.FC = () => {
               {Array.isArray(r.members) && r.members.length > 0 ? (
                 <ul style={{ paddingLeft: 18, marginTop: 8 }}>
                   {r.members.map((m, idx) => (
-                    <li key={idx}>{m.fullName} {m.isLeader ? '(Trưởng đoàn)' : ''} {m.phoneNumber ? ` - ${m.phoneNumber}` : ''}</li>
+                    <li key={idx}>
+                      {m.fullName} {m.isLeader ? '(Trưởng đoàn)' : ''} 
+                      {m.roomNumber ? <Tag color="blue" style={{ marginLeft: 8 }}>Phòng {m.roomNumber}</Tag> : ''}
+                      {m.phoneNumber ? ` - ${m.phoneNumber}` : ''}
+                    </li>
                   ))}
                 </ul>
               ) : (
@@ -437,13 +443,11 @@ const GroupBookingsPage: React.FC = () => {
                   ? `Đã hoàn ${viewItem.refundAmount?.toLocaleString() || viewItem.quoteAmount?.toLocaleString() || 0} VND`
                   : '-'}
             </Descriptions.Item>
-            <Descriptions.Item label="Danh sách đoàn">
+            <Descriptions.Item label="Chi tiết đoàn">
               {Array.isArray(viewItem.members) && viewItem.members.length > 0 ? (
-                <ul style={{ paddingLeft: 18 }}>
-                  {viewItem.members.map((m, idx) => (
-                    <li key={idx}>{m.fullName} {m.isLeader ? '(Trưởng đoàn)' : ''} {m.phoneNumber ? ` - ${m.phoneNumber}` : ''}</li>
-                  ))}
-                </ul>
+                <Button type="link" onClick={() => setMembersDetailOpen(true)}>
+                  Xem chi tiết ({viewItem.members.length} thành viên)
+                </Button>
               ) : 'Chưa có'}
             </Descriptions.Item>
           </Descriptions>
@@ -461,7 +465,14 @@ const GroupBookingsPage: React.FC = () => {
                 <Button icon={<FileExcelOutlined />} onClick={() => openTemplate(viewItem._id)}>Mẫu</Button>
               </Tooltip>
               <Tooltip title="Gửi báo giá / Link thanh toán">
-                <Button disabled={!(viewItem.status === 'approved' || viewItem.status === 'info_uploaded' || viewItem.status === 'quoted' || viewItem.status === 'awaiting_payment')} onClick={() => openQuote(viewItem)}>
+                <Button 
+                  disabled={
+                    !(viewItem.status === 'approved' || viewItem.status === 'info_uploaded') ||
+                    (viewItem.quoteAmount != null && viewItem.quoteAmount > 0) ||
+                    ['quoted', 'awaiting_payment', 'deposit_paid', 'paid', 'confirmed'].includes(viewItem.status)
+                  } 
+                  onClick={() => openQuote(viewItem)}
+                >
                   Báo giá
                 </Button>
               </Tooltip>
@@ -579,6 +590,97 @@ const GroupBookingsPage: React.FC = () => {
             </div>
           )}
         </Form>
+      </Modal>
+
+      <Modal 
+        open={membersDetailOpen} 
+        onCancel={() => setMembersDetailOpen(false)} 
+        footer={null} 
+        title={`Chi tiết đoàn - ${viewItem?._id || ''}`}
+        width={1400}
+      >
+        {viewItem && Array.isArray(viewItem.members) && viewItem.members.length > 0 ? (
+          <div>
+            <div style={{ marginBottom: 16 }}>
+              <Tag color="blue">Tổng số thành viên: {viewItem.members.length}</Tag>
+              <Tag color="orange" style={{ marginLeft: 8 }}>
+                Trưởng đoàn: {viewItem.members.filter(m => m.isLeader).length}
+              </Tag>
+            </div>
+            <Table
+              size="middle"
+              dataSource={viewItem.members.map((m, idx) => ({ ...m, key: idx }))}
+              columns={[
+                { 
+                  title: 'STT', 
+                  dataIndex: 'key', 
+                  width: 60, 
+                  align: 'center',
+                  fixed: 'left',
+                  render: (v) => v + 1 
+                },
+                { 
+                  title: 'Họ tên', 
+                  dataIndex: 'fullName',
+                  width: 200,
+                  fixed: 'left',
+                  render: (text, record) => (
+                    <span>
+                      <strong>{text}</strong>
+                      {record.isLeader && (
+                        <Tag color="orange" style={{ marginLeft: 8 }}>Trưởng đoàn</Tag>
+                      )}
+                    </span>
+                  )
+                },
+                { 
+                  title: 'CMND/CCCD', 
+                  dataIndex: 'idNumber', 
+                  width: 150,
+                  render: (v) => v || '-'
+                },
+                { 
+                  title: 'Ngày sinh', 
+                  dataIndex: 'dateOfBirth', 
+                  width: 130, 
+                  render: (v) => v ? new Date(v).toLocaleDateString('vi-VN') : '-' 
+                },
+                { 
+                  title: 'Điện thoại', 
+                  dataIndex: 'phoneNumber', 
+                  width: 150,
+                  render: (v) => v || '-'
+                },
+                { 
+                  title: 'Email', 
+                  dataIndex: 'email', 
+                  width: 250,
+                  render: (v) => v || '-'
+                },
+                { 
+                  title: 'Phòng', 
+                  dataIndex: 'roomNumber', 
+                  width: 120,
+                  align: 'center',
+                  render: (v) => v ? (
+                    <Tag color="blue" style={{ fontSize: '13px', padding: '4px 12px' }}>
+                      Phòng {v}
+                    </Tag>
+                  ) : (
+                    <Tag>-</Tag>
+                  )
+                },
+              ]}
+              pagination={false}
+              scroll={{ x: 'max-content', y: 600 }}
+              bordered
+            />
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <Tag>Chưa có thông tin thành viên</Tag>
+          </div>
+        )}
       </Modal>
     </>
   );

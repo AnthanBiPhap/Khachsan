@@ -8,6 +8,7 @@ const groupBookingMemberSchema = new Schema(
     phoneNumber: { type: String, required: false },
     email: { type: String, required: false },
     isLeader: { type: Boolean, default: false },
+    roomNumber: { type: String, required: false },
   },
   { _id: false }
 );

@@ -37,7 +37,7 @@ const getAll = async (query: any) => {
       populate: {
         path: "allocatedRoomIds",
         select: "roomNumber typeId",
-        populate: { path: "typeId", select: "name pricePerNight" }
+        populate: { path: "typeId", select: "name pricePerNight capacity extraHourPrice maxExtendHours amenities" }
       }
     })
     .populate("customerId", "fullName email phoneNumber")
@@ -66,7 +66,7 @@ const getById = async (id: string) => {
       populate: {
         path: "allocatedRoomIds",
         select: "roomNumber typeId",
-        populate: { path: "typeId", select: "name pricePerNight" }
+        populate: { path: "typeId", select: "name pricePerNight capacity extraHourPrice maxExtendHours amenities" }
       }
     })
     .populate("customerId", "fullName email phoneNumber");
@@ -97,7 +97,7 @@ const create = async (payload: any) => {
       populate: {
         path: "allocatedRoomIds",
         select: "roomNumber typeId",
-        populate: { path: "typeId", select: "name pricePerNight" }
+        populate: { path: "typeId", select: "name pricePerNight capacity extraHourPrice maxExtendHours amenities" }
       }
     });
   }
@@ -126,7 +126,7 @@ const updateById = async (id: string, payload: any) => {
       populate: {
         path: "allocatedRoomIds",
         select: "roomNumber typeId",
-        populate: { path: "typeId", select: "name pricePerNight" }
+        populate: { path: "typeId", select: "name pricePerNight capacity extraHourPrice maxExtendHours amenities" }
       }
     });
   }
@@ -153,7 +153,7 @@ const printInvoice = async (invoiceId: string) => {
       populate: {
         path: "allocatedRoomIds",
         select: "roomNumber typeId",
-        populate: { path: "typeId", select: "name pricePerNight" }
+        populate: { path: "typeId", select: "name pricePerNight capacity extraHourPrice maxExtendHours amenities" }
       }
     })
     .populate("customerId", "fullName email phoneNumber");
@@ -207,16 +207,61 @@ const printInvoice = async (invoiceId: string) => {
     doc.fontSize(14).text("THÔNG TIN ĐẶT PHÒNG", { underline: true });
     doc.fontSize(12).text(`Loại: Đặt theo đoàn`);
     
+    // Tính số đêm
+    let nights = 0;
+    if (groupBooking.checkIn && groupBooking.checkOut) {
+      nights = Math.ceil((new Date(groupBooking.checkOut).getTime() - new Date(groupBooking.checkIn).getTime()) / (1000 * 60 * 60 * 24));
+      nights = Math.max(1, nights);
+    }
+    
     // Hiển thị danh sách phòng
     if (groupBooking.allocatedRoomIds && groupBooking.allocatedRoomIds.length > 0) {
       doc.text(`Phòng: ${groupBooking.allocatedRoomIds.map((r: any) => r.roomNumber || "-").join(", ")}`);
+      doc.moveDown(0.5);
+      doc.fontSize(12).text("CHI TIẾT PHÒNG:", { underline: true });
       doc.moveDown(0.3);
-      doc.fontSize(11).text("Chi tiết phòng:");
       groupBooking.allocatedRoomIds.forEach((room: any, idx: number) => {
         const roomNum = room.roomNumber || "-";
         const typeName = room.typeId?.name || "-";
         const pricePerNight = room.typeId?.pricePerNight || 0;
-        doc.text(`  ${idx + 1}. Phòng ${roomNum} (${typeName}): ${new Intl.NumberFormat("vi-VN").format(pricePerNight)} VND/đêm`);
+        const capacity = room.typeId?.capacity || 0;
+        const extraHourPrice = room.typeId?.extraHourPrice || 0;
+        const maxExtendHours = room.typeId?.maxExtendHours || 0;
+        const amenities = room.typeId?.amenities || [];
+        const subtotal = pricePerNight * nights;
+        
+        doc.fontSize(11).text(`${idx + 1}. Phòng ${roomNum} - ${typeName}`, { underline: true });
+        doc.fontSize(10);
+        
+        // Dòng 1: Số người tối đa và Giá/đêm
+        const line1 = [];
+        line1.push(`Số người tối đa: ${capacity > 0 ? capacity : '-'} người`);
+        line1.push(`Giá/đêm: ${new Intl.NumberFormat("vi-VN").format(pricePerNight)} VND`);
+        doc.text(`   ${line1.join(" | ")}`);
+        
+        // Dòng 2: Số đêm và Tổng phụ
+        const line2 = [];
+        line2.push(`Số đêm: ${nights} đêm`);
+        line2.push(`Tổng phụ: ${new Intl.NumberFormat("vi-VN").format(subtotal)} VND`);
+        doc.text(`   ${line2.join(" | ")}`);
+        
+        // Dòng 3: Giá giờ thêm và Số giờ tối đa (nếu có)
+        if (extraHourPrice > 0) {
+          const line3 = [];
+          line3.push(`Giá giờ thêm: ${new Intl.NumberFormat("vi-VN").format(extraHourPrice)} VND/giờ`);
+          if (maxExtendHours > 0) {
+            line3.push(`Số giờ tối đa: ${maxExtendHours} giờ`);
+          }
+          doc.text(`   ${line3.join(" | ")}`);
+        }
+        
+        // Tiện ích
+        if (amenities && amenities.length > 0) {
+          doc.text(`   Tiện ích:`);
+          doc.text(`   ${amenities.join(", ")}`);
+        }
+        
+        doc.moveDown(0.4);
       });
     } else {
       doc.text(`Phòng: Chưa phân bổ`);
@@ -251,7 +296,8 @@ const printInvoice = async (invoiceId: string) => {
       doc.fontSize(11);
       groupBooking.members.forEach((member: any, idx: number) => {
         const isLeader = member.isLeader ? " (Trưởng đoàn)" : "";
-        doc.text(`${idx + 1}. ${member.fullName || "-"}${isLeader}`);
+        const roomNumber = member.roomNumber ? ` - Phòng ${member.roomNumber}` : "";
+        doc.text(`${idx + 1}. ${member.fullName || "-"}${isLeader}${roomNumber}`);
         if (member.idNumber) doc.text(`   CMND/CCCD: ${member.idNumber}`);
         if (member.phoneNumber) doc.text(`   Điện thoại: ${member.phoneNumber}`);
         if (member.email) doc.text(`   Email: ${member.email}`);

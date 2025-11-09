@@ -64,6 +64,7 @@ export interface GroupBooking {
     phoneNumber?: string;
     email?: string;
     isLeader?: boolean;
+    roomNumber?: string;
   }>;
   quoteAmount?: number;
   paymentLink?: string;

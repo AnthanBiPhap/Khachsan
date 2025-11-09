@@ -174,12 +174,52 @@ const approve = async (id: string) => {
 };
 
 const uploadMembers = async (id: string, members: any[]) => {
-  const gb = await GroupBooking.findById(id);
+  const gb = await GroupBooking.findById(id)
+    .populate("allocatedRoomIds", "roomNumber");
   if (!gb) throw createError(404, "Group booking not found");
-  if (gb.status !== "approved")
-    throw createError(400, "Members can only be uploaded after approval");
+  
+  // Cho phép upload khi đã có báo giá (quoted hoặc awaiting_payment)
+  if (!["quoted", "awaiting_payment"].includes(gb.status)) {
+    throw createError(400, "Chỉ có thể upload danh sách sau khi admin đã báo giá");
+  }
+  
+  if (!gb.allocatedRoomIds || gb.allocatedRoomIds.length === 0) {
+    throw createError(400, "Chưa có phòng được phân bổ, không thể upload danh sách");
+  }
 
-  gb.members = Array.isArray(members) ? members : [];
+  // Lấy danh sách số phòng hợp lệ
+  const validRoomNumbers = (gb.allocatedRoomIds as any[])
+    .map((r: any) => String(r.roomNumber || "").trim())
+    .filter(Boolean);
+  
+  if (validRoomNumbers.length === 0) {
+    throw createError(400, "Không có số phòng hợp lệ");
+  }
+
+  // Validate và xử lý members
+  const processedMembers = (Array.isArray(members) ? members : []).map((m: any) => {
+    const roomNumber = String(m.roomNumber || "").trim();
+    
+    // Validate roomNumber nếu có
+    if (roomNumber && !validRoomNumbers.includes(roomNumber)) {
+      throw createError(
+        400,
+        `Số phòng "${roomNumber}" không hợp lệ. Danh sách phòng hợp lệ: ${validRoomNumbers.join(", ")}`
+      );
+    }
+    
+    return {
+      fullName: m.fullName || "",
+      idNumber: m.idNumber || "",
+      dateOfBirth: m.dateOfBirth ? new Date(m.dateOfBirth) : undefined,
+      phoneNumber: m.phoneNumber || "",
+      email: m.email || "",
+      isLeader: Boolean(m.isLeader),
+      roomNumber: roomNumber || undefined,
+    };
+  });
+
+  gb.members = processedMembers;
   gb.status = "info_uploaded";
   await gb.save();
   return gb;
@@ -192,6 +232,7 @@ const quote = async (
 ) => {
   const gb = await GroupBooking.findById(id);
   if (!gb) throw createError(404, "Group booking not found");
+  // Cho phép báo giá sau khi approved hoặc info_uploaded
   if (gb.status !== "info_uploaded" && gb.status !== "approved")
     throw createError(400, "Can only quote after info uploaded or approval");
 
@@ -209,7 +250,7 @@ const markPaid = async (
   const gb = await GroupBooking.findById(id);
   if (!gb) throw createError(404, "Group booking not found");
   if (!gb.quoteAmount) throw createError(400, "Quote not set");
-  if (gb.status !== "awaiting_payment" && gb.status !== "quoted")
+  if (!["awaiting_payment", "quoted", "info_uploaded"].includes(gb.status))
     throw createError(400, "Invalid state to mark paid");
 
   const depositAmount = calculateDepositAmount(gb.quoteAmount);

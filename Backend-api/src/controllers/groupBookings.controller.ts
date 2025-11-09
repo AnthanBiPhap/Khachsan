@@ -23,11 +23,31 @@ const approve = async (req: Request, res: Response) => {
 };
 
 const template = async (req: Request, res: Response) => {
-  // Build a simple Excel template
+  const id = req.params.id;
+  const gb = await groupBookingsService.getById(id);
+  
+  // Lấy danh sách số phòng đã được phân bổ
+  const allocatedRooms = (gb as any).allocatedRoomIds || [];
+  const roomNumbers = allocatedRooms.map((r: any) => r.roomNumber || String(r)).filter(Boolean);
+  const roomNumbersStr = roomNumbers.length > 0 ? roomNumbers.join(", ") : "Chưa có phòng";
+  
+  // Build Excel template với cột roomNumber
   const headers = [
-    ["fullName", "idNumber", "dateOfBirth(YYYY-MM-DD)", "phoneNumber", "email", "isLeader(true/false)"],
+    ["fullName", "idNumber", "dateOfBirth(YYYY-MM-DD)", "phoneNumber", "email", "isLeader(true/false)", "roomNumber"],
   ];
-  const ws = XLSX.utils.aoa_to_sheet(headers);
+  
+  // Thêm dòng hướng dẫn về danh sách phòng
+  const instructionRow = [
+    "",
+    "",
+    "",
+    "",
+    "",
+    "",
+    `Danh sách phòng: ${roomNumbersStr}`,
+  ];
+  
+  const ws = XLSX.utils.aoa_to_sheet([headers[0], instructionRow]);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, "Members");
   const buf = XLSX.write(wb, { bookType: "xlsx", type: "buffer" });
@@ -56,6 +76,7 @@ const upload = async (req: Request, res: Response) => {
     phoneNumber: row.phoneNumber || row["phoneNumber"],
     email: row.email || row["email"],
     isLeader: String(row.isLeader || row["isLeader(true/false)"]).toLowerCase() === "true",
+    roomNumber: String(row.roomNumber || row["roomNumber"] || "").trim(),
   }));
 
   const gb = await groupBookingsService.uploadMembers(req.params.id, members);
@@ -129,7 +150,7 @@ export const exportMembers = async (req: Request, res: Response) => {
   const id = req.params.id;
   const gb = await groupBookingsService.getById(id);
   const rows = [
-    ["fullName", "idNumber", "dateOfBirth(YYYY-MM-DD)", "phoneNumber", "email", "isLeader(true/false)"],
+    ["fullName", "idNumber", "dateOfBirth(YYYY-MM-DD)", "phoneNumber", "email", "isLeader(true/false)", "roomNumber"],
     ...((gb as any).members || []).map((m: any) => [
       m.fullName || "",
       m.idNumber || "",
@@ -137,6 +158,7 @@ export const exportMembers = async (req: Request, res: Response) => {
       m.phoneNumber || "",
       m.email || "",
       m.isLeader ? "true" : "false",
+      m.roomNumber || "",
     ]),
   ];
   const ws = XLSX.utils.aoa_to_sheet(rows);

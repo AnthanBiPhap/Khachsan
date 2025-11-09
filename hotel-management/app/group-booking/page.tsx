@@ -414,9 +414,10 @@ export default function GroupBookingPage() {
               children: (
                 <Space direction="vertical" size={12} style={{ width: 720, maxWidth: '100%' }}>
                   <Alert
-                    type="warning"
+                    type="info"
                     showIcon
-                    message="Sau khi được duyệt, vui lòng tải mẫu và upload danh sách đoàn"
+                    message="Sau khi admin báo giá, vui lòng tải mẫu Excel, điền thông tin và số phòng cho từng người, sau đó upload lên"
+                    description="Bạn chỉ có thể tải mẫu và upload sau khi admin đã báo giá cho đặt đoàn của bạn."
                   />
                   <Input size="large" placeholder="Nhập mã yêu cầu (ID)" value={requestId} onChange={(e) => setRequestId(e.target.value)} />
                   {requestId ? (
@@ -566,14 +567,48 @@ export default function GroupBookingPage() {
                     </div>
                   ) : null}
                   <Space>
-                    <Button icon={<DownloadOutlined />} onClick={handleDownloadTemplate}>Tải file Excel mẫu</Button>
-                    <Upload {...uploadProps} onChange={(info) => handleUpload(info.fileList[0]?.originFileObj)}>
-                      <Button icon={<UploadOutlined />}>Upload danh sách đoàn</Button>
+                    <Button 
+                      icon={<DownloadOutlined />} 
+                      onClick={handleDownloadTemplate}
+                      disabled={!canProceedPayment}
+                      title={!canProceedPayment ? "Chỉ có thể tải mẫu sau khi admin đã báo giá" : ""}
+                    >
+                      Tải file Excel mẫu
+                    </Button>
+                    <Upload 
+                      {...uploadProps} 
+                      onChange={(info) => handleUpload(info.fileList[0]?.originFileObj)}
+                      disabled={!canProceedPayment}
+                    >
+                      <Button 
+                        icon={<UploadOutlined />}
+                        disabled={!canProceedPayment}
+                        title={!canProceedPayment ? "Chỉ có thể upload sau khi admin đã báo giá" : ""}
+                      >
+                        Upload danh sách đoàn
+                      </Button>
                     </Upload>
                   </Space>
-                  <div>
-                    Sau khi upload, admin sẽ gửi báo giá hoặc link thanh toán. Vui lòng theo dõi email/điện thoại.
-                  </div>
+                  {!canProceedPayment && (
+                    <Alert
+                      type="warning"
+                      showIcon
+                      message="Vui lòng chờ admin báo giá trước khi tải mẫu và upload danh sách"
+                      style={{ marginTop: 8 }}
+                    />
+                  )}
+                  {canProceedPayment && (
+                    <div style={{ marginTop: 8, padding: 12, background: '#f0f9ff', borderRadius: 6, border: '1px solid #bae6fd' }}>
+                      <div style={{ fontWeight: 600, marginBottom: 4 }}>Hướng dẫn:</div>
+                      <ul style={{ margin: 0, paddingLeft: 20 }}>
+                        <li>Tải file Excel mẫu (đã có danh sách phòng được phân bổ)</li>
+                        <li>Điền đầy đủ thông tin cho từng thành viên</li>
+                        <li>Nhập số phòng cho từng người (ví dụ: Phòng 201, Phòng 103, ...)</li>
+                        <li>Upload file đã điền lên hệ thống</li>
+                        <li>Sau đó tiến hành thanh toán</li>
+                      </ul>
+                    </div>
+                  )}
                 </Space>
               ),
             },
