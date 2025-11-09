@@ -208,10 +208,37 @@ const uploadMembers = async (id: string, members: any[]) => {
       );
     }
     
+    // Parse dateOfBirth từ string YYYY-MM-DD thành Date object với local time
+    let dateOfBirth: Date | undefined = undefined;
+    if (m.dateOfBirth) {
+      if (typeof m.dateOfBirth === 'string') {
+        // Nếu là string format YYYY-MM-DD, parse thành Date với local time
+        const ymdMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(m.dateOfBirth);
+        if (ymdMatch) {
+          const year = parseInt(ymdMatch[1], 10);
+          const month = parseInt(ymdMatch[2], 10) - 1; // month is 0-indexed
+          const day = parseInt(ymdMatch[3], 10);
+          dateOfBirth = new Date(year, month, day);
+          // Validate date
+          if (isNaN(dateOfBirth.getTime())) {
+            dateOfBirth = undefined;
+          }
+        } else {
+          // Thử parse với Date constructor
+          const parsed = new Date(m.dateOfBirth);
+          if (!isNaN(parsed.getTime())) {
+            dateOfBirth = parsed;
+          }
+        }
+      } else if (m.dateOfBirth instanceof Date) {
+        dateOfBirth = m.dateOfBirth;
+      }
+    }
+    
     return {
       fullName: m.fullName || "",
       idNumber: m.idNumber || "",
-      dateOfBirth: m.dateOfBirth ? new Date(m.dateOfBirth) : undefined,
+      dateOfBirth: dateOfBirth,
       phoneNumber: m.phoneNumber || "",
       email: m.email || "",
       isLeader: Boolean(m.isLeader),
