@@ -197,7 +197,24 @@ const uploadMembers = async (id: string, members: any[]) => {
   }
 
   // Validate và xử lý members
-  const processedMembers = (Array.isArray(members) ? members : []).map((m: any) => {
+  // Lọc bỏ các dòng trống (không có fullName) trước khi xử lý
+  const validMembers = (Array.isArray(members) ? members : []).filter((m: any) => {
+    const fullName = String(m.fullName || "").trim();
+    return fullName.length > 0;
+  });
+  
+  // Kiểm tra số lượng người phải khớp với peopleCount
+  const expectedPeopleCount = gb.peopleCount || 0;
+  const actualPeopleCount = validMembers.length;
+  
+  if (actualPeopleCount !== expectedPeopleCount) {
+    throw createError(
+      400,
+      `Số lượng người trong file không khớp với yêu cầu. Yêu cầu: ${expectedPeopleCount} người, nhưng file có: ${actualPeopleCount} người. Vui lòng kiểm tra lại và đảm bảo file có đúng ${expectedPeopleCount} người.`
+    );
+  }
+  
+  const processedMembers = validMembers.map((m: any) => {
     const roomNumber = String(m.roomNumber || "").trim();
     
     // Validate roomNumber nếu có

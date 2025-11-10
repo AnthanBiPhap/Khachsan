@@ -417,7 +417,13 @@ export default function GroupBookingPage() {
                     type="info"
                     showIcon
                     message="Sau khi admin báo giá, vui lòng tải mẫu Excel, điền thông tin và số phòng cho từng người, sau đó upload lên"
-                    description="Bạn chỉ có thể tải mẫu và upload sau khi admin đã báo giá cho đặt đoàn của bạn."
+                    description={
+                      groupDetail ? (
+                        <>Bạn chỉ có thể tải mẫu và upload sau khi admin đã báo giá. <strong>Lưu ý: File Excel phải có đúng {groupDetail.peopleCount} người.</strong></>
+                      ) : (
+                        "Bạn chỉ có thể tải mẫu và upload sau khi admin đã báo giá cho đặt đoàn của bạn."
+                      )
+                    }
                   />
                   <Input size="large" placeholder="Nhập mã yêu cầu (ID)" value={requestId} onChange={(e) => setRequestId(e.target.value)} />
                   {requestId ? (
@@ -597,16 +603,23 @@ export default function GroupBookingPage() {
                       style={{ marginTop: 8 }}
                     />
                   )}
-                  {canProceedPayment && (
+                  {canProceedPayment && groupDetail && (
                     <div style={{ marginTop: 8, padding: 12, background: '#f0f9ff', borderRadius: 6, border: '1px solid #bae6fd' }}>
                       <div style={{ fontWeight: 600, marginBottom: 4 }}>Hướng dẫn:</div>
                       <ul style={{ margin: 0, paddingLeft: 20 }}>
                         <li>Tải file Excel mẫu (đã có danh sách phòng được phân bổ)</li>
-                        <li>Điền đầy đủ thông tin cho từng thành viên</li>
+                        <li>
+                          <strong style={{ color: '#dc2626' }}>Điền đầy đủ thông tin cho đúng {groupDetail.peopleCount} người</strong> (yêu cầu: {groupDetail.peopleCount} người)
+                        </li>
                         <li>Nhập số phòng cho từng người (ví dụ: Phòng 201, Phòng 103, ...)</li>
-                        <li>Upload file đã điền lên hệ thống</li>
+                        <li>Upload file đã điền lên hệ thống (file phải có đúng {groupDetail.peopleCount} dòng dữ liệu)</li>
                         <li>Sau đó tiến hành thanh toán</li>
                       </ul>
+                      <div style={{ marginTop: 8, padding: 8, background: '#fef2f2', borderRadius: 4, border: '1px solid #fecaca' }}>
+                        <div style={{ fontSize: 12, color: '#991b1b' }}>
+                          <strong>Lưu ý:</strong> File Excel phải có đúng {groupDetail.peopleCount} người. Nếu file có nhiều hơn hoặc ít hơn {groupDetail.peopleCount} người, hệ thống sẽ từ chối upload.
+                        </div>
+                      </div>
                     </div>
                   )}
                 </Space>
