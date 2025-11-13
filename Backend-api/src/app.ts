@@ -13,6 +13,7 @@ import reviewRoute from "./router/v1/reviews.route";
 import bookingStatusRoute from "./router/v1/bookingStatus.route";
 import paymentRoute from "./router/v1/payments.route";
 import groupBookingRoute from "./router/v1/groupBookings.route";
+import notificationRoute from "./router/v1/notifications.route";
 import cors from "cors";
 
 const app = express();
@@ -34,6 +35,7 @@ app.use("/api/v1", reviewRoute);
 app.use("/api/v1", bookingStatusRoute);
 app.use("/api/v1", paymentRoute);
 app.use("/api/v1", groupBookingRoute);
+app.use("/api/v1", notificationRoute);
 app.use("/api/v1", streamRoute);
 // Hello World
 app.get("/", (req: Request, res: Response) => {

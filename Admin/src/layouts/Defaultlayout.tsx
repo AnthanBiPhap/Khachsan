@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   PieChartOutlined,
   TeamOutlined,
@@ -15,6 +15,7 @@ import {
   UserOutlined,
   LogoutOutlined,
   DeploymentUnitOutlined,
+  BellOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Layout, Menu, theme, Button, Space, Badge } from 'antd';
@@ -22,6 +23,8 @@ import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import BookingNotification from '../components/Notification/BookingNotification';
+import NotificationCenter from '../components/Notification/NotificationCenter';
+import { fetchUnreadCount } from '../services/notifications.service';
 
 const { Header, Content, Footer, Sider } = Layout;
 
@@ -91,6 +94,34 @@ const Defaultlayout: React.FC = () => {
   // WebSocket connection và notifications
   const { isConnected, notifications, clearNotifications } = useWebSocket();
   const [shownNotificationIds, setShownNotificationIds] = useState<Set<string>>(new Set());
+  const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Load unread count từ API
+  const loadUnreadCount = useCallback(async () => {
+    try {
+      const count = await fetchUnreadCount();
+      setUnreadCount(count);
+    } catch (error) {
+      console.error('Error loading unread count:', error);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (user && (user.role === 'admin' || user.role === 'staff')) {
+      loadUnreadCount();
+      // Refresh mỗi 30 giây
+      const interval = setInterval(loadUnreadCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [user, loadUnreadCount]);
+
+  // Refresh unread count khi có WebSocket notification mới
+  useEffect(() => {
+    if (notifications.length > 0) {
+      loadUnreadCount();
+    }
+  }, [notifications.length, loadUnreadCount]);
 
   const handleNotificationShown = useCallback((notificationId: string) => {
     setShownNotificationIds((prev) => {
@@ -106,6 +137,11 @@ const Defaultlayout: React.FC = () => {
       (notif) => !shownNotificationIds.has(`${notif.booking._id}-${notif.timestamp}`)
     );
   }, [notifications, shownNotificationIds]);
+
+  const handleNotificationCenterRefresh = useCallback(() => {
+    // Refresh unread count khi có thay đổi
+    loadUnreadCount();
+  }, [loadUnreadCount]);
 
   const handleMenuClick = (e: { key: string }) => {
     navigate(e.key);
@@ -176,12 +212,17 @@ const Defaultlayout: React.FC = () => {
               text={isConnected ? 'Đã kết nối' : 'Mất kết nối'}
               style={{ color: 'rgba(0, 0, 0, 0.88)' }}
             />
-            {/* Notification badge */}
-            {unshownNotifications.length > 0 && (
-              <Badge count={unshownNotifications.length} size="small">
-                <span style={{ color: 'rgba(0, 0, 0, 0.88)', marginRight: 8 }}>Thông báo</span>
-              </Badge>
-            )}
+            {/* Notification Center Button */}
+            <Badge count={unreadCount} size="small" offset={[-5, 5]}>
+              <Button
+                type="text"
+                icon={<BellOutlined />}
+                onClick={() => setNotificationCenterOpen(true)}
+                style={{ color: 'rgba(0, 0, 0, 0.88)' }}
+              >
+                Thông báo
+              </Button>
+            </Badge>
             <span style={{ color: 'rgba(0, 0, 0, 0.88)' }}>
               Xin chào, {user?.fullName}
             </span>
@@ -211,6 +252,16 @@ const Defaultlayout: React.FC = () => {
         <BookingNotification
           notifications={unshownNotifications}
           onNotificationShown={handleNotificationShown}
+        />
+        {/* Notification Center Drawer */}
+        <NotificationCenter
+          open={notificationCenterOpen}
+          onClose={() => setNotificationCenterOpen(false)}
+          onNotificationClick={(bookingId) => {
+            setNotificationCenterOpen(false);
+            navigate(`/bookings`);
+          }}
+          onRefresh={handleNotificationCenterRefresh}
         />
         <Footer style={{ textAlign: 'center', padding: '10px 50px' }}>
           Trang khách sạn của Miko Hotel {new Date().getFullYear()}

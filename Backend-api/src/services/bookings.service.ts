@@ -8,6 +8,7 @@ import User from "../models/users.model";
 import { calculateRoomPriceWithBirthdayDiscount } from "../helpers/pricing.helper";
 import Room from "../models/rooms.model";
 import socketService from "./socket.service";
+import notificationsService from "./notifications.service";
 
 // Lấy tất cả booking với filter + pagination
 const getAll = async (query: any) => {
@@ -259,8 +260,32 @@ const create = async (payload: any) => {
     await savedBooking.populate("customerId", "fullName email phoneNumber");
     await savedBooking.populate("roomId", "roomNumber typeId");
 
-    // Gửi WebSocket notification cho admin và staff
+    // Lưu notification vào database và gửi WebSocket notification cho admin và staff
     try {
+      const notificationMessage = `Có đặt phòng mới từ ${savedBooking.source === "online" ? "khách hàng online" : "khách walk-in"}`;
+      
+      // Lưu notification vào database
+      await notificationsService.create({
+        type: "new_booking",
+        title: "Đặt phòng mới",
+        message: notificationMessage,
+        bookingId: savedBooking._id,
+        userId: savedBooking.customerId || undefined,
+        bookingData: {
+          bookingId: savedBooking._id,
+          customerId: savedBooking.customerId,
+          roomId: savedBooking.roomId,
+          checkIn: savedBooking.checkIn,
+          checkOut: savedBooking.checkOut,
+          totalPrice: savedBooking.totalPrice,
+          paymentStatus: savedBooking.paymentStatus,
+          source: savedBooking.source,
+          guestCount: savedBooking.guestCount,
+          guests: savedBooking.guests,
+        },
+      });
+
+      // Gửi WebSocket notification
       const bookingNotification = {
         type: "new_booking",
         booking: {
@@ -275,7 +300,7 @@ const create = async (payload: any) => {
           guestCount: savedBooking.guestCount,
           guests: savedBooking.guests,
         },
-        message: `Có đặt phòng mới từ ${savedBooking.source === "online" ? "khách hàng online" : "khách walk-in"}`,
+        message: notificationMessage,
         timestamp: new Date().toISOString(),
       };
 
@@ -283,9 +308,9 @@ const create = async (payload: any) => {
       socketService.sendToRoom("role:admin", "new_booking", bookingNotification);
       socketService.sendToRoom("role:staff", "new_booking", bookingNotification);
       
-      console.log(`📢 Đã gửi WebSocket notification cho booking mới: ${savedBooking._id}`);
-    } catch (socketError) {
-      console.error("❌ Lỗi gửi WebSocket notification:", socketError);
+      console.log(`📢 Đã lưu và gửi WebSocket notification cho booking mới: ${savedBooking._id}`);
+    } catch (notificationError) {
+      console.error("❌ Lỗi lưu/gửi notification:", notificationError);
       // Không throw error để không làm crash API
     }
 
