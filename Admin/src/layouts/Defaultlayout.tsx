@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   PieChartOutlined,
   TeamOutlined,
@@ -17,9 +17,11 @@ import {
   DeploymentUnitOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import { Layout, Menu, theme, Button, Space } from 'antd';
+import { Layout, Menu, theme, Button, Space, Badge } from 'antd';
 import { useNavigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
+import { useWebSocket } from '../hooks/useWebSocket';
+import BookingNotification from '../components/Notification/BookingNotification';
 
 const { Header, Content, Footer, Sider } = Layout;
 
@@ -86,6 +88,25 @@ const Defaultlayout: React.FC = () => {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
+  // WebSocket connection và notifications
+  const { isConnected, notifications, clearNotifications } = useWebSocket();
+  const [shownNotificationIds, setShownNotificationIds] = useState<Set<string>>(new Set());
+
+  const handleNotificationShown = useCallback((notificationId: string) => {
+    setShownNotificationIds((prev) => {
+      const newSet = new Set(prev);
+      newSet.add(notificationId);
+      return newSet;
+    });
+  }, []);
+
+  // Lọc notifications chưa được hiển thị
+  const unshownNotifications = useMemo(() => {
+    return notifications.filter(
+      (notif) => !shownNotificationIds.has(`${notif.booking._id}-${notif.timestamp}`)
+    );
+  }, [notifications, shownNotificationIds]);
+
   const handleMenuClick = (e: { key: string }) => {
     navigate(e.key);
   };
@@ -145,11 +166,23 @@ const Defaultlayout: React.FC = () => {
       </Sider>
       <Layout>
         <Header style={{ padding: 0, background: colorBgContainer, paddingLeft: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <h2 style={{ color: 'white', margin: 0, lineHeight: '64px' }}>
+          <h2 style={{ color: 'rgba(0, 0, 0, 0.88)', margin: 0, lineHeight: '64px', fontWeight: 600 }}>
             {currentPageTitle}
           </h2>
           <Space style={{ paddingRight: 16 }}>
-            <span style={{ color: 'white' }}>
+            {/* WebSocket connection status */}
+            <Badge 
+              status={isConnected ? 'success' : 'error'} 
+              text={isConnected ? 'Đã kết nối' : 'Mất kết nối'}
+              style={{ color: 'rgba(0, 0, 0, 0.88)' }}
+            />
+            {/* Notification badge */}
+            {unshownNotifications.length > 0 && (
+              <Badge count={unshownNotifications.length} size="small">
+                <span style={{ color: 'rgba(0, 0, 0, 0.88)', marginRight: 8 }}>Thông báo</span>
+              </Badge>
+            )}
+            <span style={{ color: 'rgba(0, 0, 0, 0.88)' }}>
               Xin chào, {user?.fullName}
             </span>
             <Button 
@@ -174,6 +207,11 @@ const Defaultlayout: React.FC = () => {
             <Outlet />
           </div>
         </Content>
+        {/* Booking Notification Component */}
+        <BookingNotification
+          notifications={unshownNotifications}
+          onNotificationShown={handleNotificationShown}
+        />
         <Footer style={{ textAlign: 'center', padding: '10px 50px' }}>
           Trang khách sạn của Miko Hotel {new Date().getFullYear()}
         </Footer>

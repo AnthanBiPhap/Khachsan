@@ -7,6 +7,7 @@ import Invoice from "../models/invoices.model";
 import User from "../models/users.model";
 import { calculateRoomPriceWithBirthdayDiscount } from "../helpers/pricing.helper";
 import Room from "../models/rooms.model";
+import socketService from "./socket.service";
 
 // Lấy tất cả booking với filter + pagination
 const getAll = async (query: any) => {
@@ -257,6 +258,36 @@ const create = async (payload: any) => {
 
     await savedBooking.populate("customerId", "fullName email phoneNumber");
     await savedBooking.populate("roomId", "roomNumber typeId");
+
+    // Gửi WebSocket notification cho admin và staff
+    try {
+      const bookingNotification = {
+        type: "new_booking",
+        booking: {
+          _id: savedBooking._id,
+          customerId: savedBooking.customerId,
+          roomId: savedBooking.roomId,
+          checkIn: savedBooking.checkIn,
+          checkOut: savedBooking.checkOut,
+          totalPrice: savedBooking.totalPrice,
+          paymentStatus: savedBooking.paymentStatus,
+          source: savedBooking.source,
+          guestCount: savedBooking.guestCount,
+          guests: savedBooking.guests,
+        },
+        message: `Có đặt phòng mới từ ${savedBooking.source === "online" ? "khách hàng online" : "khách walk-in"}`,
+        timestamp: new Date().toISOString(),
+      };
+
+      // Gửi đến tất cả admin và staff
+      socketService.sendToRoom("role:admin", "new_booking", bookingNotification);
+      socketService.sendToRoom("role:staff", "new_booking", bookingNotification);
+      
+      console.log(`📢 Đã gửi WebSocket notification cho booking mới: ${savedBooking._id}`);
+    } catch (socketError) {
+      console.error("❌ Lỗi gửi WebSocket notification:", socketError);
+      // Không throw error để không làm crash API
+    }
 
     // Trả về booking + invoice
     return { booking: savedBooking, invoice };
