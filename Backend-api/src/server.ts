@@ -2,6 +2,8 @@ import app from "./app";
 import { env } from "./helpers/env.helper";
 import mongoose from "mongoose";
 import seedAdmin, { seedServices } from "./seeder";
+import { createServer } from "http";
+import socketService from "./services/socket.service";
 
 /// Start the server
 const mongooseDbOptions = {
@@ -18,9 +20,17 @@ mongoose
     console.log("Connected to MongoDB successfully");
     await seedAdmin();
     await seedServices();
+    
+    // Tạo HTTP server từ Express app
+    const httpServer = createServer(app);
+    
+    // Khởi tạo WebSocket server
+    socketService.initialize(httpServer);
+    
     // Start the server after successful MongoDB connection
-    app.listen(env.port, () => {
+    httpServer.listen(env.port, () => {
       console.log(`Server is running on port http://localhost:${env.port}`);
+      console.log(`WebSocket server is ready`);
     });
   })
   .catch((err) => {
