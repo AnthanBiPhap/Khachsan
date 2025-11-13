@@ -171,13 +171,32 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
           renderItem={(notif) => {
             const isRead = isNotificationRead(notif);
             const bookingData = notif.bookingData;
-            const customerName =
-              bookingData?.customerId?.fullName ||
-              bookingData?.guests?.find((g: any) => g.isMainGuest)?.fullName ||
-              'Khách hàng';
-            const roomNumber = bookingData?.roomId?.roomNumber || 'N/A';
-            const checkInDate = bookingData?.checkIn ? dayjs(bookingData.checkIn).format('DD/MM/YYYY') : 'N/A';
-            const checkOutDate = bookingData?.checkOut ? dayjs(bookingData.checkOut).format('DD/MM/YYYY') : 'N/A';
+            const isGroupBooking = !!notif.metadata?.groupBookingId;
+            
+            let customerName = 'Khách hàng';
+            let roomNumber = 'N/A';
+            let checkInDate = 'N/A';
+            let checkOutDate = 'N/A';
+            let navigateUrl = '/bookings';
+
+            if (isGroupBooking && notif.metadata) {
+              // Group booking
+              customerName = notif.metadata.requesterName || 'Khách hàng';
+              roomNumber = `${notif.metadata.roomCount || 0} phòng`;
+              checkInDate = bookingData?.checkIn ? dayjs(bookingData.checkIn).format('DD/MM/YYYY') : 'N/A';
+              checkOutDate = bookingData?.checkOut ? dayjs(bookingData.checkOut).format('DD/MM/YYYY') : 'N/A';
+              navigateUrl = '/group-bookings';
+            } else if (bookingData) {
+              // Regular booking
+              customerName =
+                bookingData?.customerId?.fullName ||
+                bookingData?.guests?.find((g: any) => g.isMainGuest)?.fullName ||
+                'Khách hàng';
+              roomNumber = bookingData?.roomId?.roomNumber || 'N/A';
+              checkInDate = bookingData?.checkIn ? dayjs(bookingData.checkIn).format('DD/MM/YYYY') : 'N/A';
+              checkOutDate = bookingData?.checkOut ? dayjs(bookingData.checkOut).format('DD/MM/YYYY') : 'N/A';
+            }
+
             const notificationTime = dayjs(notif.createdAt).format('DD/MM/YYYY HH:mm');
 
             return (
@@ -194,8 +213,13 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   opacity: isRead ? 0.8 : 1,
                 }}
                 onClick={() => {
-                  if (onNotificationClick && bookingData?.bookingId) {
-                    onNotificationClick(bookingData.bookingId);
+                  if (onNotificationClick) {
+                    if (isGroupBooking && notif.metadata?.groupBookingId) {
+                      // Navigate to group bookings page
+                      window.location.href = '/group-bookings';
+                    } else if (bookingData?.bookingId) {
+                      onNotificationClick(bookingData.bookingId);
+                    }
                   }
                 }}
                 onMouseEnter={(e) => {
@@ -252,15 +276,20 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                     </Space>
                   }
                   description={
-                    bookingData ? (
+                    bookingData || isGroupBooking ? (
                       <Space direction="vertical" size={8} style={{ width: '100%', marginTop: '8px' }}>
                         <div>
                           <Text>{notif.message}</Text>
                         </div>
                         <div>
                           <UserOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
-                          <Text>Khách hàng: {customerName}</Text>
+                          <Text>{isGroupBooking ? 'Người yêu cầu' : 'Khách hàng'}: {customerName}</Text>
                         </div>
+                        {isGroupBooking && notif.metadata?.requesterPhone && (
+                          <div>
+                            <Text type="secondary">SĐT: {notif.metadata.requesterPhone}</Text>
+                          </div>
+                        )}
                         <div>
                           <HomeOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
                           <Text>Phòng: {roomNumber}</Text>
@@ -271,15 +300,20 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                             {checkInDate} - {checkOutDate}
                           </Text>
                         </div>
-                        <div>
-                          <DollarOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
-                          <Text strong style={{ color: '#52c41a' }}>
-                            {formatPrice(bookingData.totalPrice)}
-                          </Text>
-                        </div>
+                        {bookingData?.totalPrice && (
+                          <div>
+                            <DollarOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
+                            <Text strong style={{ color: '#52c41a' }}>
+                              {formatPrice(bookingData.totalPrice)}
+                            </Text>
+                          </div>
+                        )}
                         <div>
                           <Text type="secondary" style={{ fontSize: '12px' }}>
-                            Số khách: {bookingData.guestCount} • {notificationTime}
+                            {isGroupBooking 
+                              ? `Số người: ${notif.metadata?.peopleCount || 0} • ${notificationTime}`
+                              : `Số khách: ${bookingData?.guestCount || 0} • ${notificationTime}`
+                            }
                           </Text>
                         </div>
                       </Space>

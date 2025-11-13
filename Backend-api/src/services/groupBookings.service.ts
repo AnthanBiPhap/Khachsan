@@ -6,6 +6,8 @@ import Payment from "../models/payments.model";
 import Invoice from "../models/invoices.model";
 import invoicesService from "./invoices.service";
 import paymentsService from "./payments.service";
+import socketService from "./socket.service";
+import notificationsService from "./notifications.service";
 
 const GROUP_DEPOSIT_RATE = Number(process.env.GROUP_DEPOSIT_RATE ?? 0.5);
 const GROUP_DEPOSIT_PERCENT_LABEL = `${Math.round(GROUP_DEPOSIT_RATE * 100)}%`;
@@ -32,6 +34,71 @@ const create = async (payload: CreateGroupBookingPayload) => {
     ...payload,
     status: "pending_approval",
   });
+
+  // Populate để lấy thông tin đầy đủ
+  await gb.populate("requesterId", "fullName email phoneNumber");
+
+  // Lưu notification vào database và gửi WebSocket notification cho admin và staff
+  try {
+    const notificationMessage = `Có yêu cầu đặt phòng nhóm mới từ ${payload.requesterName}`;
+    
+    // Lưu notification vào database
+    await notificationsService.create({
+      type: "new_booking",
+      title: "Yêu cầu đặt phòng nhóm mới",
+      message: notificationMessage,
+      userId: gb.requesterId?._id || undefined,
+      bookingData: {
+        bookingId: gb._id,
+        customerId: gb.requesterId?._id,
+        roomId: null, // Group booking chưa có phòng cụ thể
+        checkIn: gb.checkIn,
+        checkOut: gb.checkOut,
+        totalPrice: gb.quoteAmount || 0,
+        paymentStatus: gb.status,
+        source: "online",
+        guestCount: gb.peopleCount,
+        guests: [],
+      },
+      metadata: {
+        groupBookingId: gb._id,
+        roomCount: gb.roomCount,
+        peopleCount: gb.peopleCount,
+        requesterName: gb.requesterName,
+        requesterPhone: gb.requesterPhone,
+        requesterEmail: gb.requesterEmail,
+      },
+    });
+
+    // Gửi WebSocket notification
+    const groupBookingNotification = {
+      type: "new_group_booking",
+      groupBooking: {
+        _id: gb._id,
+        requesterId: gb.requesterId,
+        requesterName: gb.requesterName,
+        requesterPhone: gb.requesterPhone,
+        checkIn: gb.checkIn,
+        checkOut: gb.checkOut,
+        peopleCount: gb.peopleCount,
+        roomCount: gb.roomCount,
+        status: gb.status,
+        quoteAmount: gb.quoteAmount,
+      },
+      message: notificationMessage,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Gửi đến tất cả admin và staff
+    socketService.sendToRoom("role:admin", "new_group_booking", groupBookingNotification);
+    socketService.sendToRoom("role:staff", "new_group_booking", groupBookingNotification);
+    
+    console.log(`📢 Đã lưu và gửi WebSocket notification cho group booking mới: ${gb._id}`);
+  } catch (notificationError) {
+    console.error("❌ Lỗi lưu/gửi notification cho group booking:", notificationError);
+    // Không throw error để không làm crash API
+  }
+
   return gb;
 };
 

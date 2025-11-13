@@ -5,7 +5,7 @@ import type { NotificationArgsProps } from 'antd';
 
 interface BookingNotificationData {
   type: string;
-  booking: {
+  booking?: {
     _id: string;
     customerId: any;
     roomId: any;
@@ -16,6 +16,18 @@ interface BookingNotificationData {
     source: string;
     guestCount: number;
     guests: any[];
+  };
+  groupBooking?: {
+    _id: string;
+    requesterId: any;
+    requesterName: string;
+    requesterPhone: string;
+    checkIn: string;
+    checkOut: string;
+    peopleCount: number;
+    roomCount: number;
+    status: string;
+    quoteAmount?: number;
   };
   message: string;
   timestamp: string;
@@ -135,7 +147,11 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
 
   useEffect(() => {
     notifications.forEach((notif) => {
-      const notificationId = `${notif.booking._id}-${notif.timestamp}`;
+      // Xác định notification ID và loại
+      const isGroupBooking = !!notif.groupBooking;
+      const notificationId = isGroupBooking 
+        ? `group-${notif.groupBooking._id}-${notif.timestamp}`
+        : `${notif.booking?._id}-${notif.timestamp}`;
       
       // Chỉ hiển thị notification một lần
       if (shownNotificationsRef.current.has(notificationId)) {
@@ -147,28 +163,49 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
       // Phát âm thanh
       playNotificationSound();
 
-      // Lấy thông tin khách hàng
-      const customerName = notif.booking.customerId?.fullName || 
-                          notif.booking.guests?.find((g: any) => g.isMainGuest)?.fullName || 
-                          'Khách hàng';
-      
-      // Lấy thông tin phòng
-      const roomNumber = notif.booking.roomId?.roomNumber || 'N/A';
-      
-      // Format giá tiền
-      const formattedPrice = new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND',
-      }).format(notif.booking.totalPrice);
+      let descriptionContent: React.ReactNode;
+      let navigateUrl = '/bookings';
+      let notificationTitle = '🔔 Đặt phòng mới';
 
-      // Format ngày
-      const checkInDate = new Date(notif.booking.checkIn).toLocaleDateString('vi-VN');
-      const checkOutDate = new Date(notif.booking.checkOut).toLocaleDateString('vi-VN');
+      if (isGroupBooking && notif.groupBooking) {
+        // Group booking notification
+        notificationTitle = '🔔 Yêu cầu đặt phòng nhóm mới';
+        const checkInDate = new Date(notif.groupBooking.checkIn).toLocaleDateString('vi-VN');
+        const checkOutDate = new Date(notif.groupBooking.checkOut).toLocaleDateString('vi-VN');
+        const formattedPrice = notif.groupBooking.quoteAmount 
+          ? new Intl.NumberFormat('vi-VN', {
+              style: 'currency',
+              currency: 'VND',
+            }).format(notif.groupBooking.quoteAmount)
+          : 'Chưa có báo giá';
 
-      // Hiển thị notification
-      notification.open({
-        message: '🔔 Đặt phòng mới',
-        description: (
+        descriptionContent = (
+          <div>
+            <p><strong>{notif.message}</strong></p>
+            <p>Người yêu cầu: {notif.groupBooking.requesterName}</p>
+            <p>Số điện thoại: {notif.groupBooking.requesterPhone}</p>
+            <p>Số phòng: {notif.groupBooking.roomCount}</p>
+            <p>Số người: {notif.groupBooking.peopleCount}</p>
+            <p>Giá dự kiến: {formattedPrice}</p>
+            <p>Check-in: {checkInDate} - Check-out: {checkOutDate}</p>
+            <p>Trạng thái: {notif.groupBooking.status === 'pending_approval' ? 'Chờ duyệt' : notif.groupBooking.status}</p>
+          </div>
+        );
+        navigateUrl = '/group-bookings';
+      } else if (notif.booking) {
+        // Regular booking notification
+        const customerName = notif.booking.customerId?.fullName || 
+                            notif.booking.guests?.find((g: any) => g.isMainGuest)?.fullName || 
+                            'Khách hàng';
+        const roomNumber = notif.booking.roomId?.roomNumber || 'N/A';
+        const formattedPrice = new Intl.NumberFormat('vi-VN', {
+          style: 'currency',
+          currency: 'VND',
+        }).format(notif.booking.totalPrice);
+        const checkInDate = new Date(notif.booking.checkIn).toLocaleDateString('vi-VN');
+        const checkOutDate = new Date(notif.booking.checkOut).toLocaleDateString('vi-VN');
+
+        descriptionContent = (
           <div>
             <p><strong>{notif.message}</strong></p>
             <p>Khách hàng: {customerName}</p>
@@ -178,7 +215,16 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
             <p>Số khách: {notif.booking.guestCount}</p>
             <p>Trạng thái: {notif.booking.paymentStatus === 'partial_paid' ? 'Đã đặt cọc' : 'Chưa thanh toán'}</p>
           </div>
-        ),
+        );
+      } else {
+        // Fallback
+        descriptionContent = <div><p><strong>{notif.message}</strong></p></div>;
+      }
+
+      // Hiển thị notification
+      notification.open({
+        message: notificationTitle,
+        description: descriptionContent,
         icon: <BellOutlined style={{ color: '#1890ff' }} />,
         duration: 10, // Hiển thị 10 giây, sau đó tự động đóng
         placement: 'topRight' as NotificationArgsProps['placement'],
@@ -189,7 +235,6 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
               size="small"
               icon={<CheckCircleOutlined />}
               onClick={() => {
-                // Đóng notification ngay lập tức và đánh dấu đã xem
                 notification.destroy(notificationId);
                 onNotificationShown(notificationId);
               }}
@@ -200,12 +245,9 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
         ),
         key: notificationId,
         onClick: () => {
-          // Có thể navigate đến trang booking detail
-          window.location.href = `/bookings`;
+          window.location.href = navigateUrl;
         },
         onClose: () => {
-          // Khi notification tự đóng (sau 10 giây), đánh dấu đã hiển thị
-          // nhưng không đánh dấu đã đọc (vẫn hiển thị trong Notification Center nếu có)
           onNotificationShown(notificationId);
         },
       });

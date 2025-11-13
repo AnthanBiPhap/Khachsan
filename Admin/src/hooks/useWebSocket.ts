@@ -5,7 +5,7 @@ import { env } from '../constanst/getEnvs';
 
 interface BookingNotification {
   type: string;
-  booking: {
+  booking?: {
     _id: string;
     customerId: any;
     roomId: any;
@@ -16,6 +16,18 @@ interface BookingNotification {
     source: string;
     guestCount: number;
     guests: any[];
+  };
+  groupBooking?: {
+    _id: string;
+    requesterId: any;
+    requesterName: string;
+    requesterPhone: string;
+    checkIn: string;
+    checkOut: string;
+    peopleCount: number;
+    roomCount: number;
+    status: string;
+    quoteAmount?: number;
   };
   message: string;
   timestamp: string;
@@ -75,6 +87,12 @@ export const useWebSocket = (): UseWebSocketReturn => {
     // Lắng nghe thông báo đặt phòng mới
     newSocket.on('new_booking', (data: BookingNotification) => {
       console.log('📢 Nhận được thông báo đặt phòng mới:', data);
+      setNotifications((prev) => [data, ...prev]);
+    });
+
+    // Lắng nghe thông báo đặt phòng nhóm mới
+    newSocket.on('new_group_booking', (data: BookingNotification) => {
+      console.log('📢 Nhận được thông báo đặt phòng nhóm mới:', data);
       setNotifications((prev) => [data, ...prev]);
     });
 

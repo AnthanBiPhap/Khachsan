@@ -133,9 +133,13 @@ const Defaultlayout: React.FC = () => {
 
   // Lọc notifications chưa được hiển thị
   const unshownNotifications = useMemo(() => {
-    return notifications.filter(
-      (notif) => !shownNotificationIds.has(`${notif.booking._id}-${notif.timestamp}`)
-    );
+    return notifications.filter((notif) => {
+      const isGroupBooking = !!notif.groupBooking;
+      const notificationId = isGroupBooking
+        ? `group-${notif.groupBooking?._id}-${notif.timestamp}`
+        : `${notif.booking?._id}-${notif.timestamp}`;
+      return !shownNotificationIds.has(notificationId);
+    });
   }, [notifications, shownNotificationIds]);
 
   const handleNotificationCenterRefresh = useCallback(() => {
@@ -259,7 +263,7 @@ const Defaultlayout: React.FC = () => {
           onClose={() => setNotificationCenterOpen(false)}
           onNotificationClick={(bookingId) => {
             setNotificationCenterOpen(false);
-            navigate(`/bookings`);
+            // Navigate sẽ được xử lý trong NotificationCenter component
           }}
           onRefresh={handleNotificationCenterRefresh}
         />
