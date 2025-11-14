@@ -30,10 +30,28 @@ type CreateGroupBookingPayload = {
 };
 
 const create = async (payload: CreateGroupBookingPayload) => {
-  const gb = await GroupBooking.create({
+  // Normalize check-in và check-out với giờ cụ thể
+  // Check-in: 14:00, Check-out: 12:00 (giống booking thường)
+  const normalizeCheckIn = (date: Date | string): Date => {
+    const d = new Date(date);
+    d.setHours(14, 0, 0, 0);
+    return d;
+  };
+
+  const normalizeCheckOut = (date: Date | string): Date => {
+    const d = new Date(date);
+    d.setHours(12, 0, 0, 0);
+    return d;
+  };
+
+  const normalizedPayload = {
     ...payload,
-    status: "pending_approval",
-  });
+    checkIn: normalizeCheckIn(payload.checkIn),
+    checkOut: normalizeCheckOut(payload.checkOut),
+    status: "pending_approval" as const,
+  };
+
+  const gb = await GroupBooking.create(normalizedPayload);
 
   // Populate để lấy thông tin đầy đủ
   await gb.populate("requesterId", "fullName email phoneNumber");
@@ -147,21 +165,122 @@ const list = async (query: any = {}) => {
   return items;
 };
 
-const checkAvailability = async (checkIn: Date, checkOut: Date) => {
+const checkAvailability = async (checkIn: Date, checkOut: Date, excludeGroupBookingId?: string) => {
   // Load rooms with type info (price/capacity)
   const rooms = await Room.find({}).populate('typeId', 'pricePerNight capacity name');
   const allRoomIds = rooms.map((r) => r._id);
 
-  // Find bookings overlapping interval
+  // Normalize checkIn và checkOut để so sánh chính xác
+  const normalizeCheckIn = (date: Date | string): Date => {
+    const d = new Date(date);
+    d.setHours(14, 0, 0, 0); // Check-in lúc 14:00
+    return d;
+  };
+
+  const normalizeCheckOut = (date: Date | string): Date => {
+    const d = new Date(date);
+    d.setHours(12, 0, 0, 0); // Check-out lúc 12:00 (không có extra hours cho group booking)
+    return d;
+  };
+
+  const searchCheckIn = normalizeCheckIn(checkIn);
+  const searchCheckOut = normalizeCheckOut(checkOut);
+
+  console.log(`   🔍 [checkAvailability] Search range: ${searchCheckIn.toISOString()} → ${searchCheckOut.toISOString()}`);
+
+  // Find bookings overlapping interval (đặt phòng thường)
+  // Tìm các booking có overlap với khoảng thời gian tìm kiếm
+  // Logic overlap: booking.checkIn < searchCheckOut && booking.checkOut > searchCheckIn
   const bookings = await Booking.find({
     roomId: { $in: allRoomIds },
     paymentStatus: { $ne: "cancelled" },
-    checkIn: { $lt: new Date(checkOut) },
-    checkOut: { $gt: new Date(checkIn) },
+    checkIn: { $lt: searchCheckOut },
+    checkOut: { $gt: searchCheckIn },
   }).select("roomId checkIn checkOut paymentStatus");
 
-  const bookedSet = new Set<string>(bookings.map((b: any) => String(b.roomId)));
-  const availableRooms = rooms.filter((r: any) => !bookedSet.has(String(r._id)));
+  console.log(`   📋 Found ${bookings.length} regular bookings that might overlap`);
+
+  // Find group bookings overlapping interval (đặt phòng theo đoàn)
+  // Tìm các group booking đã được allocate và có overlap với khoảng thời gian tìm kiếm
+  // Logic overlap: groupBooking.checkIn < searchCheckOut && groupBooking.checkOut > searchCheckIn
+  const groupBookingQuery: any = {
+    status: { $nin: ["cancelled", "rejected", "refunded"] }, // Loại các status không còn hiệu lực
+    allocatedRoomIds: { $in: allRoomIds }, // Có allocate phòng trong danh sách
+    checkIn: { $lt: searchCheckOut },
+    checkOut: { $gt: searchCheckIn },
+  };
+  
+  // Nếu có excludeGroupBookingId (khi update), loại trừ chính nó
+  if (excludeGroupBookingId) {
+    groupBookingQuery._id = { $ne: excludeGroupBookingId };
+  }
+  
+  const groupBookings = await GroupBooking.find(groupBookingQuery)
+    .select("allocatedRoomIds checkIn checkOut status");
+
+  // Tạo map các phòng đã bị book với khoảng thời gian overlap
+  // Key: roomId, Value: array of {checkIn, checkOut}
+  const bookedRoomsMap = new Map<string, Array<{ checkIn: Date; checkOut: Date }>>();
+  
+  // Thêm các phòng từ Booking thường (kiểm tra overlap chính xác với giờ)
+  // Normalize checkIn về 14:00 và checkOut về 12:00 (ngày checkOut) để so sánh chính xác
+  bookings.forEach((b: any) => {
+    if (b.roomId) {
+      const roomId = String(b.roomId);
+      const bookingCheckIn = normalizeCheckIn(b.checkIn);
+      // Booking thường có thể có extra hours, nhưng để so sánh overlap với group booking,
+      // ta cần normalize checkOut về 12:00 của ngày checkOut để đảm bảo logic chính xác
+      const bookingCheckOutNormalized = normalizeCheckOut(b.checkOut);
+      // Nhưng nếu booking có extra hours, checkOut thực tế có thể muộn hơn 12:00
+      // Nên ta lấy max giữa checkOut gốc và checkOut normalized
+      const bookingCheckOutOriginal = new Date(b.checkOut);
+      const bookingCheckOut = bookingCheckOutOriginal > bookingCheckOutNormalized 
+        ? bookingCheckOutOriginal 
+        : bookingCheckOutNormalized;
+      
+      // Kiểm tra overlap chính xác
+      const isOverlap = bookingCheckIn < searchCheckOut && bookingCheckOut > searchCheckIn;
+      
+      if (isOverlap) {
+        console.log(`   ⚠️  Regular booking overlaps: Room ${roomId}, CheckIn: ${bookingCheckIn.toISOString()}, CheckOut: ${bookingCheckOut.toISOString()}`);
+        if (!bookedRoomsMap.has(roomId)) {
+          bookedRoomsMap.set(roomId, []);
+        }
+        bookedRoomsMap.get(roomId)!.push({
+          checkIn: bookingCheckIn,
+          checkOut: bookingCheckOut
+        });
+      }
+    }
+  });
+  
+  // Thêm các phòng từ GroupBooking đã được allocate (kiểm tra overlap chính xác với giờ)
+  groupBookings.forEach((gb: any) => {
+    if (gb.allocatedRoomIds && Array.isArray(gb.allocatedRoomIds)) {
+      const gbCheckIn = normalizeCheckIn(gb.checkIn);
+      const gbCheckOut = normalizeCheckOut(gb.checkOut);
+      
+      // Kiểm tra overlap chính xác
+      const isOverlap = gbCheckIn < searchCheckOut && gbCheckOut > searchCheckIn;
+      
+      if (isOverlap) {
+        gb.allocatedRoomIds.forEach((roomId: any) => {
+          const roomIdStr = String(roomId);
+          if (!bookedRoomsMap.has(roomIdStr)) {
+            bookedRoomsMap.set(roomIdStr, []);
+          }
+          bookedRoomsMap.get(roomIdStr)!.push({
+            checkIn: gbCheckIn,
+            checkOut: gbCheckOut
+          });
+        });
+      }
+    }
+  });
+
+  // Lọc các phòng khả dụng (không có trong bookedRoomsMap)
+  const availableRooms = rooms.filter((r: any) => !bookedRoomsMap.has(String(r._id)));
+  console.log(`   📊 Booked rooms: ${bookedRoomsMap.size}, Available rooms: ${availableRooms.length}`);
   return availableRooms as any[];
 };
 
@@ -236,12 +355,19 @@ const approve = async (id: string) => {
   if (gb.status !== "pending_approval")
     throw createError(400, "Only pending_approval can be approved");
 
+  console.log(`🔍 [Group Booking Approve] Checking availability for group booking ${id}`);
+  console.log(`   Check-in: ${gb.checkIn}, Check-out: ${gb.checkOut}`);
+  console.log(`   Required rooms: ${gb.roomCount}, Required people: ${gb.peopleCount}`);
+
   const availableRooms = await checkAvailability(gb.checkIn, gb.checkOut);
+  console.log(`   Available rooms: ${availableRooms.length}`);
+  
   if (availableRooms.length < gb.roomCount) {
     const reason = `Không đủ phòng trống trong giai đoạn ${formatDateRange(
       gb.checkIn,
       gb.checkOut
     )}. Yêu cầu ${gb.roomCount} phòng, khả dụng ${availableRooms.length} phòng.`;
+    console.log(`   ❌ Rejecting: ${reason}`);
     await rejectGroupBooking(gb, reason);
     throw createError(400, "Không đủ phòng trống để duyệt yêu cầu đặt đoàn");
   }

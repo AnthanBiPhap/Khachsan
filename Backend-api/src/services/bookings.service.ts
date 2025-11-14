@@ -9,6 +9,7 @@ import { calculateRoomPriceWithBirthdayDiscount } from "../helpers/pricing.helpe
 import Room from "../models/rooms.model";
 import socketService from "./socket.service";
 import notificationsService from "./notifications.service";
+import GroupBooking from "../models/groupBooking.model";
 
 // Lấy tất cả booking với filter + pagination
 const getAll = async (query: any) => {
@@ -74,15 +75,25 @@ const getById = async (id: string) => {
 const create = async (payload: any) => {
   const { roomId, checkIn, checkOut, services = [], extendHours = 0 } = payload;
 
-  // check trùng phòng
-  const conflict = await Booking.findOne({
+  // check trùng phòng với Booking khác
+  const conflictBooking = await Booking.findOne({
     roomId,
     paymentStatus: { $ne: "cancelled" }, // hoặc $nin: ["cancelled"]
     checkIn: { $lt: new Date(checkOut) },
     checkOut: { $gt: new Date(checkIn) },
   });
-  if (conflict)
+  if (conflictBooking)
     throw createError(400, "Phòng đã được đặt trong khoảng thời gian này");
+
+  // check trùng phòng với GroupBooking đã được allocate
+  const conflictGroupBooking = await GroupBooking.findOne({
+    allocatedRoomIds: roomId,
+    status: { $nin: ["cancelled", "rejected", "refunded"] }, // Loại các status không còn hiệu lực
+    checkIn: { $lt: new Date(checkOut) },
+    checkOut: { $gt: new Date(checkIn) },
+  });
+  if (conflictGroupBooking)
+    throw createError(400, "Phòng đã được đặt theo đoàn trong khoảng thời gian này");
 
   // Validate guests array
   if (!payload.guests || !Array.isArray(payload.guests) || payload.guests.length === 0) {
@@ -338,16 +349,26 @@ const updateById = async (id: string, payload: any) => {
   const checkOut = payload.checkOut ?? booking.checkOut;
   const services = payload.services || booking.services || [];
 
-  // check trùng phòng
-  const conflict = await Booking.findOne({
+  // check trùng phòng với Booking khác
+  const conflictBooking = await Booking.findOne({
     _id: { $ne: id },
     roomId,
-    status: { $nin: ["cancelled"] },
+    paymentStatus: { $ne: "cancelled" },
     checkIn: { $lt: new Date(checkOut) },
     checkOut: { $gt: new Date(checkIn) },
   });
-  if (conflict)
+  if (conflictBooking)
     throw createError(400, "Phòng đã được đặt trong khoảng thời gian này");
+
+  // check trùng phòng với GroupBooking đã được allocate
+  const conflictGroupBooking = await GroupBooking.findOne({
+    allocatedRoomIds: roomId,
+    status: { $nin: ["cancelled", "rejected", "refunded"] }, // Loại các status không còn hiệu lực
+    checkIn: { $lt: new Date(checkOut) },
+    checkOut: { $gt: new Date(checkIn) },
+  });
+  if (conflictGroupBooking)
+    throw createError(400, "Phòng đã được đặt theo đoàn trong khoảng thời gian này");
 
   if (payload.services) {
     // 1. Xóa tất cả dịch vụ cũ của booking này

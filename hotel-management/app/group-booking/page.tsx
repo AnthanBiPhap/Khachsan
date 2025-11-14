@@ -70,13 +70,27 @@ export default function GroupBookingPage() {
     setLoadingCreate(true);
     
     try {
+      // Normalize check-in và check-out với giờ cụ thể
+      // Check-in: 14:00, Check-out: 12:00 (giống booking thường)
+      const normalizeCheckIn = (date: dayjs.Dayjs): string => {
+        const d = date.clone();
+        d.hour(14).minute(0).second(0).millisecond(0);
+        return d.toISOString();
+      };
+
+      const normalizeCheckOut = (date: dayjs.Dayjs): string => {
+        const d = date.clone();
+        d.hour(12).minute(0).second(0).millisecond(0);
+        return d.toISOString();
+      };
+
       const payload = {
         requesterId: user?._id || undefined,
         requesterName,
         requesterPhone,
         requesterEmail: requesterEmail || undefined,
-        checkIn: checkIn.toISOString(),
-        checkOut: checkOut.toISOString(),
+        checkIn: normalizeCheckIn(checkIn),
+        checkOut: normalizeCheckOut(checkOut),
         peopleCount: Number(peopleCount),
         roomCount: Number(roomCount),
         notes: notes || undefined,
