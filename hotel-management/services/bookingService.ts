@@ -77,15 +77,39 @@ export const bookingService = {
     checkOut: string,
     guests?: number
   ): Promise<Room[]> => {
-    const searchCheckIn = normalizeDate(checkIn);
-    const searchCheckOut = normalizeDate(checkOut, true);
+    // Chuẩn hóa ngày check-in và check-out với giờ cụ thể
+    // Check-in: 14:00, Check-out: 12:00
+    const normalizeCheckIn = (dateStr: string): Date => {
+      const d = new Date(dateStr);
+      d.setHours(14, 0, 0, 0); // Check-in lúc 14:00
+      return d;
+    };
 
-    // gọi BE lấy booking trong khoảng overlap
+    const normalizeCheckOut = (dateStr: string): Date => {
+      const d = new Date(dateStr);
+      d.setHours(12, 0, 0, 0); // Check-out lúc 12:00
+      return d;
+    };
+
+    const searchCheckIn = normalizeCheckIn(checkIn);
+    const searchCheckOut = normalizeCheckOut(checkOut);
+
+    // Mở rộng phạm vi tìm kiếm để bao gồm các booking có thể overlap
+    // Tìm các booking có checkIn < searchCheckOut và checkOut > searchCheckIn
+    const searchStart = new Date(searchCheckIn);
+    searchStart.setDate(searchStart.getDate() - 1); // Tìm từ ngày trước đó
+    searchStart.setHours(0, 0, 0, 0);
+    
+    const searchEnd = new Date(searchCheckOut);
+    searchEnd.setDate(searchEnd.getDate() + 1); // Tìm đến ngày sau đó
+    searchEnd.setHours(23, 59, 59, 999);
+
+    // gọi BE lấy booking trong khoảng mở rộng
     const [{ rooms }, { bookings }] = await Promise.all([
       bookingService.getRooms(),
       bookingService.getBookings({
-        startDate: searchCheckIn,
-        endDate: searchCheckOut,
+        startDate: searchStart.toISOString(),
+        endDate: searchEnd.toISOString(),
       }),
     ]);
 
@@ -98,9 +122,12 @@ export const bookingService = {
       const bookingCheckIn = new Date(booking.checkIn);
       const bookingCheckOut = new Date(booking.checkOut);
 
+      // Kiểm tra overlap chính xác: booking1 và booking2 overlap khi
+      // booking1.checkIn < booking2.checkOut AND booking1.checkOut > booking2.checkIn
+      // Nhưng cần đảm bảo không overlap nếu checkOut của booking cũ <= checkIn của booking mới
       const isOverlap =
-        bookingCheckIn < new Date(searchCheckOut) &&
-        bookingCheckOut > new Date(searchCheckIn);
+        bookingCheckIn < searchCheckOut &&
+        bookingCheckOut > searchCheckIn;
 
       if (isOverlap && booking.roomId?._id) {
         bookedSet.add(booking.roomId._id);
