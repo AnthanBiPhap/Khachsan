@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Table,
   Tag,
@@ -7,87 +7,86 @@ import {
   message,
   Drawer,
   Descriptions,
-  Modal,
+  Card,
+  Spin,
+  Empty,
+  Divider,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
   UserOutlined,
   CheckCircleOutlined,
   StopOutlined,
+  HistoryOutlined,
+  CalendarOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 import UserForm from "../../components/User/UserForm";
 import type { User } from "../../types/user";
 import { fetchUsers, deleteUser } from "../../services/user.service";
-import { StreamChat, Channel as StreamChannel } from "stream-chat";
-import {
-  Chat,
-  Channel,
-  Window,
-  ChannelHeader,
-  MessageList,
-  MessageInput,
-  Thread,
-  Avatar,
-} from "stream-chat-react";
-import "stream-chat-react/dist/css/v2/index.css";
-
+import axios from "axios";
 import { env } from "../../constanst/getEnvs";
 import { useAuthStore } from "../../stores/authStore";
+import dayjs from "dayjs";
 
-// ----------------- Hook quản lý unread -----------------
-function useUnread(chatClient: StreamChat | null, currentUserId?: string) {
-  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    if (!chatClient || !currentUserId) return;
-
-    const loadUnread = async () => {
-      const channels = await chatClient.queryChannels({ type: "messaging" });
-
-      for (const ch of channels) {
-        const count = await ch.countUnread();
-        const memberIds = Object.keys(ch.state.members);
-        const otherUserId = memberIds.find((id) => id !== currentUserId);
-        if (otherUserId) {
-          setUnreadCounts((prev) => ({
-            ...prev,
-            [otherUserId]: count,
-          }));
-        }
-      }
-    };
-
-    loadUnread();
-
-    const handleNewMessage = async (event: any) => {
-      const channel = chatClient.channel(event.channel_type, event.channel_id);
-      const count = await channel.countUnread();
-      const memberIds = Object.keys(channel.state.members);
-      const otherUserId = memberIds.find((id) => id !== currentUserId);
-
-      if (otherUserId) {
-        setUnreadCounts((prev) => ({
-          ...prev,
-          [otherUserId]: count,
-        }));
-      }
-    };
-
-    chatClient.on("message.new", handleNewMessage);
-    return () => {
-      chatClient.off("message.new", handleNewMessage);
-    };
-  }, [chatClient, currentUserId]);
-
-  const resetUnread = (userId: string) => {
-    setUnreadCounts((prev) => ({
-      ...prev,
-      [userId]: 0,
-    }));
+// ----------------- Types -----------------
+type Booking = {
+  _id: string;
+  customerId?: {
+    _id: string;
+    fullName: string;
+    email?: string;
+    phoneNumber?: string;
   };
+  guests: any[];
+  guestCount: number;
+  roomId: {
+    _id: string;
+    roomNumber: string;
+    typeId: string;
+  };
+  checkIn: string;
+  checkOut: string;
+  totalPrice: number;
+  paymentStatus: 'pending' | 'paid' | 'cancelled' | 'completed' | 'refunded' | 'failed' | 'refund_requested';
+  services?: Array<{
+    name: string;
+    price: number;
+    quantity: number;
+  }>;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
-  return { unreadCounts, resetUnread };
-}
+type GroupBooking = {
+  _id: string;
+  requesterId?: {
+    _id: string;
+    fullName: string;
+    email?: string;
+    phoneNumber?: string;
+  };
+  requesterName: string;
+  requesterPhone: string;
+  requesterEmail?: string;
+  checkIn: string;
+  checkOut: string;
+  peopleCount: number;
+  roomCount: number;
+  notes?: string;
+  status: string;
+  allocatedRoomIds?: Array<{
+    _id: string;
+    roomNumber: string;
+  }>;
+  quoteAmount?: number;
+  paymentLink?: string;
+  paidAmount?: number;
+  remainingAmount?: number;
+  createdAt: string;
+  updatedAt: string;
+};
 
 // ----------------- Component chính -----------------
 export default function UserPage() {
@@ -103,14 +102,13 @@ export default function UserPage() {
   const [openDetail, setOpenDetail] = useState(false);
   const [detailUser, setDetailUser] = useState<User | null>(null);
 
-  const [chatClient, setChatClient] = useState<StreamChat | null>(null);
-  const [chatChannel, setChatChannel] = useState<StreamChannel | null>(null);
-  const [openChat, setOpenChat] = useState(false);
-
-  const [openDetailModal, setOpenDetailModal] = useState(false);
+  const [openBookingHistory, setOpenBookingHistory] = useState(false);
+  const [bookingHistoryUser, setBookingHistoryUser] = useState<User | null>(null);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [groupBookings, setGroupBookings] = useState<GroupBooking[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
 
   const storedUser = useAuthStore.getState().user;
-  const { unreadCounts, resetUnread } = useUnread(chatClient, storedUser?._id);
 
   // ----------------- Load users -----------------
   const loadUsers = async (page = 1, limit = 10) => {
@@ -175,41 +173,81 @@ export default function UserPage() {
     }
   };
 
-  // ----------------- Chat -----------------
-  const handleChat = async (userId: string) => {
+  // ----------------- Booking History -----------------
+  const fetchBookingHistory = useCallback(async (userId: string) => {
     try {
-      const res = await fetch(`${env.API_URL}/api/v1/chat/open`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, adminId: storedUser?._id }),
-      });
-      const { channelId } = await res.json();
+      setLoadingBookings(true);
+      const [bookingsRes, groupBookingsRes, invoicesRes] = await Promise.all([
+        axios.get(`${env.API_URL}/api/v1/bookings?customerId=${userId}`),
+        axios.get(`${env.API_URL}/api/v1/group-bookings?requesterId=${userId}`),
+        axios.get(`${env.API_URL}/api/v1/invoices?customerId=${userId}`).catch(() => null),
+      ]);
 
-      const tokenRes = await fetch(`${env.API_URL}/api/v1/chat/token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: storedUser?._id ?? "",
-          name: "System Admin",
-        }),
-      });
-      const { token, apiKey, user } = await tokenRes.json();
+      const allBookings = bookingsRes.data?.data?.bookings || [];
+      const userBookings = allBookings.filter(
+        (b: any) => b.customerId?._id === userId
+      );
+      setBookings(userBookings);
 
-      const client = StreamChat.getInstance(apiKey);
-      await client.connectUser(user, token);
-
-      const channel = client.channel("messaging", channelId);
-      await channel.watch();
-
-      setChatClient(client);
-      setChatChannel(channel);
-      setOpenChat(true);
-
-      resetUnread(userId); // reset badge
+      const groupBookingsList = groupBookingsRes.data?.data || [];
+      setGroupBookings(groupBookingsList);
     } catch (err) {
-      console.error(err);
-      message.error("Không mở được chat");
+      console.error("Error fetching booking history:", err);
+      message.error("Không thể tải lịch sử đặt phòng");
+      setBookings([]);
+      setGroupBookings([]);
+    } finally {
+      setLoadingBookings(false);
     }
+  }, []);
+
+  const handleViewBookingHistory = (user: User) => {
+    setBookingHistoryUser(user);
+    setOpenBookingHistory(true);
+    fetchBookingHistory(user._id);
+  };
+
+  const formatDate = (dateString: string) => {
+    return dayjs(dateString).format("DD/MM/YYYY HH:mm");
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { color: string; text: string }> = {
+      paid: { color: "success", text: "Đã thanh toán" },
+      refunded: { color: "blue", text: "Đã hoàn tiền" },
+      refund_requested: { color: "purple", text: "Đang yêu cầu hoàn tiền" },
+      failed: { color: "error", text: "Thất bại" },
+      cancelled: { color: "error", text: "Đã hủy" },
+      pending: { color: "warning", text: "Chờ thanh toán" },
+    };
+    const config = statusConfig[status] || { color: "default", text: status };
+    return <Tag color={config.color}>{config.text}</Tag>;
+  };
+
+  const getGroupStatusBadge = (status: string) => {
+    const statusConfig: Record<string, { color: string; text: string }> = {
+      pending_approval: { color: "warning", text: "Chờ duyệt" },
+      approved: { color: "blue", text: "Đã duyệt" },
+      info_uploaded: { color: "cyan", text: "Đã cập nhật danh sách" },
+      quoted: { color: "orange", text: "Đã báo giá" },
+      awaiting_payment: { color: "gold", text: "Chờ thanh toán" },
+      deposit_paid: { color: "geekblue", text: "Đã đặt cọc" },
+      paid: { color: "success", text: "Đã thanh toán" },
+      confirmed: { color: "processing", text: "Đã xác nhận" },
+      refund_requested: { color: "purple", text: "Đang xử lý hoàn tiền" },
+      refunded: { color: "success", text: "Đã hoàn tiền" },
+      rejected: { color: "error", text: "Đã từ chối" },
+      cancelled: { color: "error", text: "Đã hủy" },
+    };
+    const config = statusConfig[status] || { color: "default", text: status };
+    return <Tag color={config.color}>{config.text}</Tag>;
   };
 
   // ----------------- Table Columns -----------------
@@ -226,17 +264,6 @@ export default function UserPage() {
           }}
         >
           {text}
-          {unreadCounts[record._id] > 0 && (
-            <span
-              style={{
-                color: "red",
-                fontWeight: "bold",
-                marginLeft: 6,
-              }}
-            >
-              ● {unreadCounts[record._id]}
-            </span>
-          )}
         </a>
       ),
     },
@@ -290,30 +317,9 @@ export default function UserPage() {
             Chi tiết
           </a>
           <a
-            onClick={() => {
-              setDetailUser(record);
-              handleChat(record._id);
-            }}
-            style={{ position: "relative" }}
+            onClick={() => handleViewBookingHistory(record)}
           >
-            💬 Chat
-            {unreadCounts[record._id] > 0 && (
-              <span
-                style={{
-                  position: "absolute",
-                  top: -8,
-                  right: -12,
-                  background: "red",
-                  color: "white",
-                  borderRadius: "50%",
-                  padding: "0 6px",
-                  fontSize: 12,
-                  fontWeight: "bold",
-                }}
-              >
-                {unreadCounts[record._id]}
-              </span>
-            )}
+            <HistoryOutlined /> Lịch sử đặt phòng
           </a>
         </Space>
       ),
@@ -394,88 +400,169 @@ export default function UserPage() {
         )}
       </Drawer>
 
-      {/* Drawer Chat */}
+      {/* Drawer Booking History */}
       <Drawer
-        title={`Chat với ${detailUser?.fullName || "người dùng"}`}
-        open={openChat}
+        title={
+          <Space>
+            <HistoryOutlined />
+            <span>Lịch sử đặt phòng - {bookingHistoryUser?.fullName || "Người dùng"}</span>
+          </Space>
+        }
+        open={openBookingHistory}
         onClose={() => {
-          setOpenChat(false);
-          setChatClient(null);
-          setChatChannel(null);
+          setOpenBookingHistory(false);
+          setBookingHistoryUser(null);
+          setBookings([]);
+          setGroupBookings([]);
         }}
-        width={400}
+        width={900}
         destroyOnClose
       >
-        {chatClient && chatChannel && (
-          <Chat client={chatClient} theme="messaging light">
-            <Channel channel={chatChannel}>
-              <Window>
-                <ChannelHeader
-                  Avatar={(props) => (
-                    <Avatar
-                      {...props}
-                      onClick={() => setOpenDetailModal(true)}
-                    />
-                  )}
-                  title={detailUser?.fullName || "Người dùng"}
-                />
-                <MessageList />
-                <MessageInput focus />
-              </Window>
-              <Thread />
-            </Channel>
-          </Chat>
-        )}
+        <Spin spinning={loadingBookings}>
+          {!loadingBookings && bookings.length === 0 && groupBookings.length === 0 ? (
+            <Empty description="Khách hàng chưa có đặt phòng nào" />
+          ) : (
+            <Space direction="vertical" size="large" style={{ width: "100%" }}>
+              {/* Regular Bookings */}
+              {bookings.length > 0 && (
+                <div>
+                  <Typography.Title level={5}>
+                    <CalendarOutlined /> Đặt phòng thường ({bookings.length})
+                  </Typography.Title>
+                  <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+                    {bookings.map((booking) => (
+                      <Card key={booking._id} size="small">
+                        <Space direction="vertical" style={{ width: "100%" }} size="small">
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <Typography.Text strong>
+                              Phòng {booking.roomId?.roomNumber || "N/A"}
+                            </Typography.Text>
+                            {getStatusBadge(booking.paymentStatus)}
+                          </div>
+                          <Descriptions size="small" column={2} bordered>
+                            <Descriptions.Item label="Mã đặt phòng" span={2}>
+                              <Typography.Text code>{booking._id.slice(-8).toUpperCase()}</Typography.Text>
+                            </Descriptions.Item>
+                            <Descriptions.Item label={<><CalendarOutlined /> Nhận phòng</>}>
+                              {formatDate(booking.checkIn)}
+                            </Descriptions.Item>
+                            <Descriptions.Item label={<><CalendarOutlined /> Trả phòng</>}>
+                              {formatDate(booking.checkOut)}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Số khách">
+                              {booking.guestCount || booking.guests?.length || 0} người
+                            </Descriptions.Item>
+                            <Descriptions.Item label={<><DollarOutlined /> Tổng tiền</>}>
+                              <Typography.Text strong>{formatCurrency(booking.totalPrice || 0)}</Typography.Text>
+                            </Descriptions.Item>
+                            {booking.services && booking.services.length > 0 && (
+                              <Descriptions.Item label="Dịch vụ" span={2}>
+                                {booking.services.map((s, idx) => (
+                                  <div key={idx}>
+                                    {s.name} (x{s.quantity}) - {formatCurrency(s.price * s.quantity)}
+                                  </div>
+                                ))}
+                              </Descriptions.Item>
+                            )}
+                            {booking.notes && (
+                              <Descriptions.Item label="Ghi chú" span={2}>
+                                {booking.notes}
+                              </Descriptions.Item>
+                            )}
+                            <Descriptions.Item label="Ngày tạo">
+                              {formatDate(booking.createdAt)}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Cập nhật">
+                              {formatDate(booking.updatedAt)}
+                            </Descriptions.Item>
+                          </Descriptions>
+                        </Space>
+                      </Card>
+                    ))}
+                  </Space>
+                </div>
+              )}
+
+              {/* Group Bookings */}
+              {groupBookings.length > 0 && (
+                <div>
+                  <Divider />
+                  <Typography.Title level={5}>
+                    <UserOutlined /> Đặt phòng theo đoàn ({groupBookings.length})
+                  </Typography.Title>
+                  <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+                    {groupBookings.map((group) => (
+                      <Card key={group._id} size="small">
+                        <Space direction="vertical" style={{ width: "100%" }} size="small">
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                            <Typography.Text strong>
+                              Đặt đoàn {group._id.slice(-8).toUpperCase()}
+                            </Typography.Text>
+                            {getGroupStatusBadge(group.status)}
+                          </div>
+                          <Descriptions size="small" column={2} bordered>
+                            <Descriptions.Item label="Mã yêu cầu" span={2}>
+                              <Typography.Text code>{group._id}</Typography.Text>
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Số khách">
+                              {group.peopleCount} người
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Số phòng">
+                              {group.roomCount} phòng
+                            </Descriptions.Item>
+                            <Descriptions.Item label={<><CalendarOutlined /> Nhận phòng</>}>
+                              {formatDate(group.checkIn)}
+                            </Descriptions.Item>
+                            <Descriptions.Item label={<><CalendarOutlined /> Trả phòng</>}>
+                              {formatDate(group.checkOut)}
+                            </Descriptions.Item>
+                            {group.quoteAmount && (
+                              <Descriptions.Item label={<><DollarOutlined /> Báo giá</>} span={2}>
+                                <Typography.Text strong>{formatCurrency(group.quoteAmount)}</Typography.Text>
+                              </Descriptions.Item>
+                            )}
+                            {group.paidAmount !== undefined && (
+                              <Descriptions.Item label="Đã thanh toán">
+                                {formatCurrency(group.paidAmount)}
+                              </Descriptions.Item>
+                            )}
+                            {group.remainingAmount !== undefined && (
+                              <Descriptions.Item label="Còn lại">
+                                {formatCurrency(group.remainingAmount)}
+                              </Descriptions.Item>
+                            )}
+                            {group.allocatedRoomIds && group.allocatedRoomIds.length > 0 && (
+                              <Descriptions.Item label="Phòng đã phân bổ" span={2}>
+                                <Space wrap>
+                                  {group.allocatedRoomIds.map((room) => (
+                                    <Tag key={room._id}>Phòng {room.roomNumber}</Tag>
+                                  ))}
+                                </Space>
+                              </Descriptions.Item>
+                            )}
+                            {group.notes && (
+                              <Descriptions.Item label="Ghi chú" span={2}>
+                                {group.notes}
+                              </Descriptions.Item>
+                            )}
+                            <Descriptions.Item label="Ngày tạo">
+                              {formatDate(group.createdAt)}
+                            </Descriptions.Item>
+                            <Descriptions.Item label="Cập nhật">
+                              {formatDate(group.updatedAt)}
+                            </Descriptions.Item>
+                          </Descriptions>
+                        </Space>
+                      </Card>
+                    ))}
+                  </Space>
+                </div>
+              )}
+            </Space>
+          )}
+        </Spin>
       </Drawer>
 
-      {/* Modal chi tiết user */}
-      <Modal
-        title={
-          detailUser
-            ? `Chi tiết người dùng: ${detailUser.fullName}`
-            : "Chi tiết người dùng"
-        }
-        open={openDetailModal}
-        onCancel={() => setOpenDetailModal(false)}
-        footer={null}
-        width={520}
-        centered
-        destroyOnClose
-      >
-        {detailUser && (
-          <Descriptions column={1} bordered size="middle">
-            <Descriptions.Item label="Họ và tên">
-              {detailUser.fullName}
-            </Descriptions.Item>
-            <Descriptions.Item label="Email">
-              {detailUser.email}
-            </Descriptions.Item>
-            <Descriptions.Item label="Số điện thoại">
-              {detailUser.phoneNumber || "-"}
-            </Descriptions.Item>
-            <Descriptions.Item label="Vai trò">
-              <Tag
-                color={
-                  detailUser.role === "admin"
-                    ? "volcano"
-                    : detailUser.role === "staff"
-                    ? "blue"
-                    : "geekblue"
-                }
-              >
-                {detailUser.role?.toUpperCase()}
-              </Tag>
-            </Descriptions.Item>
-            <Descriptions.Item label="Trạng thái">
-              <Tag color={detailUser.status === "active" ? "success" : "error"}>
-                {detailUser.status === "active"
-                  ? "Đang hoạt động"
-                  : "Vô hiệu hóa"}
-              </Tag>
-            </Descriptions.Item>
-          </Descriptions>
-        )}
-      </Modal>
     </div>
   );
 }
