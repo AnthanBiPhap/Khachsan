@@ -52,7 +52,7 @@ export default function StripeSuccessPage() {
         extendHours: bookingInfo.extraHours || 0,
         actualCheckOut: bookingInfo.actualCheckOut,
         guests: bookingInfo.guests,
-        totalPrice: bookingInfo.totalPrice,
+        totalPrice: bookingInfo.totalPrice || bookingInfo.paymentAmount * 2, // Tổng giá đầy đủ (bao gồm extra hours)
         status: 'pending',
         paymentStatus: 'partial_paid', // Chỉ thanh toán 50%
         services: bookingInfo.services || [],

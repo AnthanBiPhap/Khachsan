@@ -242,28 +242,26 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
   const totalPrice = useMemo(() => {
     if (!room) return 0;
     
-    // Nếu có pricing info với giảm giá, sử dụng giá đã giảm
-    if (pricingInfo) {
-      const serviceTotal = selectedServices.reduce((sum, s) => {
-        const service = services.find((srv) => srv._id === s.serviceId);
-        if (!service) return sum;
-        return sum + s.quantity * (service.basePrice || 0);
-      }, 0);
-      
-      return pricingInfo.totalPrice + serviceTotal;
-    }
-
-    // Nếu không có pricing info, tính giá bình thường
-    const nights = getNights();
+    // Tính giá dịch vụ
     const serviceTotal = selectedServices.reduce((sum, s) => {
       const service = services.find((srv) => srv._id === s.serviceId);
       if (!service) return sum;
       return sum + s.quantity * (service.basePrice || 0);
     }, 0);
+    
+    // Tính giá extra hours
+    const extraHoursPrice = (extraHours || 0) * (room.typeId.extraHourPrice || 0);
+    
+    // Nếu có pricing info với giảm giá, sử dụng giá đã giảm + extra hours
+    if (pricingInfo) {
+      return pricingInfo.totalPrice + serviceTotal + extraHoursPrice;
+    }
 
+    // Nếu không có pricing info, tính giá bình thường + extra hours
+    const nights = getNights();
     return (
       nights * (room.typeId.pricePerNight || 0) +
-      (extraHours || 0) * (room.typeId.extraHourPrice || 0) +
+      extraHoursPrice +
       serviceTotal
     );
   }, [room, checkIn, checkOut, extraHours, selectedServices, services, pricingInfo]);
@@ -384,7 +382,8 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
         actualCheckOut: new Date(checkOutDate).toISOString(),
         guests: guestInfo, // Sử dụng mảng thông tin khách hàng mới
         guestCount: guests,
-        totalPrice: paymentAmount, // Chỉ thanh toán 50%
+        totalPrice: totalPrice, // Tổng giá đầy đủ (bao gồm extra hours)
+        paymentAmount: paymentAmount, // Số tiền thanh toán (50% tổng giá)
         services: selectedServices.map((s) => {
           const srv = services.find((srv) => srv._id === s.serviceId);
           return {

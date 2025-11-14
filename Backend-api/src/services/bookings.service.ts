@@ -72,7 +72,7 @@ const getById = async (id: string) => {
 
 // Tạo booking mới
 const create = async (payload: any) => {
-  const { roomId, checkIn, checkOut, services = [] } = payload;
+  const { roomId, checkIn, checkOut, services = [], extendHours = 0 } = payload;
 
   // check trùng phòng
   const conflict = await Booking.findOne({
@@ -111,9 +111,10 @@ const create = async (payload: any) => {
       }))
     });
     
-    const room = await Room.findById(roomId).populate('typeId', 'pricePerNight');
+    const room = await Room.findById(roomId).populate('typeId', 'pricePerNight extraHourPrice');
     if (room && room.typeId) {
       const pricePerNight = (room.typeId as any).pricePerNight;
+      const extraHourPrice = (room.typeId as any).extraHourPrice || 0;
       const pricingInfo = await calculateRoomPriceWithBirthdayDiscount(
         pricePerNight,
         new Date(checkIn),
@@ -122,14 +123,18 @@ const create = async (payload: any) => {
         guestsWithMainFlag
       );
       
-      // Tính lại tổng giá: giá phòng (đã có giảm giá sinh nhật) + giá dịch vụ
+      // Tính lại tổng giá: giá phòng (đã có giảm giá sinh nhật) + giá dịch vụ + giá extra hours
       const servicesTotal = services.reduce((sum: number, s: any) => sum + (s.price * (s.quantity || 1)), 0);
-      finalTotalPrice = pricingInfo.totalPrice + servicesTotal;
+      const extraHoursTotal = (extendHours || 0) * extraHourPrice;
+      finalTotalPrice = pricingInfo.totalPrice + servicesTotal + extraHoursTotal;
       
       console.log(`💰 Price calculation:`, {
         pricePerNight,
         roomPriceWithDiscount: pricingInfo.totalPrice,
         servicesTotal,
+        extraHoursTotal,
+        extraHours: extendHours || 0,
+        extraHourPrice,
         finalTotalPrice,
         originalPrice: payload.totalPrice,
         difference: payload.totalPrice - finalTotalPrice
@@ -139,6 +144,8 @@ const create = async (payload: any) => {
         originalPrice: payload.totalPrice,
         roomPriceWithDiscount: pricingInfo.totalPrice,
         servicesTotal,
+        extraHoursTotal,
+        extraHours: extendHours || 0,
         finalTotalPrice,
         discountAmount: pricingInfo.discountAmount,
         discountApplied: pricingInfo.discountApplied,
