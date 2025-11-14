@@ -69,10 +69,37 @@ const Delete = async(req: Request, res: Response, next: NextFunction) => {
     }
 }
 
+// Get available rooms
+const getAvailableRooms = async(req: Request, res: Response, next: NextFunction) => {
+    try{
+        const { checkIn, checkOut, extendHours, excludeBookingId } = req.query;
+        
+        if (!checkIn || !checkOut) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing required parameters: checkIn, checkOut'
+            });
+        }
+
+        const availableRooms = await roomService.getAvailableRooms(
+            checkIn as string,
+            checkOut as string,
+            extendHours ? Number(extendHours) : 0,
+            excludeBookingId as string | undefined
+        );
+
+        sendJsonSuccess(res, { rooms: availableRooms }, httpStatus.OK.statusCode, httpStatus.OK.message);
+    }
+    catch(error) {
+        next(error);
+    }
+}
+
 export default {
     getAll,
     getById,
     Create,
     Update,
-    Delete
+    Delete,
+    getAvailableRooms
 }

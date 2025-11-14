@@ -58,8 +58,6 @@ export default function BookingForm({
   loading,
 }: BookingFormProps) {
   const [form] = Form.useForm();
-  const [rooms, setRooms] = useState<Room[]>([]);
-  const [bookings, setBookings] = useState<Booking[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<ServiceItem[]>([]);
   const [checkIn, setCheckIn] = useState<Dayjs | null>(null);
@@ -69,6 +67,7 @@ export default function BookingForm({
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [guests, setGuests] = useState<GuestInfo[]>([]);
   const [guestCount, setGuestCount] = useState<number>(1);
+  const [loadingAvailableRooms, setLoadingAvailableRooms] = useState<boolean>(false);
   const [pricingInfo, setPricingInfo] = useState<{
     totalPrice: number;
     breakdown: Array<{ date: Date; price: number; isBirthday: boolean }>;
@@ -146,17 +145,13 @@ export default function BookingForm({
     [roomPrice, servicesPrice, extraHours, extraHourPrice]
   );
 
-  // Fetch rooms, bookings, services
+  // Fetch rooms, services
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [roomsRes, bookingsRes, servicesRes] = await Promise.all([
-          axios.get("http://localhost:8080/api/v1/rooms"),
-          axios.get("http://localhost:8080/api/v1/bookings"),
+        const [servicesRes] = await Promise.all([
           axios.get("http://localhost:8080/api/v1/services"),
         ]);
-        setRooms(roomsRes.data?.data?.rooms || []);
-        setBookings(bookingsRes.data?.data?.bookings || []);
         // Chỉ hiển thị dịch vụ có trạng thái active
         const allServices = servicesRes.data?.data?.data || [];
         const activeServices = allServices.filter((service: any) => service.status === 'active');
@@ -170,23 +165,55 @@ export default function BookingForm({
     fetchData();
   }, []);
 
-  // Filter available rooms
+  // Fetch available rooms from API (check both regular bookings and group bookings)
   useEffect(() => {
-    if (!checkIn || !checkOut) {
-      setAvailableRooms([]);
-      return;
-    }
-    const filtered = rooms.filter(
-      (room) =>
-        !bookings.some(
-          (b) =>
-            b.roomId._id === room._id &&
-            dayjs(b.checkIn).isBefore(checkOut) &&
-            dayjs(b.checkOut).isAfter(checkIn)
-        )
-    );
-    setAvailableRooms(filtered);
-  }, [checkIn, checkOut, rooms, bookings]);
+    const fetchAvailableRooms = async () => {
+      if (!checkIn || !checkOut) {
+        setAvailableRooms([]);
+        setSelectedRoom(null);
+        form.setFieldValue("roomId", undefined);
+        return;
+      }
+
+      setLoadingAvailableRooms(true);
+      try {
+        const response = await axios.get("http://localhost:8080/api/v1/rooms/available", {
+          params: {
+            checkIn: checkIn.hour(14).minute(0).second(0).toISOString(),
+            checkOut: checkOut.hour(12).minute(0).second(0).toISOString(),
+            extendHours: extraHours || 0,
+            excludeBookingId: booking?._id || undefined,
+          },
+        });
+        const availableRoomsData = response.data?.data?.rooms || [];
+        setAvailableRooms(availableRoomsData);
+        
+        // Nếu đang edit booking, cập nhật selectedRoom với full data từ API
+        if (selectedRoom) {
+          const foundRoom = availableRoomsData.find((r: Room) => r._id === selectedRoom._id);
+          if (foundRoom) {
+            // Update selected room với full data từ API
+            setSelectedRoom(foundRoom);
+            form.setFieldValue("roomId", foundRoom._id);
+          } else if (!booking) {
+            // Chỉ reset nếu không phải đang edit booking (phòng đã bị đặt bởi booking/group booking khác)
+            setSelectedRoom(null);
+            form.setFieldValue("roomId", undefined);
+          }
+          // Nếu đang edit và phòng không có trong available (do conflict), giữ lại phòng đã chọn
+          // nhưng không reset (vì đó là phòng của booking hiện tại)
+        }
+      } catch (err) {
+        console.error("Error fetching available rooms:", err);
+        setAvailableRooms([]);
+      } finally {
+        setLoadingAvailableRooms(false);
+      }
+    };
+
+    fetchAvailableRooms();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [checkIn, checkOut, extraHours, booking?._id]);
 
   // Initialize guests when guestCount changes
   useEffect(() => {
@@ -227,15 +254,25 @@ export default function BookingForm({
         guestCount: booking.guestCount || booking.guests?.length || 1,
         extraHours: (booking as Booking & { extendHours?: number }).extendHours || 0,
       });
-      setCheckIn(booking.checkIn ? dayjs(booking.checkIn) : null);
-      setCheckOut(booking.checkOut ? dayjs(booking.checkOut) : null);
+      const bookingCheckIn = booking.checkIn ? dayjs(booking.checkIn) : null;
+      const bookingCheckOut = booking.checkOut ? dayjs(booking.checkOut) : null;
+      setCheckIn(bookingCheckIn);
+      setCheckOut(bookingCheckOut);
       setExtraHours((booking as Booking & { extendHours?: number }).extendHours || 0);
       setGuestCount(booking.guestCount || booking.guests?.length || 1);
       setGuests(booking.guests || []);
 
+      // Set selected room from booking (will be updated when available rooms are fetched)
       const roomIdValue = (booking.roomId as Room)?._id || booking.roomId;
-      const room = rooms.find((r) => r._id === roomIdValue);
-      setSelectedRoom(room || null);
+      if (roomIdValue && booking.roomId) {
+        // Use booking room data directly, will be validated when available rooms are fetched
+        const bookingRoom = booking.roomId as any;
+        setSelectedRoom({
+          _id: roomIdValue,
+          roomNumber: bookingRoom.roomNumber || "",
+          typeId: bookingRoom.typeId || null,
+        } as Room);
+      }
 
       if (booking.services) {
         setSelectedServices(
@@ -258,7 +295,7 @@ export default function BookingForm({
       setGuests([]);
       setGuestCount(1);
     }
-  }, [booking, rooms, form]);
+  }, [booking, form]);
 
   const handleAddService = (serviceId: string) => {
     const service = services.find((s) => s._id === serviceId);
@@ -626,18 +663,31 @@ export default function BookingForm({
                   <Space>
                     <HomeOutlined />
                     <span>Chọn phòng</span>
-                    {availableRooms.length > 0 && (
+                    {loadingAvailableRooms ? (
+                      <Tag color="processing">Đang kiểm tra...</Tag>
+                    ) : availableRooms.length > 0 ? (
                       <Tag color="green">{availableRooms.length} phòng trống</Tag>
-                    )}
+                    ) : checkIn && checkOut ? (
+                      <Tag color="red">Không có phòng trống</Tag>
+                    ) : null}
                   </Space>
                 }
-                rules={[{ required: true }]}
+                rules={[{ required: true, message: "Vui lòng chọn phòng" }]}
               >
                 <Select
-                  placeholder={availableRooms.length === 0 ? "Không có phòng trống" : "Chọn phòng"}
-                  disabled={!checkIn || !checkOut}
+                  placeholder={
+                    !checkIn || !checkOut
+                      ? "Vui lòng chọn ngày nhận phòng và ngày trả phòng trước"
+                      : loadingAvailableRooms
+                      ? "Đang kiểm tra phòng trống..."
+                      : availableRooms.length === 0
+                      ? "Không có phòng trống trong khoảng thời gian này"
+                      : "Chọn phòng"
+                  }
+                  disabled={!checkIn || !checkOut || loadingAvailableRooms}
+                  loading={loadingAvailableRooms}
                   options={availableRooms.map((r) => ({
-                    label: `${r.roomNumber} - ${r.typeId?.name}`,
+                    label: `${r.roomNumber} - ${r.typeId?.name} (${r.typeId?.capacity || 0} người)`,
                     value: r._id,
                   }))}
                   onChange={(v) =>
@@ -645,6 +695,7 @@ export default function BookingForm({
                       availableRooms.find((r) => r._id === v) || null
                     )
                   }
+                  value={selectedRoom?._id}
                 />
               </Form.Item>
             </Col>

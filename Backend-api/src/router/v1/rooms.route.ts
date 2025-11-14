@@ -4,6 +4,8 @@ const router = express.Router();
 
 //Get all users
 router.get("/rooms", roomController.getAll);
+//Get available rooms (must be before /rooms/:id)
+router.get("/rooms/available", roomController.getAvailableRooms);
 //Get user by id
 router.get("/rooms/:id", roomController.getById);
 //Create user
