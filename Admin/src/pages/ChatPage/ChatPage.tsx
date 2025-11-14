@@ -392,13 +392,46 @@ export default function ChatPage() {
   }, [user?._id, tokens?.accessToken, socket, socket?.connected, loadConversations]);
 
   // Format time
-  const formatTime = (dateString: string) => {
-    return dayjs(dateString).format("HH:mm");
-  };
-
   // Format date
   const formatDate = (dateString: string) => {
     return dayjs(dateString).format("DD/MM/YYYY HH:mm");
+  };
+
+  // Kiểm tra xem có nên hiển thị thời gian không
+  // Chỉ hiển thị thời gian khi:
+  // 1. Tin nhắn đầu tiên
+  // 2. Tin nhắn từ người gửi khác (so với tin nhắn trước)
+  // 3. Tin nhắn cách tin nhắn trước hơn 5 phút
+  const shouldShowTimestamp = (currentMessage: Message, index: number) => {
+    // Tin nhắn đầu tiên luôn hiển thị thời gian
+    if (index === 0) {
+      return true;
+    }
+
+    const previousMessage = messages[index - 1];
+    if (!previousMessage) {
+      return true;
+    }
+
+    // Nếu tin nhắn từ người gửi khác, hiển thị thời gian
+    const currentSenderId = typeof currentMessage.senderId === 'object' 
+      ? currentMessage.senderId._id 
+      : currentMessage.senderId;
+    const previousSenderId = typeof previousMessage.senderId === 'object' 
+      ? previousMessage.senderId._id 
+      : previousMessage.senderId;
+    
+    if (currentSenderId !== previousSenderId) {
+      return true;
+    }
+
+    // Nếu cách nhau hơn 5 phút, hiển thị thời gian
+    const currentTime = new Date(currentMessage.createdAt).getTime();
+    const previousTime = new Date(previousMessage.createdAt).getTime();
+    const timeDiff = currentTime - previousTime;
+    const fiveMinutes = 5 * 60 * 1000; // 5 phút tính bằng milliseconds
+
+    return timeDiff > fiveMinutes;
   };
 
   // Get other participant
@@ -472,20 +505,13 @@ export default function ChatPage() {
                         </Space>
                       }
                       description={
-                        <div>
-                          <Text
-                            type="secondary"
-                            ellipsis
-                            style={{ fontSize: 12, display: "block" }}
-                          >
-                            {getLastMessagePreview(conversation)}
-                          </Text>
-                          <Text type="secondary" style={{ fontSize: 11 }}>
-                            {conversation.lastMessageAt
-                              ? dayjs(conversation.lastMessageAt).fromNow()
-                              : ""}
-                          </Text>
-                        </div>
+                        <Text
+                          type="secondary"
+                          ellipsis
+                          style={{ fontSize: 12, display: "block" }}
+                        >
+                          {getLastMessagePreview(conversation)}
+                        </Text>
                       }
                     />
                   </List.Item>
@@ -541,52 +567,61 @@ export default function ChatPage() {
               ) : messages.length === 0 ? (
                 <Empty description="Chưa có tin nhắn" />
               ) : (
-                messages.map((msg) => {
-                  const isOwnMessage = msg.senderId._id === user?._id;
+                messages.map((msg, index) => {
+                  const isOwnMessage = typeof msg.senderId === 'object'
+                    ? msg.senderId._id === user?._id
+                    : msg.senderId === user?._id;
+                  const showSenderName = !isOwnMessage && shouldShowTimestamp(msg, index);
+                  const messageId = `msg-${msg._id}`;
+                  
                   return (
                     <div
                       key={msg._id}
                       style={{
                         display: "flex",
                         justifyContent: isOwnMessage ? "flex-end" : "flex-start",
-                        marginBottom: 16,
+                        marginBottom: index > 0 ? 4 : 16,
                       }}
                     >
                       <div
+                        id={messageId}
                         style={{
-                          maxWidth: "70%",
-                          padding: "12px 16px",
-                          borderRadius: 12,
-                          backgroundColor: isOwnMessage ? "#1890ff" : "#fff",
-                          color: isOwnMessage ? "#fff" : "#000",
-                          boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                          maxWidth: "75%",
+                          padding: "10px 16px",
+                          borderRadius: 16,
+                          backgroundColor: isOwnMessage ? "#9333ea" : "#f3e8ff",
+                          color: isOwnMessage ? "#fff" : "#1f2937",
+                          boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+                          position: "relative",
+                          cursor: "default",
+                          transition: "all 0.2s ease",
+                          wordWrap: "break-word",
+                          overflowWrap: "break-word",
                         }}
+                        title={`${formatDate(msg.createdAt)}`}
                       >
-                        {!isOwnMessage && (
+                        {showSenderName && (
                           <Text
                             strong
                             style={{
                               display: "block",
-                              marginBottom: 4,
+                              marginBottom: 6,
                               fontSize: 12,
-                              color: isOwnMessage ? "#fff" : "#1890ff",
+                              color: isOwnMessage ? "rgba(255,255,255,0.9)" : "#7c3aed",
                             }}
                           >
-                            {msg.senderId.fullName}
+                            {typeof msg.senderId === 'object' 
+                              ? msg.senderId.fullName 
+                              : 'Người dùng'}
                           </Text>
                         )}
-                        <Text style={{ color: isOwnMessage ? "#fff" : "#000" }}>
+                        <Text style={{ 
+                          color: isOwnMessage ? "#fff" : "#1f2937",
+                          lineHeight: 1.5,
+                          fontSize: 14,
+                        }}>
                           {msg.content}
                         </Text>
-                        <div
-                          style={{
-                            marginTop: 4,
-                            fontSize: 11,
-                            color: isOwnMessage ? "rgba(255,255,255,0.7)" : "#8c8c8c",
-                          }}
-                        >
-                          {formatTime(msg.createdAt)}
-                        </div>
                       </div>
                     </div>
                   );

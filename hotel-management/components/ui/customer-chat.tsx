@@ -400,14 +400,51 @@ export default function CustomerChat() {
     };
   }, [isOpen]);
 
-  // Format time
-  const formatTime = (dateString: string) => {
+  // Format date và time đầy đủ (cho tooltip)
+  const formatDateTime = (dateString: string) => {
     try {
       const date = new Date(dateString);
-      return format(date, "HH:mm", { locale: vi });
+      return format(date, "dd/MM/yyyy HH:mm", { locale: vi });
     } catch {
       return "";
     }
+  };
+
+  // Kiểm tra xem có nên hiển thị thời gian không
+  // Chỉ hiển thị thời gian khi:
+  // 1. Tin nhắn đầu tiên
+  // 2. Tin nhắn từ người gửi khác (so với tin nhắn trước)
+  // 3. Tin nhắn cách tin nhắn trước hơn 5 phút
+  const shouldShowTimestamp = (currentMessage: Message, index: number) => {
+    // Tin nhắn đầu tiên luôn hiển thị thời gian
+    if (index === 0) {
+      return true;
+    }
+
+    const previousMessage = messages[index - 1];
+    if (!previousMessage) {
+      return true;
+    }
+
+    // Nếu tin nhắn từ người gửi khác, hiển thị thời gian
+    const currentSenderId = typeof currentMessage.senderId === 'object' 
+      ? currentMessage.senderId._id 
+      : currentMessage.senderId;
+    const previousSenderId = typeof previousMessage.senderId === 'object' 
+      ? previousMessage.senderId._id 
+      : previousMessage.senderId;
+    
+    if (currentSenderId !== previousSenderId) {
+      return true;
+    }
+
+    // Nếu cách nhau hơn 5 phút, hiển thị thời gian
+    const currentTime = new Date(currentMessage.createdAt).getTime();
+    const previousTime = new Date(previousMessage.createdAt).getTime();
+    const timeDiff = currentTime - previousTime;
+    const fiveMinutes = 5 * 60 * 1000; // 5 phút tính bằng milliseconds
+
+    return timeDiff > fiveMinutes;
   };
 
   // Get other participant
@@ -427,11 +464,11 @@ export default function CustomerChat() {
       {/* Nút bong bóng chat */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 text-white flex items-center justify-center shadow-2xl hover:shadow-3xl transition-all duration-300 hover:scale-110 z-[1000] group"
+        className="fixed bottom-6 right-6 w-16 h-16 rounded-full bg-gradient-to-r from-purple-500 to-purple-600 text-white flex items-center justify-center shadow-2xl hover:shadow-purple-500/50 transition-all duration-300 hover:scale-110 z-[1000] group ring-4 ring-purple-200/50"
       >
         <MessageCircle className="h-7 w-7 group-hover:scale-110 transition-transform duration-200" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold animate-pulse">
+          <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold animate-pulse shadow-lg">
             {unreadCount > 9 ? "9+" : unreadCount}
           </span>
         )}
@@ -441,19 +478,19 @@ export default function CustomerChat() {
       {isOpen && (
         <div
           ref={chatRef}
-          className="fixed bottom-24 right-6 w-96 h-[600px] bg-white shadow-2xl rounded-2xl overflow-hidden flex flex-col z-[1001] animate-in slide-in-from-bottom-4 fade-in duration-300 border border-gray-200"
+          className="fixed bottom-24 right-6 w-96 h-[600px] bg-white shadow-2xl rounded-2xl overflow-hidden flex flex-col z-[1001] animate-in slide-in-from-bottom-4 fade-in duration-300 border border-gray-100 ring-1 ring-gray-200/50"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-500 to-purple-600 text-white p-4 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-4 flex items-center justify-between shadow-md">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center ring-2 ring-white/30">
                 <MessageCircle className="h-5 w-5" />
               </div>
               <div>
-                <h3 className="font-semibold">
+                <h3 className="font-semibold text-base">
                   {getOtherParticipant()?.fullName || "Hỗ trợ khách hàng"}
                 </h3>
-                <p className="text-xs text-white/80">
+                <p className="text-xs text-white/90">
                   {socket?.connected ? "Đang trực tuyến" : "Đang kết nối..."}
                 </p>
               </div>
@@ -469,7 +506,8 @@ export default function CustomerChat() {
           {/* Messages */}
           <div
             ref={messagesContainerRef}
-            className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
+            className="flex-1 overflow-y-auto p-4 bg-white"
+            style={{ background: "linear-gradient(to bottom, #fafafa 0%, #ffffff 100%)" }}
           >
             {loading ? (
               <div className="flex items-center justify-center h-full">
@@ -480,32 +518,41 @@ export default function CustomerChat() {
                 Chưa có tin nhắn. Hãy bắt đầu cuộc trò chuyện!
               </div>
             ) : (
-              messages.map((message) => {
-                const isOwnMessage = message.senderId._id === user._id;
+              messages.map((message, index) => {
+                const isOwnMessage = typeof message.senderId === 'object' 
+                  ? message.senderId._id === user._id 
+                  : message.senderId === user._id;
+                const showSenderName = !isOwnMessage && shouldShowTimestamp(message, index);
+                
                 return (
                   <div
                     key={message._id}
                     className={`flex ${isOwnMessage ? "justify-end" : "justify-start"}`}
+                    style={{
+                      marginBottom: index > 0 ? 4 : 16,
+                    }}
                   >
                     <div
-                      className={`max-w-[80%] rounded-lg p-3 ${
+                      className={`max-w-[75%] rounded-2xl px-4 py-2.5 relative shadow-sm transition-all duration-200 ${
                         isOwnMessage
-                          ? "bg-blue-500 text-white"
-                          : "bg-white text-gray-800 border border-gray-200"
+                          ? "bg-purple-500 text-white"
+                          : "bg-purple-100 text-gray-800"
                       }`}
+                      title={formatDateTime(message.createdAt)}
+                      style={{
+                        wordWrap: "break-word",
+                        overflowWrap: "break-word",
+                      }}
                     >
-                      {!isOwnMessage && (
-                        <p className="text-xs font-semibold mb-1 opacity-80">
-                          {message.senderId.fullName}
+                      {showSenderName && (
+                        <p className={`text-xs font-semibold mb-1.5 ${isOwnMessage ? "text-white/90" : "text-purple-700"}`}>
+                          {typeof message.senderId === 'object' 
+                            ? message.senderId.fullName 
+                            : 'Người dùng'}
                         </p>
                       )}
-                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                      <p
-                        className={`text-xs mt-1 ${
-                          isOwnMessage ? "text-white/70" : "text-gray-500"
-                        }`}
-                      >
-                        {formatTime(message.createdAt)}
+                      <p className={`text-sm leading-relaxed whitespace-pre-wrap ${isOwnMessage ? "text-white" : "text-gray-800"}`}>
+                        {message.content}
                       </p>
                     </div>
                   </div>
@@ -517,7 +564,7 @@ export default function CustomerChat() {
 
           {/* Input */}
           <div className="border-t border-gray-200 p-4 bg-white">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
               <input
                 type="text"
                 value={messageText}
@@ -529,13 +576,13 @@ export default function CustomerChat() {
                   }
                 }}
                 placeholder="Nhập tin nhắn..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="flex-1 px-4 py-2.5 border border-gray-200 rounded-full focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent bg-gray-50 text-sm transition-all duration-200"
                 disabled={sending || loading}
               />
               <button
                 onClick={handleSendMessage}
                 disabled={!messageText.trim() || sending || loading}
-                className="w-10 h-10 bg-blue-500 text-white rounded-lg flex items-center justify-center hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                className="w-11 h-11 rounded-full bg-purple-500 text-white flex items-center justify-center hover:bg-purple-600 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg transform hover:scale-105 active:scale-95"
               >
                 {sending ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
