@@ -820,7 +820,16 @@ export default function GroupBookingPage() {
                                 setCreatedId(''); 
                                 setCurrentStatus(''); 
                                 setRequestId('');
-                                message.success('Đã xóa mã yêu cầu đã lưu');
+                                setGroupDetail(null);
+                                setQuoteAmount(null);
+                                setPaymentLink('');
+                                setStatusNote('');
+                                setLastUpdated('');
+                                message.success('Đã xóa mã yêu cầu đã lưu. Trang sẽ được tải lại...', 1);
+                                // Tự động reload trang sau 1 giây
+                                setTimeout(() => {
+                                  window.location.reload();
+                                }, 1000);
                               }}
                             >
                               Xóa mã lưu

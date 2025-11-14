@@ -44,22 +44,33 @@ const playNotificationSound = () => {
     // Sử dụng Web Audio API để tạo âm thanh beep
     // Tạo audio context mới mỗi lần để tránh lỗi "suspended state"
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    
+    // Kiểm tra xem có AudioContext không
+    if (!AudioContextClass) {
+      console.warn('Web Audio API không được hỗ trợ. Sử dụng beep đơn giản.');
+      playSimpleBeep();
+      return;
+    }
+    
     const audioContext = new AudioContextClass();
     
     // Resume audio context nếu bị suspended (cần user interaction)
     if (audioContext.state === 'suspended') {
-      audioContext.resume().then(() => {
-        playTone(audioContext);
-      }).catch((err) => {
-        console.error('Không thể resume audio context:', err);
-        // Fallback: sử dụng beep đơn giản
-        playSimpleBeep();
-      });
+      audioContext.resume()
+        .then(() => {
+          console.log('✅ Audio context đã được resume');
+          playTone(audioContext);
+        })
+        .catch((err) => {
+          console.error('❌ Không thể resume audio context:', err);
+          // Fallback: sử dụng beep đơn giản
+          playSimpleBeep();
+        });
     } else {
       playTone(audioContext);
     }
   } catch (error) {
-    console.error('Lỗi phát âm thanh:', error);
+    console.error('❌ Lỗi phát âm thanh:', error);
     // Fallback: sử dụng beep đơn giản
     playSimpleBeep();
   }
@@ -160,8 +171,15 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
 
       shownNotificationsRef.current.add(notificationId);
 
-      // Phát âm thanh
-      playNotificationSound();
+      // Phát âm thanh cho thông báo mới
+      console.log(`🔔 Hiển thị notification: ${isGroupBooking ? 'Group Booking' : 'Booking'} - ${notificationId}`);
+      try {
+        playNotificationSound();
+        console.log('✅ Đã phát âm thanh thông báo');
+      } catch (soundError) {
+        console.error('❌ Lỗi phát âm thanh:', soundError);
+        // Vẫn hiển thị notification dù không phát được âm thanh
+      }
 
       let descriptionContent: React.ReactNode;
       let navigateUrl = '/bookings';

@@ -152,8 +152,28 @@ class SocketService {
 
   // Gửi message đến room
   sendToRoom(room: string, event: string, data: any) {
-    if (!this.io) return;
-    this.io.to(room).emit(event, data);
+    if (!this.io) {
+      console.warn(`⚠️ WebSocket server chưa được khởi tạo. Không thể gửi message đến room: ${room}`);
+      return;
+    }
+    
+    try {
+      // Lấy số lượng clients trong room
+      const roomClients = this.io.sockets.adapter.rooms.get(room);
+      const clientCount = roomClients ? roomClients.size : 0;
+      
+      // Gửi message đến room
+      this.io.to(room).emit(event, data);
+      
+      if (clientCount > 0) {
+        console.log(`✅ Đã gửi "${event}" đến room "${room}" (${clientCount} clients)`);
+      } else {
+        console.warn(`⚠️ Room "${room}" không có clients nào đang online. Notification sẽ không được nhận.`);
+      }
+    } catch (error) {
+      console.error(`❌ Lỗi gửi message đến room "${room}":`, error);
+      throw error;
+    }
   }
 
   // Broadcast đến tất cả users

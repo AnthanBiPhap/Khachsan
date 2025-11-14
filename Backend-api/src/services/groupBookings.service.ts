@@ -90,13 +90,35 @@ const create = async (payload: CreateGroupBookingPayload) => {
     };
 
     // Gửi đến tất cả admin và staff
-    socketService.sendToRoom("role:admin", "new_group_booking", groupBookingNotification);
-    socketService.sendToRoom("role:staff", "new_group_booking", groupBookingNotification);
+    try {
+      socketService.sendToRoom("role:admin", "new_group_booking", groupBookingNotification);
+      console.log(`📢 Đã gửi WebSocket notification đến room "role:admin" cho group booking: ${gb._id}`);
+    } catch (adminError) {
+      console.error("❌ Lỗi gửi notification đến admin:", adminError);
+    }
     
-    console.log(`📢 Đã lưu và gửi WebSocket notification cho group booking mới: ${gb._id}`);
+    try {
+      socketService.sendToRoom("role:staff", "new_group_booking", groupBookingNotification);
+      console.log(`📢 Đã gửi WebSocket notification đến room "role:staff" cho group booking: ${gb._id}`);
+    } catch (staffError) {
+      console.error("❌ Lỗi gửi notification đến staff:", staffError);
+    }
+    
+    console.log(`✅ Đã lưu và gửi WebSocket notification cho group booking mới: ${gb._id}`);
+    console.log(`📊 Thông tin notification:`, {
+      message: notificationMessage,
+      requesterName: payload.requesterName,
+      peopleCount: gb.peopleCount,
+      roomCount: gb.roomCount,
+      checkIn: gb.checkIn,
+      checkOut: gb.checkOut,
+    });
   } catch (notificationError) {
     console.error("❌ Lỗi lưu/gửi notification cho group booking:", notificationError);
-    // Không throw error để không làm crash API
+    // Không throw error để không làm crash API, nhưng vẫn log chi tiết
+    if (notificationError instanceof Error) {
+      console.error("Error stack:", notificationError.stack);
+    }
   }
 
   return gb;
