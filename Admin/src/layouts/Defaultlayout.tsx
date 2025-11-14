@@ -135,9 +135,17 @@ const Defaultlayout: React.FC = () => {
   const unshownNotifications = useMemo(() => {
     return notifications.filter((notif) => {
       const isGroupBooking = !!notif.groupBooking;
-      const notificationId = isGroupBooking
-        ? `group-${notif.groupBooking?._id}-${notif.timestamp}`
-        : `${notif.booking?._id}-${notif.timestamp}`;
+      const isPaymentNotification = notif.type === 'group_booking_payment';
+      
+      // Tạo notification ID duy nhất dựa trên loại notification
+      let notificationId: string;
+      if (isPaymentNotification && notif.groupBooking) {
+        notificationId = `payment-group-${notif.groupBooking?._id}-${notif.timestamp}`;
+      } else if (isGroupBooking) {
+        notificationId = `group-${notif.groupBooking?._id}-${notif.timestamp}`;
+      } else {
+        notificationId = `${notif.booking?._id}-${notif.timestamp}`;
+      }
       return !shownNotificationIds.has(notificationId);
     });
   }, [notifications, shownNotificationIds]);

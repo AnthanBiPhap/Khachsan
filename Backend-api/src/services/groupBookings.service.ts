@@ -380,7 +380,8 @@ const markPaid = async (
   id: string,
   options?: { stripeSessionId?: string; stripePaymentIntentId?: string; stripeCustomerId?: string }
 ) => {
-  const gb = await GroupBooking.findById(id);
+  const gb = await GroupBooking.findById(id)
+    .populate("requesterId", "fullName email phoneNumber");
   if (!gb) throw createError(404, "Group booking not found");
   if (!gb.quoteAmount) throw createError(400, "Quote not set");
   if (!["awaiting_payment", "quoted", "info_uploaded"].includes(gb.status))
@@ -472,6 +473,98 @@ const markPaid = async (
     // Không throw error để không làm crash API
   }
 
+  // Lưu notification vào database và gửi WebSocket notification cho admin và staff
+  try {
+    const isDeposit = remainingAmount > 0;
+    const notificationMessage = isDeposit 
+      ? `Khách hàng ${gb.requesterName} đã thanh toán đặt cọc ${paidAmount.toLocaleString("vi-VN")} VND cho đặt phòng nhóm ${gb._id}`
+      : `Khách hàng ${gb.requesterName} đã thanh toán đủ ${paidAmount.toLocaleString("vi-VN")} VND cho đặt phòng nhóm ${gb._id}`;
+    
+    // Lưu notification vào database
+    await notificationsService.create({
+      type: "payment_received",
+      title: isDeposit ? "Nhận đặt cọc đặt phòng nhóm" : "Thanh toán đủ đặt phòng nhóm",
+      message: notificationMessage,
+      userId: gb.requesterId?._id || undefined,
+      bookingData: {
+        bookingId: null,
+        customerId: gb.requesterId?._id,
+        roomId: null,
+        checkIn: gb.checkIn,
+        checkOut: gb.checkOut,
+        totalPrice: gb.quoteAmount,
+        paymentStatus: isDeposit ? "partial_paid" : "paid",
+        source: "online",
+        guestCount: gb.peopleCount,
+        guests: [],
+      },
+      metadata: {
+        groupBookingId: gb._id,
+        roomCount: gb.roomCount,
+        peopleCount: gb.peopleCount,
+        requesterName: gb.requesterName,
+        requesterPhone: gb.requesterPhone,
+        requesterEmail: gb.requesterEmail,
+        paidAmount,
+        remainingAmount,
+        isDeposit,
+      },
+    });
+
+    // Gửi WebSocket notification
+    const paymentNotification = {
+      type: "group_booking_payment",
+      groupBooking: {
+        _id: gb._id,
+        requesterId: gb.requesterId,
+        requesterName: gb.requesterName,
+        requesterPhone: gb.requesterPhone,
+        checkIn: gb.checkIn,
+        checkOut: gb.checkOut,
+        peopleCount: gb.peopleCount,
+        roomCount: gb.roomCount,
+        status: gb.status,
+        quoteAmount: gb.quoteAmount,
+        paidAmount,
+        remainingAmount,
+      },
+      message: notificationMessage,
+      isDeposit,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Gửi đến tất cả admin và staff
+    try {
+      socketService.sendToRoom("role:admin", "group_booking_payment", paymentNotification);
+      console.log(`📢 Đã gửi WebSocket notification thanh toán đến room "role:admin" cho group booking: ${gb._id}`);
+    } catch (adminError) {
+      console.error("❌ Lỗi gửi notification thanh toán đến admin:", adminError);
+    }
+    
+    try {
+      socketService.sendToRoom("role:staff", "group_booking_payment", paymentNotification);
+      console.log(`📢 Đã gửi WebSocket notification thanh toán đến room "role:staff" cho group booking: ${gb._id}`);
+    } catch (staffError) {
+      console.error("❌ Lỗi gửi notification thanh toán đến staff:", staffError);
+    }
+    
+    console.log(`✅ Đã lưu và gửi WebSocket notification thanh toán cho group booking: ${gb._id}`);
+    console.log(`📊 Thông tin thanh toán:`, {
+      message: notificationMessage,
+      requesterName: gb.requesterName,
+      paidAmount,
+      remainingAmount,
+      isDeposit,
+      status: gb.status,
+    });
+  } catch (notificationError) {
+    console.error("❌ Lỗi lưu/gửi notification thanh toán cho group booking:", notificationError);
+    // Không throw error để không làm crash API, nhưng vẫn log chi tiết
+    if (notificationError instanceof Error) {
+      console.error("Error stack:", notificationError.stack);
+    }
+  }
+
   return gb;
 };
 
@@ -479,7 +572,8 @@ const markFullPayment = async (
   id: string,
   options?: { stripeSessionId?: string; stripePaymentIntentId?: string; stripeCustomerId?: string }
 ) => {
-  const gb = await GroupBooking.findById(id);
+  const gb = await GroupBooking.findById(id)
+    .populate("requesterId", "fullName email phoneNumber");
   if (!gb) throw createError(404, "Group booking not found");
   if (!gb.quoteAmount) throw createError(400, "Quote not set");
 
@@ -554,6 +648,95 @@ const markFullPayment = async (
     }
   } catch (paymentError) {
     console.error(`❌ Lỗi cập nhật payment khi tất toán group booking ${gb._id}:`, paymentError);
+  }
+
+  // Lưu notification vào database và gửi WebSocket notification cho admin và staff
+  try {
+    const notificationMessage = `Admin đã xác nhận thanh toán đủ ${gb.quoteAmount.toLocaleString("vi-VN")} VND cho đặt phòng nhóm ${gb._id} từ ${gb.requesterName}`;
+    
+    // Lưu notification vào database
+    await notificationsService.create({
+      type: "payment_received",
+      title: "Thanh toán đủ đặt phòng nhóm",
+      message: notificationMessage,
+      userId: gb.requesterId?._id || undefined,
+      bookingData: {
+        bookingId: null,
+        customerId: gb.requesterId?._id,
+        roomId: null,
+        checkIn: gb.checkIn,
+        checkOut: gb.checkOut,
+        totalPrice: gb.quoteAmount,
+        paymentStatus: "paid",
+        source: "online",
+        guestCount: gb.peopleCount,
+        guests: [],
+      },
+      metadata: {
+        groupBookingId: gb._id,
+        roomCount: gb.roomCount,
+        peopleCount: gb.peopleCount,
+        requesterName: gb.requesterName,
+        requesterPhone: gb.requesterPhone,
+        requesterEmail: gb.requesterEmail,
+        paidAmount: gb.quoteAmount,
+        remainingAmount: 0,
+        isDeposit: false,
+        isFullPayment: true,
+      },
+    });
+
+    // Gửi WebSocket notification
+    const paymentNotification = {
+      type: "group_booking_payment",
+      groupBooking: {
+        _id: gb._id,
+        requesterId: gb.requesterId,
+        requesterName: gb.requesterName,
+        requesterPhone: gb.requesterPhone,
+        checkIn: gb.checkIn,
+        checkOut: gb.checkOut,
+        peopleCount: gb.peopleCount,
+        roomCount: gb.roomCount,
+        status: gb.status,
+        quoteAmount: gb.quoteAmount,
+        paidAmount: gb.quoteAmount,
+        remainingAmount: 0,
+      },
+      message: notificationMessage,
+      isDeposit: false,
+      isFullPayment: true,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Gửi đến tất cả admin và staff
+    try {
+      socketService.sendToRoom("role:admin", "group_booking_payment", paymentNotification);
+      console.log(`📢 Đã gửi WebSocket notification thanh toán đủ đến room "role:admin" cho group booking: ${gb._id}`);
+    } catch (adminError) {
+      console.error("❌ Lỗi gửi notification thanh toán đủ đến admin:", adminError);
+    }
+    
+    try {
+      socketService.sendToRoom("role:staff", "group_booking_payment", paymentNotification);
+      console.log(`📢 Đã gửi WebSocket notification thanh toán đủ đến room "role:staff" cho group booking: ${gb._id}`);
+    } catch (staffError) {
+      console.error("❌ Lỗi gửi notification thanh toán đủ đến staff:", staffError);
+    }
+    
+    console.log(`✅ Đã lưu và gửi WebSocket notification thanh toán đủ cho group booking: ${gb._id}`);
+    console.log(`📊 Thông tin thanh toán đủ:`, {
+      message: notificationMessage,
+      requesterName: gb.requesterName,
+      paidAmount: gb.quoteAmount,
+      status: gb.status,
+    });
+  } catch (notificationError) {
+    console.error("❌ Lỗi lưu/gửi notification thanh toán đủ cho group booking:", notificationError);
+    // Không throw error để không làm crash API, nhưng vẫn log chi tiết
+    if (notificationError instanceof Error) {
+      console.error("Error stack:", notificationError.stack);
+    }
   }
 
   return gb;

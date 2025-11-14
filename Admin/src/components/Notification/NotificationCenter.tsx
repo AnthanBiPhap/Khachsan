@@ -172,6 +172,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
             const isRead = isNotificationRead(notif);
             const bookingData = notif.bookingData;
             const isGroupBooking = !!notif.metadata?.groupBookingId;
+            const isPaymentNotification = notif.type === 'payment_received' && isGroupBooking;
             
             let customerName = 'Khách hàng';
             let roomNumber = 'N/A';
@@ -198,6 +199,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
             }
 
             const notificationTime = dayjs(notif.createdAt).format('DD/MM/YYYY HH:mm');
+            const paidAmount = notif.metadata?.paidAmount || 0;
+            const remainingAmount = notif.metadata?.remainingAmount || 0;
+            const isDeposit = notif.metadata?.isDeposit || false;
+            const isFullPayment = notif.metadata?.isFullPayment || false;
 
             return (
               <List.Item
@@ -258,11 +263,21 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                 ].filter(Boolean)}
               >
                 <List.Item.Meta
-                  avatar={<BellOutlined style={{ fontSize: '24px', color: '#1890ff' }} />}
+                  avatar={
+                    <div style={{ 
+                      fontSize: '24px', 
+                      color: isPaymentNotification ? '#52c41a' : '#1890ff',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {isPaymentNotification ? '💳' : <BellOutlined />}
+                    </div>
+                  }
                   title={
                     <Space direction="vertical" size={4} style={{ width: '100%' }}>
                       <div>
-                        <Text strong style={{ fontSize: '16px' }}>
+                        <Text strong style={{ fontSize: '16px', color: isPaymentNotification ? '#52c41a' : undefined }}>
                           {notif.title}
                         </Text>
                         {!isRead && <Badge dot style={{ marginLeft: '8px' }} />}
@@ -271,6 +286,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                         <Space>
                           {getSourceTag(bookingData.source)}
                           {getPaymentStatusTag(bookingData.paymentStatus)}
+                          {isPaymentNotification && (
+                            <Tag color={isDeposit ? 'orange' : isFullPayment ? 'green' : 'blue'}>
+                              {isDeposit ? 'Đặt cọc' : isFullPayment ? 'Thanh toán đủ' : 'Thanh toán'}
+                            </Tag>
+                          )}
                         </Space>
                       )}
                     </Space>
@@ -303,9 +323,32 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                         {bookingData?.totalPrice && (
                           <div>
                             <DollarOutlined style={{ marginRight: '8px', color: '#1890ff' }} />
-                            <Text strong style={{ color: '#52c41a' }}>
-                              {formatPrice(bookingData.totalPrice)}
+                            <Text>Tổng giá: <Text strong>{formatPrice(bookingData.totalPrice)}</Text></Text>
+                          </div>
+                        )}
+                        {isPaymentNotification && paidAmount > 0 && (
+                          <div style={{ 
+                            padding: '8px 12px', 
+                            background: '#f6ffed', 
+                            borderRadius: '4px',
+                            border: '1px solid #b7eb8f'
+                          }}>
+                            <DollarOutlined style={{ marginRight: '8px', color: '#52c41a' }} />
+                            <Text strong style={{ color: '#52c41a', fontSize: '14px' }}>
+                              Đã thanh toán: {formatPrice(paidAmount)}
                             </Text>
+                            {remainingAmount > 0 && (
+                              <div style={{ marginTop: '4px' }}>
+                                <Text type="secondary" style={{ fontSize: '13px' }}>
+                                  Còn lại: <Text strong style={{ color: '#fa8c16' }}>{formatPrice(remainingAmount)}</Text>
+                                </Text>
+                              </div>
+                            )}
+                            {remainingAmount === 0 && (
+                              <div style={{ marginTop: '4px' }}>
+                                <Tag color="success" style={{ fontSize: '12px' }}>✅ Đã thanh toán đủ</Tag>
+                              </div>
+                            )}
                           </div>
                         )}
                         <div>

@@ -20,6 +20,18 @@ export interface Notification {
     guestCount: number;
     guests: any[];
   };
+  metadata?: {
+    groupBookingId?: string;
+    roomCount?: number;
+    peopleCount?: number;
+    requesterName?: string;
+    requesterPhone?: string;
+    requesterEmail?: string;
+    paidAmount?: number;
+    remainingAmount?: number;
+    isDeposit?: boolean;
+    isFullPayment?: boolean;
+  };
   recipients: Array<{
     userId: string;
     role: string;

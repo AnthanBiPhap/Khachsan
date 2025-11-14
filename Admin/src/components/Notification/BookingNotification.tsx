@@ -28,9 +28,13 @@ interface BookingNotificationData {
     roomCount: number;
     status: string;
     quoteAmount?: number;
+    paidAmount?: number;
+    remainingAmount?: number;
   };
   message: string;
   timestamp: string;
+  isDeposit?: boolean;
+  isFullPayment?: boolean;
 }
 
 interface BookingNotificationProps {
@@ -160,9 +164,18 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
     notifications.forEach((notif) => {
       // Xác định notification ID và loại
       const isGroupBooking = !!notif.groupBooking;
-      const notificationId = isGroupBooking 
-        ? `group-${notif.groupBooking._id}-${notif.timestamp}`
-        : `${notif.booking?._id}-${notif.timestamp}`;
+      const isPaymentNotification = notif.type === 'group_booking_payment';
+      
+      // Tạo notification ID duy nhất dựa trên loại notification
+      let notificationId: string;
+      if (isPaymentNotification && notif.groupBooking) {
+        // Notification thanh toán có ID riêng để phân biệt với notification đặt phòng mới
+        notificationId = `payment-group-${notif.groupBooking._id}-${notif.timestamp}`;
+      } else if (isGroupBooking) {
+        notificationId = `group-${notif.groupBooking._id}-${notif.timestamp}`;
+      } else {
+        notificationId = `${notif.booking?._id}-${notif.timestamp}`;
+      }
       
       // Chỉ hiển thị notification một lần
       if (shownNotificationsRef.current.has(notificationId)) {
@@ -171,8 +184,15 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
 
       shownNotificationsRef.current.add(notificationId);
 
+      // Kiểm tra loại notification để hiển thị
+      const notificationType = isPaymentNotification 
+        ? 'Payment' 
+        : isGroupBooking 
+          ? 'Group Booking' 
+          : 'Booking';
+      
       // Phát âm thanh cho thông báo mới
-      console.log(`🔔 Hiển thị notification: ${isGroupBooking ? 'Group Booking' : 'Booking'} - ${notificationId}`);
+      console.log(`🔔 Hiển thị notification: ${notificationType} - ${notificationId}`);
       try {
         playNotificationSound();
         console.log('✅ Đã phát âm thanh thông báo');
@@ -185,7 +205,65 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
       let navigateUrl = '/bookings';
       let notificationTitle = '🔔 Đặt phòng mới';
 
-      if (isGroupBooking && notif.groupBooking) {
+      if (isPaymentNotification && notif.groupBooking) {
+        // Group booking payment notification
+        const isDeposit = notif.isDeposit || false;
+        const isFullPayment = notif.isFullPayment || false;
+        notificationTitle = isDeposit 
+          ? '💳 Nhận đặt cọc đặt phòng nhóm' 
+          : isFullPayment
+            ? '✅ Thanh toán đủ đặt phòng nhóm'
+            : '💳 Thanh toán đặt phòng nhóm';
+        
+        const checkInDate = new Date(notif.groupBooking.checkIn).toLocaleDateString('vi-VN');
+        const checkOutDate = new Date(notif.groupBooking.checkOut).toLocaleDateString('vi-VN');
+        const formattedTotalPrice = notif.groupBooking.quoteAmount 
+          ? new Intl.NumberFormat('vi-VN', {
+              style: 'currency',
+              currency: 'VND',
+            }).format(notif.groupBooking.quoteAmount)
+          : 'Chưa có báo giá';
+        const formattedPaidAmount = notif.groupBooking.paidAmount 
+          ? new Intl.NumberFormat('vi-VN', {
+              style: 'currency',
+              currency: 'VND',
+            }).format(notif.groupBooking.paidAmount)
+          : '0 VND';
+        const formattedRemainingAmount = notif.groupBooking.remainingAmount 
+          ? new Intl.NumberFormat('vi-VN', {
+              style: 'currency',
+              currency: 'VND',
+            }).format(notif.groupBooking.remainingAmount)
+          : '0 VND';
+
+        descriptionContent = (
+          <div>
+            <p><strong>{notif.message}</strong></p>
+            <p>Người yêu cầu: {notif.groupBooking.requesterName}</p>
+            <p>Số điện thoại: {notif.groupBooking.requesterPhone}</p>
+            <p>Số phòng: {notif.groupBooking.roomCount}</p>
+            <p>Số người: {notif.groupBooking.peopleCount}</p>
+            <p>Tổng giá: {formattedTotalPrice}</p>
+            <p style={{ color: '#52c41a', fontWeight: 'bold' }}>
+              Đã thanh toán: {formattedPaidAmount}
+            </p>
+            {notif.groupBooking.remainingAmount && notif.groupBooking.remainingAmount > 0 && (
+              <p style={{ color: '#fa8c16', fontWeight: 'bold' }}>
+                Còn lại: {formattedRemainingAmount}
+              </p>
+            )}
+            <p>Check-in: {checkInDate} - Check-out: {checkOutDate}</p>
+            <p>Trạng thái: {
+              notif.groupBooking.status === 'deposit_paid' 
+                ? 'Đã đặt cọc' 
+                : notif.groupBooking.status === 'paid'
+                  ? 'Đã thanh toán đủ'
+                  : notif.groupBooking.status
+            }</p>
+          </div>
+        );
+        navigateUrl = '/group-bookings';
+      } else if (isGroupBooking && notif.groupBooking) {
         // Group booking notification
         notificationTitle = '🔔 Yêu cầu đặt phòng nhóm mới';
         const checkInDate = new Date(notif.groupBooking.checkIn).toLocaleDateString('vi-VN');

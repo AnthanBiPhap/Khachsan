@@ -28,9 +28,13 @@ interface BookingNotification {
     roomCount: number;
     status: string;
     quoteAmount?: number;
+    paidAmount?: number;
+    remainingAmount?: number;
   };
   message: string;
   timestamp: string;
+  isDeposit?: boolean;
+  isFullPayment?: boolean;
 }
 
 interface UseWebSocketReturn {
@@ -93,6 +97,12 @@ export const useWebSocket = (): UseWebSocketReturn => {
     // Lắng nghe thông báo đặt phòng nhóm mới
     newSocket.on('new_group_booking', (data: BookingNotification) => {
       console.log('📢 Nhận được thông báo đặt phòng nhóm mới:', data);
+      setNotifications((prev) => [data, ...prev]);
+    });
+
+    // Lắng nghe thông báo thanh toán đặt phòng nhóm
+    newSocket.on('group_booking_payment', (data: BookingNotification) => {
+      console.log('💳 Nhận được thông báo thanh toán đặt phòng nhóm:', data);
       setNotifications((prev) => [data, ...prev]);
     });
 
