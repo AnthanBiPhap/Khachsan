@@ -6,7 +6,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Toaster } from "@/components/ui/toaster";
 import "./globals.css";
-import ChatBubble from "@/components/ui/bubble-chat";
+import CustomerChat from "@/components/ui/customer-chat";
 import AIChatBubble from "@/components/ui/ai-chat-bubble";
 import { Header } from "@/components/header";
 
@@ -50,7 +50,7 @@ export default function RootLayout({
               {children}
             </Suspense>
           </main>
-          <ChatBubble />
+          <CustomerChat />
           <AIChatBubble />
 
           <Toaster />

@@ -14,6 +14,7 @@ import bookingStatusRoute from "./router/v1/bookingStatus.route";
 import paymentRoute from "./router/v1/payments.route";
 import groupBookingRoute from "./router/v1/groupBookings.route";
 import notificationRoute from "./router/v1/notifications.route";
+import chatRoute from "./router/v1/chat.route";
 import cors from "cors";
 
 const app = express();
@@ -37,6 +38,7 @@ app.use("/api/v1", paymentRoute);
 app.use("/api/v1", groupBookingRoute);
 app.use("/api/v1", notificationRoute);
 app.use("/api/v1", streamRoute);
+app.use("/api/v1/chat", chatRoute);
 // Hello World
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello World!");

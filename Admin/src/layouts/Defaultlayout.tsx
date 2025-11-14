@@ -16,6 +16,7 @@ import {
   LogoutOutlined,
   DeploymentUnitOutlined,
   BellOutlined,
+  MessageOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Layout, Menu, theme, Button, Space, Badge } from 'antd';
@@ -64,6 +65,7 @@ const allMenuItems = [
   createMenuItem('Invoices', '/invoices', <FileTextOutlined />),
   createMenuItem('Payments', '/payments', <CreditCardOutlined />),
   createMenuItem('Group Bookings', '/group-bookings', <DeploymentUnitOutlined />),
+  createMenuItem('Chat', '/chat', <MessageOutlined />),
   // createMenuItem('Invoice Items', '/invoiceitems', <FileTextOutlined />),
 ];
 
@@ -72,9 +74,9 @@ const getMenuItemsByRole = (userRole: string): MenuItem[] => {
   if (userRole === 'admin') {
     return allMenuItems;
   } else if (userRole === 'staff') {
-    // Staff chỉ được xem: Dashboard, Bookings, Booking Status, Guests, Service Bookings, Users, Invoices
+    // Staff chỉ được xem: Dashboard, Bookings, Booking Status, Guests, Service Bookings, Users, Invoices, Chat
     return allMenuItems.filter(item => 
-      ['/', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/users', '/invoices'].includes(item.key)
+      ['/', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/users', '/invoices', '/chat'].includes(item.key)
     );
   } else {
     // User thường chỉ xem Dashboard

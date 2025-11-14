@@ -20,6 +20,7 @@ import ReviewsPage from "./pages/ReviewsPage/ReviewsPage";
 import InvoicesPage from "./pages/InvoicesPage/InvoicesPage";
 import PaymentsPage from "./pages/PaymentPage/PaymentsPage";
 import GroupBookingsPage from "./pages/GroupBookingsPage/GroupBookingsPage";
+import ChatPage from "./pages/ChatPage/ChatPage";
 import AccessDenied from "./pages/AccessDenied";
 import { useAuthStore } from "./stores/authStore";
 
@@ -88,6 +89,7 @@ function App() {
           <Route path="invoices" element={<RoleProtectedRoute path="/invoices"><InvoicesPage /></RoleProtectedRoute>} />
           <Route path="payments" element={<RoleProtectedRoute path="/payments"><PaymentsPage /></RoleProtectedRoute>} />
           <Route path="group-bookings" element={<RoleProtectedRoute path="/group-bookings"><GroupBookingsPage /></RoleProtectedRoute>} />
+          <Route path="chat" element={<RoleProtectedRoute path="/chat"><ChatPage /></RoleProtectedRoute>} />
         </Route>
 
         {/* Layout rỗng cho login */}

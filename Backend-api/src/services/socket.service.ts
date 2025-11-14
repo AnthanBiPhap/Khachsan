@@ -117,7 +117,36 @@ class SocketService {
       console.log(`User ${userId} left room: ${room}`);
     });
 
-    // Event: gửi message đến user cụ thể
+    // Event: join conversation room
+    socket.on("join-conversation", async (conversationId: string) => {
+      try {
+        const roomName = `conversation:${conversationId}`;
+        await socket.join(roomName);
+        socket.emit("joined-conversation", { conversationId });
+        
+        // Log số lượng clients trong room
+        const roomClients = this.io?.sockets.adapter.rooms.get(roomName);
+        const clientCount = roomClients ? roomClients.size : 0;
+        console.log(`✅ User ${userId} joined conversation: ${conversationId} (Room: ${roomName}, Clients: ${clientCount})`);
+        
+        // Log tất cả rooms hiện tại để debug
+        if (this.io) {
+          const allRooms = Array.from(this.io.sockets.adapter.rooms.keys());
+          console.log(`   All active rooms:`, allRooms.filter(r => r.startsWith('conversation:')));
+        }
+      } catch (error) {
+        console.error(`❌ Error joining conversation room ${conversationId}:`, error);
+      }
+    });
+
+    // Event: leave conversation room
+    socket.on("leave-conversation", (conversationId: string) => {
+      socket.leave(`conversation:${conversationId}`);
+      socket.emit("left-conversation", { conversationId });
+      console.log(`User ${userId} left conversation: ${conversationId}`);
+    });
+
+    // Event: gửi message đến user cụ thể (legacy, giữ lại để tương thích)
     socket.on("send-message", (data: { toUserId: string; message: any }) => {
       const { toUserId, message } = data;
       this.sendToUser(toUserId, "new-message", {
@@ -162,13 +191,20 @@ class SocketService {
       const roomClients = this.io.sockets.adapter.rooms.get(room);
       const clientCount = roomClients ? roomClients.size : 0;
       
-      // Gửi message đến room
+      // Gửi message đến room (bao gồm cả sender nếu sender đã join room)
       this.io.to(room).emit(event, data);
       
+      // Log chi tiết để debug
       if (clientCount > 0) {
         console.log(`✅ Đã gửi "${event}" đến room "${room}" (${clientCount} clients)`);
+        console.log(`   Message data:`, {
+          conversationId: data.conversationId,
+          messageId: data.message?._id,
+          senderId: data.message?.senderId?._id,
+        });
       } else {
         console.warn(`⚠️ Room "${room}" không có clients nào đang online. Notification sẽ không được nhận.`);
+        console.warn(`   Tất cả rooms hiện tại:`, Array.from(this.io.sockets.adapter.rooms.keys()));
       }
     } catch (error) {
       console.error(`❌ Lỗi gửi message đến room "${room}":`, error);
