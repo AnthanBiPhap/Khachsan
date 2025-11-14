@@ -26,10 +26,18 @@ const template = async (req: Request, res: Response) => {
   const id = req.params.id;
   const gb = await groupBookingsService.getById(id);
   
-  // Lấy danh sách số phòng đã được phân bổ
+  // Lấy danh sách số phòng đã được phân bổ với capacity
   const allocatedRooms = (gb as any).allocatedRoomIds || [];
-  const roomNumbers = allocatedRooms.map((r: any) => r.roomNumber || String(r)).filter(Boolean);
-  const roomNumbersStr = roomNumbers.length > 0 ? roomNumbers.join(", ") : "Chưa có phòng";
+  const roomInfoList = allocatedRooms
+    .map((r: any) => {
+      const roomNumber = r.roomNumber || String(r);
+      const capacity = r.typeId?.capacity || 0;
+      if (!roomNumber) return null;
+      // Format: "103 (2 người)" hoặc chỉ "103" nếu không có capacity
+      return capacity > 0 ? `${roomNumber} (${capacity} người)` : roomNumber;
+    })
+    .filter(Boolean);
+  const roomNumbersStr = roomInfoList.length > 0 ? roomInfoList.join(", ") : "Chưa có phòng";
   
   // Lấy số người từ groupBooking
   const peopleCount = (gb as any).peopleCount || 1;
