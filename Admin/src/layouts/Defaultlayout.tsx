@@ -26,6 +26,7 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import BookingNotification from '../components/Notification/BookingNotification';
 import NotificationCenter from '../components/Notification/NotificationCenter';
 import { fetchUnreadCount } from '../services/notifications.service';
+import { initAudioContext } from '../utils/soundNotification';
 
 const { Header, Content, Footer, Sider } = Layout;
 
@@ -98,6 +99,28 @@ const Defaultlayout: React.FC = () => {
   const [shownNotificationIds, setShownNotificationIds] = useState<Set<string>>(new Set());
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+
+  // Khởi tạo audio context khi user tương tác với trang (click)
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      initAudioContext();
+      // Chỉ cần khởi tạo một lần
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+    };
+
+    // Lắng nghe các sự kiện user interaction để kích hoạt audio context
+    document.addEventListener('click', handleUserInteraction, { once: true });
+    document.addEventListener('keydown', handleUserInteraction, { once: true });
+    document.addEventListener('touchstart', handleUserInteraction, { once: true });
+
+    return () => {
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+    };
+  }, []);
 
   // Load unread count từ API
   const loadUnreadCount = useCallback(async () => {

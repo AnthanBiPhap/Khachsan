@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '../stores/authStore';
 import { env } from '../constanst/getEnvs';
+import { playNotificationSound, initAudioContext } from '../utils/soundNotification';
 
 interface BookingNotification {
   type: string;
@@ -74,6 +75,15 @@ export const useWebSocket = (): UseWebSocketReturn => {
     newSocket.on('connect', () => {
       console.log('✅ WebSocket connected:', newSocket.id);
       setIsConnected(true);
+      
+      // Khởi tạo audio context khi WebSocket kết nối để sẵn sàng phát âm thanh
+      // Sử dụng một cách tiếp cận đơn giản: tạo silent audio để "unlock" audio context
+      try {
+        initAudioContext();
+        console.log('✅ Audio context đã được khởi tạo cho WebSocket');
+      } catch (error) {
+        console.warn('⚠️ Không thể khởi tạo audio context ngay (cần user interaction):', error);
+      }
     });
 
     // Xử lý kết nối thất bại
@@ -91,18 +101,30 @@ export const useWebSocket = (): UseWebSocketReturn => {
     // Lắng nghe thông báo đặt phòng mới
     newSocket.on('new_booking', (data: BookingNotification) => {
       console.log('📢 Nhận được thông báo đặt phòng mới:', data);
+      // Phát âm thanh ngay khi nhận được notification
+      playNotificationSound().catch((error) => {
+        console.error('❌ Lỗi phát âm thanh:', error);
+      });
       setNotifications((prev) => [data, ...prev]);
     });
 
     // Lắng nghe thông báo đặt phòng nhóm mới
     newSocket.on('new_group_booking', (data: BookingNotification) => {
       console.log('📢 Nhận được thông báo đặt phòng nhóm mới:', data);
+      // Phát âm thanh ngay khi nhận được notification
+      playNotificationSound().catch((error) => {
+        console.error('❌ Lỗi phát âm thanh:', error);
+      });
       setNotifications((prev) => [data, ...prev]);
     });
 
     // Lắng nghe thông báo thanh toán đặt phòng nhóm
     newSocket.on('group_booking_payment', (data: BookingNotification) => {
       console.log('💳 Nhận được thông báo thanh toán đặt phòng nhóm:', data);
+      // Phát âm thanh ngay khi nhận được notification
+      playNotificationSound().catch((error) => {
+        console.error('❌ Lỗi phát âm thanh:', error);
+      });
       setNotifications((prev) => [data, ...prev]);
     });
 
