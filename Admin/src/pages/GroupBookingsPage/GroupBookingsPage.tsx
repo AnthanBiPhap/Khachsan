@@ -337,12 +337,14 @@ const GroupBookingsPage: React.FC = () => {
       render: (name: string, r: GroupBookingItem) => (
         <div style={{ textAlign: 'center', padding: '8px 0' }}>
           <Typography.Text strong>{name}</Typography.Text>
-          <br />
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {r.requesterPhone || ''}
-            {r.requesterPhone && r.requesterEmail ? ' | ' : ''}
-            {r.requesterEmail || ''}
-          </Typography.Text>
+          {r.requesterPhone && (
+            <>
+              <br />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {r.requesterPhone}
+              </Typography.Text>
+            </>
+          )}
         </div>
       )
     },
