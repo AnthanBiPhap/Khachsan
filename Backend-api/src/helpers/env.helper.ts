@@ -12,4 +12,6 @@ export const env = {
   JWT_SECRET: process.env.JWT_SECRET || "your_jwt_secret",
   STREAM_API_KEY: process.env.STREAM_API_KEY || "your_stream_api_key",
   STREAM_API_SECRET: process.env.STREAM_API_SECRET || "your_stream_api_secret",
+  GMAIL_USER: process.env.GMAIL_USER || "",
+  GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD || "",
 };

@@ -15,5 +15,7 @@ router.post("/bookings", bookingController.Create);
 router.put("/bookings/:id", bookingController.Update);
 //Delete user
 router.delete("/bookings/:id", bookingController.Delete);
+//Resend confirmation email
+router.post("/bookings/:id/resend-email", bookingController.resendConfirmationEmail);
 
 export default router;

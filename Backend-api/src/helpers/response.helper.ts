@@ -18,3 +18,10 @@ export const sendJsonSuccess = (res: Response,data: any, statusCode: number, mes
             data
     });
 };
+
+export const sendJsonError = (res: Response, message: string, statusCode: number) => {
+    res.status(statusCode).json({
+        statusCode,
+        message,
+    });
+};

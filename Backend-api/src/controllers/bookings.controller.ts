@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import bookingService from "../services/bookings.service";
-import  {sendJsonSuccess, httpStatus}  from '../helpers/response.helper';
+import  {sendJsonSuccess, sendJsonError, httpStatus}  from '../helpers/response.helper';
 import { calculateRoomPriceWithBirthdayDiscount } from '../helpers/pricing.helper';
 import Room from '../models/rooms.model';
 
@@ -134,6 +134,16 @@ const updatePaymentStatus = async (req: Request, res: Response, next: NextFuncti
   }
 };
 
+const resendConfirmationEmail = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const result = await bookingService.resendConfirmationEmail(id);
+    sendJsonSuccess(res, result, httpStatus.OK.statusCode, httpStatus.OK.message);
+  } catch (error) {
+    next(error);
+  }
+};
+
 export default {
     getAll,
     getById,
@@ -141,5 +151,6 @@ export default {
     Update,
     Delete,
     calculatePrice,
-    updatePaymentStatus
+    updatePaymentStatus,
+    resendConfirmationEmail
 }

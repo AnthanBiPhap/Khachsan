@@ -262,8 +262,18 @@ const getAvailableRooms = async (checkIn: Date | string, checkOut: Date | string
     }
   });
 
-  // Lọc các phòng khả dụng (không có trong bookedRoomsMap)
-  const availableRooms = rooms.filter((r: any) => !bookedRoomsMap.has(String(r._id)));
+  // Lọc các phòng khả dụng (không có trong bookedRoomsMap và có status available)
+  const availableRooms = rooms.filter((r: any) => {
+    // Loại bỏ phòng đã bị book
+    if (bookedRoomsMap.has(String(r._id))) {
+      return false;
+    }
+    // Chỉ lấy phòng có status available (loại bỏ maintenance, unavailable, occupied, checked_in)
+    if (r.status !== "available") {
+      return false;
+    }
+    return true;
+  });
 
   return availableRooms;
 };

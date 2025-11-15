@@ -10,6 +10,7 @@ import Room from "../models/rooms.model";
 import socketService from "./socket.service";
 import notificationsService from "./notifications.service";
 import GroupBooking from "../models/groupBooking.model";
+import emailService from "./email.service";
 
 // Lấy tất cả booking với filter + pagination
 const getAll = async (query: any) => {
@@ -446,6 +447,68 @@ const create = async (payload: any) => {
     } catch (notificationError) {
       console.error("❌ Lỗi lưu/gửi notification:", notificationError);
       // Không throw error để không làm crash API
+    }
+
+    // Gửi email xác nhận đặt phòng cho khách hàng
+    try {
+      console.log(`📧 Bắt đầu gửi email xác nhận cho booking ${savedBooking._id}`);
+      
+      // Lấy email từ customer hoặc main guest
+      let customerEmail: string | null = null;
+      let guestName: string = "Khách hàng";
+      
+      if (savedBooking.customerId && (savedBooking.customerId as any).email) {
+        // Khách hàng online - lấy email từ customerId
+        customerEmail = (savedBooking.customerId as any).email;
+        guestName = (savedBooking.customerId as any)?.fullName || guestName;
+        console.log(`📧 Lấy email từ customerId: ${customerEmail}, tên: ${guestName}`);
+      } else {
+        // Khách hàng walk-in - lấy email từ main guest
+        const mainGuest = savedBooking.guests?.find((g: any) => g.isMainGuest) || savedBooking.guests?.[0];
+        customerEmail = mainGuest?.email || null;
+        guestName = mainGuest?.fullName || guestName;
+        console.log(`📧 Lấy email từ main guest: ${customerEmail}, tên: ${guestName}`);
+      }
+
+      // Chỉ gửi email nếu có email
+      if (customerEmail) {
+        const room = savedBooking.roomId as any;
+        const roomNumber = room?.roomNumber || "N/A";
+
+        console.log(`📧 Đang gửi email đến ${customerEmail}...`);
+        console.log(`📧 Thông tin booking: ID=${savedBooking._id}, Room=${roomNumber}, Guest=${guestName}`);
+
+        await emailService.sendBookingConfirmation({
+          to: customerEmail,
+          bookingId: savedBooking._id.toString(),
+          guestName: guestName,
+          roomNumber: roomNumber,
+          checkIn: savedBooking.checkIn,
+          checkOut: savedBooking.checkOut,
+          totalPrice: savedBooking.totalPrice,
+          paidAmount: savedBooking.paidAmount,
+          remainingAmount: savedBooking.remainingAmount,
+          paymentStatus: savedBooking.paymentStatus,
+          services: savedBooking.services?.map((s: any) => ({
+            name: s.name,
+            quantity: s.quantity || 1,
+            price: s.price,
+          })) || [],
+        });
+        
+        console.log(`✅ Đã gửi email xác nhận đặt phòng thành công đến ${customerEmail} cho booking ${savedBooking._id}`);
+      } else {
+        console.log(`⚠️ Không tìm thấy email để gửi xác nhận cho booking ${savedBooking._id}`);
+        console.log(`⚠️ Debug info: customerId=${savedBooking.customerId}, guests=${JSON.stringify(savedBooking.guests)}`);
+      }
+    } catch (emailError: any) {
+      console.error("❌ Lỗi gửi email xác nhận đặt phòng:", emailError);
+      console.error("❌ Error details:", {
+        message: emailError?.message,
+        stack: emailError?.stack,
+        code: emailError?.code,
+      });
+      // Không throw error để không làm crash API - booking đã được tạo thành công
     }
 
     // Trả về booking + invoice
@@ -949,6 +1012,64 @@ const updatePaymentStatus = async (id: string, paymentData: { amount: number; pa
   return updatedBooking;
 };
 
+// Gửi lại email xác nhận cho booking hiện có
+const resendConfirmationEmail = async (id: string) => {
+  try {
+    const booking = await getById(id);
+    
+    // Populate các thông tin cần thiết
+    await booking.populate("customerId", "fullName email phoneNumber");
+    await booking.populate("roomId", "roomNumber typeId");
+
+    // Lấy email từ customer hoặc main guest
+    let customerEmail: string | null = null;
+    let guestName: string = "Khách hàng";
+    
+    if (booking.customerId && (booking.customerId as any).email) {
+      // Khách hàng online - lấy email từ customerId
+      customerEmail = (booking.customerId as any).email;
+      guestName = (booking.customerId as any)?.fullName || guestName;
+    } else {
+      // Khách hàng walk-in - lấy email từ main guest
+      const mainGuest = booking.guests?.find((g: any) => g.isMainGuest) || booking.guests?.[0];
+      customerEmail = mainGuest?.email || null;
+      guestName = mainGuest?.fullName || guestName;
+    }
+
+    if (!customerEmail) {
+      throw createError(400, "Không tìm thấy email để gửi xác nhận. Vui lòng cập nhật thông tin email của khách hàng.");
+    }
+
+    const room = booking.roomId as any;
+    const roomNumber = room?.roomNumber || "N/A";
+
+    await emailService.sendBookingConfirmation({
+      to: customerEmail,
+      bookingId: booking._id.toString(),
+      guestName: guestName,
+      roomNumber: roomNumber,
+      checkIn: booking.checkIn,
+      checkOut: booking.checkOut,
+      totalPrice: booking.totalPrice,
+      paidAmount: booking.paidAmount,
+      remainingAmount: booking.remainingAmount,
+      paymentStatus: booking.paymentStatus,
+      services: booking.services?.map((s: any) => ({
+        name: s.name,
+        quantity: s.quantity || 1,
+        price: s.price,
+      })) || [],
+    });
+
+    return { success: true, message: `Đã gửi email xác nhận đến ${customerEmail}` };
+  } catch (error: any) {
+    if (error.statusCode) {
+      throw error;
+    }
+    throw createError(500, `Lỗi gửi email: ${error.message}`);
+  }
+};
+
 export default {
   getAll,
   getById,
@@ -956,4 +1077,5 @@ export default {
   updateById,
   deleteById,
   updatePaymentStatus,
+  resendConfirmationEmail,
 };
