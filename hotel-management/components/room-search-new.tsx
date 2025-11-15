@@ -38,6 +38,7 @@ import {
 } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export function RoomSearch() {
   const router = useRouter();
@@ -185,6 +186,17 @@ export function RoomSearch() {
         </div>
         {error && <div className="mt-4 text-red-500 text-sm">{error}</div>}
       </form>
+      
+      <div className="mt-4 text-center">
+        <Link href="/group-booking">
+          <Button
+            variant="outline"
+            className="w-full md:w-auto border-blue-600 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+          >
+            Hoặc đặt phòng theo tour
+          </Button>
+        </Link>
+      </div>
 
       {availableRooms.length > 0 && (
         <div className="mt-8">
