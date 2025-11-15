@@ -241,7 +241,6 @@ export default function LocationsPage() {
             setEditing(record);
             setOpenForm(true);
           },
-          handleDelete,
           (record) => {
             setDetailItem(record);
             setOpenDetail(true);
