@@ -7,6 +7,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import notificationService from "@/services/notificationService";
+import NotificationDropdown from "@/components/NotificationDropdown";
 
 export function Header() {
   const { user, isLoading, logout } = useAuth();
@@ -103,16 +104,10 @@ export function Header() {
           <div className="flex items-center space-x-4">
             {user ? (
               <div className="flex items-center space-x-4">
-                <Link href="/notifications" className="relative inline-block">
-                  <Button variant="ghost" size="sm" className="relative">
-                    <Bell className="h-5 w-5" />
-                    {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center border-2 border-white shadow-lg">
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                      </span>
-                    )}
-                  </Button>
-                </Link>
+                <NotificationDropdown 
+                  unreadCount={unreadCount} 
+                  onCountChange={setUnreadCount}
+                />
                 <span className="text-sm font-medium">Xin chào, {user.fullName || user.email}</span>
                 <Button 
                   variant="outline" 

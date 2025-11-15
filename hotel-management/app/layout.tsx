@@ -10,6 +10,7 @@ import CustomerChat from "@/components/ui/customer-chat";
 import AIChatBubble from "@/components/ui/ai-chat-bubble";
 import { Header } from "@/components/header";
 import BookingNotificationListener from "@/components/BookingNotificationListener";
+import NotificationPopup from "@/components/NotificationPopup";
 
 export const metadata: Metadata = {
   title: "Miko Hotel - Đặt phòng khách sạn trực tuyến",
@@ -40,6 +41,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <BookingNotificationListener />
+          <NotificationPopup />
           <Header />
           <main className="">
             <Suspense

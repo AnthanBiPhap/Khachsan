@@ -55,11 +55,21 @@ class SocketService {
     this.io.on("connection", (socket: AuthenticatedSocket) => {
       const userId = socket.userId!;
       const socketId = socket.id;
+      
+      // Đảm bảo userId là string
+      const userIdStr = userId.toString();
 
-      console.log(`User ${userId} connected with socket ID: ${socketId}`);
+      console.log(`✅ User ${userIdStr} connected with socket ID: ${socketId}`);
+      console.log(`   UserId type: ${typeof userId}, value: ${userId}`);
+      console.log(`   UserId string: ${userIdStr}`);
 
-      // Lưu mapping userId -> socketId
-      this.connectedUsers.set(userId, socketId);
+      // Lưu mapping userId -> socketId (lưu cả string và ObjectId nếu có)
+      this.connectedUsers.set(userIdStr, socketId);
+      // Nếu userId là ObjectId, cũng lưu dạng string
+      if (userId !== userIdStr) {
+        this.connectedUsers.set(userId, socketId);
+      }
+      console.log(`📝 Đã lưu mapping: userId ${userIdStr} -> socketId ${socketId}`);
 
       // Gửi thông báo kết nối thành công
       socket.emit("connected", {
@@ -69,20 +79,38 @@ class SocketService {
       });
 
       // Join room theo userId để có thể gửi message đến user cụ thể
-      socket.join(`user:${userId}`);
+      const userRoom = `user:${userIdStr}`;
+      socket.join(userRoom);
+      console.log(`✅ User ${userIdStr} đã join room: ${userRoom}`);
+      
+      // Nếu userId khác userIdStr, cũng join room với userId gốc
+      if (userId !== userIdStr) {
+        const userRoomOriginal = `user:${userId}`;
+        socket.join(userRoomOriginal);
+        console.log(`✅ User ${userIdStr} cũng đã join room: ${userRoomOriginal}`);
+      }
 
       // Join room theo role nếu cần
       if (socket.user?.role) {
-        socket.join(`role:${socket.user.role}`);
+        const roleRoom = `role:${socket.user.role}`;
+        socket.join(roleRoom);
+        console.log(`✅ User ${userIdStr} đã join role room: ${roleRoom}`);
       }
+      
+      // Log tất cả rooms mà user đã join
+      const rooms = Array.from(socket.rooms);
+      console.log(`📋 User ${userIdStr} đang ở trong các rooms:`, rooms);
 
       // Xử lý các events tùy chỉnh
       this.setupEventHandlers(socket);
 
       // Xử lý disconnect
       socket.on("disconnect", () => {
-        console.log(`User ${userId} disconnected`);
-        this.connectedUsers.delete(userId);
+        console.log(`User ${userIdStr} disconnected`);
+        this.connectedUsers.delete(userIdStr);
+        if (userId !== userIdStr) {
+          this.connectedUsers.delete(userId);
+        }
       });
 
       // Xử lý lỗi
@@ -168,14 +196,41 @@ class SocketService {
 
   // Gửi message đến user cụ thể
   sendToUser(userId: string, event: string, data: any) {
-    if (!this.io) return;
+    if (!this.io) {
+      console.error('❌ Socket.IO not initialized');
+      return;
+    }
 
-    const socketId = this.connectedUsers.get(userId);
+    // Chuyển userId sang string để đảm bảo khớp
+    const userIdStr = userId.toString();
+    
+    // Gửi đến room user:userId (đảm bảo user đã join room)
+    const roomName = `user:${userIdStr}`;
+    
+    // Kiểm tra xem room có tồn tại không
+    const room = this.io.sockets.adapter.rooms.get(roomName);
+    const clientCount = room ? room.size : 0;
+    
+    console.log(`📤 [sendToUser] Gửi ${event} đến user ${userIdStr}`);
+    console.log(`   Room: ${roomName}, Clients trong room: ${clientCount}`);
+    console.log(`   Data:`, JSON.stringify(data, null, 2));
+    
+    // Gửi đến room
+    this.io.to(roomName).emit(event, data);
+    
+    // Log để debug
+    const socketId = this.connectedUsers.get(userIdStr);
     if (socketId) {
-      this.io.to(socketId).emit(event, data);
+      console.log(`✅ Đã gửi ${event} đến user ${userIdStr} (socketId: ${socketId}, room: ${roomName}, clients: ${clientCount})`);
     } else {
-      // Nếu user không online, có thể lưu vào database để gửi sau
-      console.log(`User ${userId} is not online. Message queued.`);
+      console.log(`⚠️ User ${userIdStr} không có trong connectedUsers map, nhưng đã gửi đến room ${roomName} (clients: ${clientCount})`);
+    }
+    
+    // Nếu không có client nào trong room, log cảnh báo
+    if (clientCount === 0) {
+      console.warn(`⚠️ ⚠️ ⚠️ Không có client nào trong room ${roomName}! User có thể chưa kết nối hoặc chưa join room.`);
+      console.warn(`   Tất cả connected users:`, Array.from(this.connectedUsers.keys()));
+      console.warn(`   Tất cả active rooms:`, Array.from(this.io.sockets.adapter.rooms.keys()).filter(r => r.startsWith('user:')));
     }
   }
 

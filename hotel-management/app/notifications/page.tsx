@@ -94,6 +94,10 @@ export default function NotificationsPage() {
         return '❌';
       case 'booking_refunded':
         return '💰';
+      case 'group_booking_approved':
+        return '✅';
+      case 'group_booking_quoted':
+        return '💰';
       default:
         return '📢';
     }
@@ -102,13 +106,21 @@ export default function NotificationsPage() {
   const getNotificationColor = (type: string) => {
     switch (type) {
       case 'booking_paid':
-        return 'bg-green-50 border-green-200';
+        return 'border-l-green-500';
       case 'booking_cancelled':
-        return 'bg-red-50 border-red-200';
+        return 'border-l-red-500';
       case 'booking_refunded':
-        return 'bg-blue-50 border-blue-200';
+        return 'border-l-blue-500';
+      case 'group_booking_approved':
+        return 'border-l-green-500';
+      case 'group_booking_quoted':
+        return 'border-l-purple-500';
+      case 'group_booking_paid':
+        return 'border-l-green-500';
+      case 'group_booking_confirmed':
+        return 'border-l-green-500';
       default:
-        return 'bg-gray-50 border-gray-200';
+        return 'border-l-gray-300';
     }
   };
 
@@ -242,8 +254,8 @@ export default function NotificationsPage() {
                   key={notification._id}
                   className={`bg-white rounded-xl shadow-md border-l-4 transition-all hover:shadow-lg ${
                     !isRead 
-                      ? 'border-l-primary shadow-lg ring-2 ring-primary/20' 
-                      : 'border-l-gray-300'
+                      ? `${getNotificationColor(notification.type)} shadow-lg ring-2 ring-primary/20` 
+                      : getNotificationColor(notification.type)
                   }`}
                 >
                   <div className="p-6">
@@ -315,6 +327,17 @@ export default function NotificationsPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                               </svg>
                               Xem đặt phòng
+                            </Link>
+                          )}
+                          {notification.metadata?.groupBookingId && (
+                            <Link
+                              href={`/group-booking`}
+                              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                              Xem đặt phòng nhóm
                             </Link>
                           )}
                         </div>

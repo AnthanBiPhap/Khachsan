@@ -4,6 +4,7 @@ import Room from "../models/rooms.model";
 import Booking from "../models/bookings.model";
 import Payment from "../models/payments.model";
 import Invoice from "../models/invoices.model";
+import User from "../models/users.model";
 import invoicesService from "./invoices.service";
 import paymentsService from "./payments.service";
 import socketService from "./socket.service";
@@ -447,6 +448,101 @@ const approve = async (id: string) => {
   gb.allocatedRoomIds = optimal.map((r: any) => r._id);
   gb.status = "approved";
   await gb.save();
+
+  // Gửi socket notification và lưu vào database cho khách hàng
+  try {
+    console.log(`📢 [Approve Group Booking] Bắt đầu gửi notification cho group booking ${gb._id}`);
+    console.log(`   requesterId (before populate):`, gb.requesterId);
+    console.log(`   requesterEmail:`, gb.requesterEmail);
+    
+    await gb.populate("requesterId", "fullName email phoneNumber");
+    
+    console.log(`   requesterId (after populate):`, gb.requesterId);
+    
+    // Lấy userId từ requesterId hoặc từ requesterEmail (nếu có user với email đó)
+    let userId: string | null = null;
+    if (gb.requesterId) {
+      const requester = gb.requesterId as any;
+      userId = requester._id.toString();
+      console.log(`   ✅ Tìm thấy userId từ requesterId: ${userId}`);
+    } else if (gb.requesterEmail) {
+      // Nếu không có requesterId, tìm user theo email
+      console.log(`   🔍 Tìm user theo email: ${gb.requesterEmail}`);
+      const userByEmail = await User.findOne({ email: gb.requesterEmail, role: "customer" });
+      if (userByEmail) {
+        userId = userByEmail._id.toString();
+        console.log(`   ✅ Tìm thấy userId từ email: ${userId}`);
+      } else {
+        console.log(`   ⚠️ Không tìm thấy user với email: ${gb.requesterEmail}`);
+      }
+    }
+    
+    if (userId) {
+      const notificationMessage = `Yêu cầu đặt phòng nhóm của bạn đã được duyệt. Vui lòng chờ báo giá từ khách sạn.`;
+      
+      console.log(`📢 [Approve Group Booking] Gửi notification đến user ${userId} cho group booking ${gb._id}`);
+      
+      // Lưu notification vào database
+      const notification = await notificationsService.create({
+        type: "group_booking_approved",
+        title: "Đặt phòng nhóm đã được duyệt",
+        message: notificationMessage,
+        userId: userId,
+        recipients: [{
+          userId: userId,
+          role: "customer",
+          read: false,
+        }],
+        metadata: {
+          groupBookingId: gb._id.toString(),
+          requesterName: gb.requesterName,
+          requesterPhone: gb.requesterPhone,
+          requesterEmail: gb.requesterEmail,
+          roomCount: gb.roomCount,
+          peopleCount: gb.peopleCount,
+        },
+      });
+      console.log(`✅ Đã lưu notification vào database: ${notification._id}`);
+      
+      // Gửi socket notification
+      const socketNotification = {
+        type: "group_booking_approved",
+        groupBooking: {
+          _id: gb._id.toString(),
+          requesterName: gb.requesterName,
+          checkIn: gb.checkIn,
+          checkOut: gb.checkOut,
+          roomCount: gb.roomCount,
+          peopleCount: gb.peopleCount,
+        },
+        message: notificationMessage,
+        timestamp: new Date().toISOString(),
+      };
+      
+      console.log(`📤 [Approve Group Booking] Gửi socket notification đến user ${userId}`);
+      console.log(`   Event: group_booking_update`);
+      console.log(`   Data:`, JSON.stringify(socketNotification, null, 2));
+      console.log(`   UserId type: ${typeof userId}, value: ${userId}`);
+      
+      // Đảm bảo userId là string
+      const userIdStr = userId.toString();
+      console.log(`   UserId string: ${userIdStr}`);
+      
+      socketService.sendToUser(userIdStr, "group_booking_update", socketNotification);
+      console.log(`✅ Đã gửi socket notification và lưu notification duyệt group booking đến customer ${userIdStr}`);
+    } else {
+      console.log(`⚠️ ⚠️ ⚠️ Không tìm thấy user để gửi notification cho group booking ${gb._id}`);
+      console.log(`   requesterEmail: ${gb.requesterEmail}`);
+      console.log(`   requesterId: ${gb.requesterId}`);
+    }
+  } catch (notificationError) {
+    console.error("❌ ❌ ❌ Lỗi gửi notification duyệt group booking:", notificationError);
+    console.error("❌ Error details:", notificationError);
+    if (notificationError instanceof Error) {
+      console.error("❌ Error stack:", notificationError.stack);
+    }
+  }
+
   return gb;
 };
 
@@ -599,6 +695,63 @@ const quote = async (
   gb.paymentLink = paymentLink;
   gb.status = paymentLink ? "awaiting_payment" : "quoted";
   await gb.save();
+
+  // Gửi socket notification và lưu vào database cho khách hàng
+  try {
+    await gb.populate("requesterId", "fullName email phoneNumber");
+    if (gb.requesterId) {
+      const requester = gb.requesterId as any;
+      const formattedAmount = new Intl.NumberFormat("vi-VN").format(quoteAmount);
+      const notificationMessage = paymentLink 
+        ? `Khách sạn đã báo giá ${formattedAmount} VND cho đặt phòng nhóm của bạn. Vui lòng thanh toán qua link: ${paymentLink}`
+        : `Khách sạn đã báo giá ${formattedAmount} VND cho đặt phòng nhóm của bạn.`;
+      
+      // Lưu notification vào database
+      await notificationsService.create({
+        type: "group_booking_quoted",
+        title: "Đã nhận báo giá đặt phòng nhóm",
+        message: notificationMessage,
+        userId: requester._id,
+        recipients: [{
+          userId: requester._id,
+          role: "customer",
+          read: false,
+        }],
+        metadata: {
+          groupBookingId: gb._id.toString(),
+          requesterName: gb.requesterName,
+          requesterPhone: gb.requesterPhone,
+          requesterEmail: gb.requesterEmail,
+          quoteAmount: quoteAmount,
+          paymentLink: paymentLink,
+          roomCount: gb.roomCount,
+          peopleCount: gb.peopleCount,
+        },
+      });
+      
+      // Gửi socket notification
+      const socketNotification = {
+        type: "group_booking_quoted",
+        groupBooking: {
+          _id: gb._id.toString(),
+          requesterName: gb.requesterName,
+          checkIn: gb.checkIn,
+          checkOut: gb.checkOut,
+          quoteAmount: quoteAmount,
+          roomCount: gb.roomCount,
+          peopleCount: gb.peopleCount,
+        },
+        message: notificationMessage,
+        timestamp: new Date().toISOString(),
+      };
+      
+      socketService.sendToUser(requester._id.toString(), "group_booking_update", socketNotification);
+      console.log(`✅ Đã gửi socket notification và lưu notification báo giá group booking đến customer ${requester._id}`);
+    }
+  } catch (notificationError) {
+    console.error("❌ Lỗi gửi notification báo giá group booking:", notificationError);
+  }
+
   return gb;
 };
 
@@ -965,6 +1118,94 @@ const markFullPayment = async (
     }
   }
 
+  // Gửi socket notification và lưu vào database cho khách hàng
+  try {
+    console.log(`📢 [Mark Full Payment] Bắt đầu gửi notification cho customer - group booking ${gb._id}`);
+    
+    // Lấy userId từ requesterId hoặc từ requesterEmail (nếu có user với email đó)
+    let userId: string | null = null;
+    if (gb.requesterId) {
+      const requester = gb.requesterId as any;
+      userId = requester._id.toString();
+      console.log(`   ✅ Tìm thấy userId từ requesterId: ${userId}`);
+    } else if (gb.requesterEmail) {
+      // Nếu không có requesterId, tìm user theo email
+      console.log(`   🔍 Tìm user theo email: ${gb.requesterEmail}`);
+      const userByEmail = await User.findOne({ email: gb.requesterEmail, role: "customer" });
+      if (userByEmail) {
+        userId = userByEmail._id.toString();
+        console.log(`   ✅ Tìm thấy userId từ email: ${userId}`);
+      } else {
+        console.log(`   ⚠️ Không tìm thấy user với email: ${gb.requesterEmail}`);
+      }
+    }
+    
+    if (userId) {
+      const formattedAmount = new Intl.NumberFormat("vi-VN").format(gb.quoteAmount);
+      const notificationMessage = `Đặt phòng nhóm của bạn đã được thanh toán đầy đủ ${formattedAmount} VND.`;
+      
+      console.log(`📢 [Mark Full Payment] Gửi notification đến user ${userId} cho group booking ${gb._id}`);
+      
+      // Lưu notification vào database
+      const notification = await notificationsService.create({
+        type: "group_booking_paid",
+        title: "Đã thanh toán đầy đủ đặt phòng nhóm",
+        message: notificationMessage,
+        userId: userId,
+        recipients: [{
+          userId: userId,
+          role: "customer",
+          read: false,
+        }],
+        metadata: {
+          groupBookingId: gb._id.toString(),
+          requesterName: gb.requesterName,
+          requesterPhone: gb.requesterPhone,
+          requesterEmail: gb.requesterEmail,
+          quoteAmount: gb.quoteAmount,
+          paidAmount: gb.quoteAmount,
+          roomCount: gb.roomCount,
+          peopleCount: gb.peopleCount,
+        },
+      });
+      console.log(`✅ Đã lưu notification vào database: ${notification._id}`);
+      
+      // Gửi socket notification
+      const socketNotification = {
+        type: "group_booking_paid",
+        groupBooking: {
+          _id: gb._id.toString(),
+          requesterName: gb.requesterName,
+          checkIn: gb.checkIn,
+          checkOut: gb.checkOut,
+          quoteAmount: gb.quoteAmount,
+          paidAmount: gb.quoteAmount,
+          roomCount: gb.roomCount,
+          peopleCount: gb.peopleCount,
+        },
+        message: notificationMessage,
+        timestamp: new Date().toISOString(),
+      };
+      
+      console.log(`📤 [Mark Full Payment] Gửi socket notification đến user ${userId}`);
+      console.log(`   Event: group_booking_update`);
+      console.log(`   Data:`, JSON.stringify(socketNotification, null, 2));
+      
+      socketService.sendToUser(userId, "group_booking_update", socketNotification);
+      console.log(`✅ Đã gửi socket notification và lưu notification thanh toán đủ đến customer ${userId}`);
+    } else {
+      console.log(`⚠️ ⚠️ ⚠️ Không tìm thấy user để gửi notification cho group booking ${gb._id}`);
+      console.log(`   requesterEmail: ${gb.requesterEmail}`);
+      console.log(`   requesterId: ${gb.requesterId}`);
+    }
+  } catch (notificationError) {
+    console.error("❌ ❌ ❌ Lỗi gửi notification thanh toán đủ cho customer:", notificationError);
+    console.error("❌ Error details:", notificationError);
+    if (notificationError instanceof Error) {
+      console.error("❌ Error stack:", notificationError.stack);
+    }
+  }
+
   return gb;
 };
 
@@ -975,6 +1216,101 @@ const confirm = async (id: string) => {
     throw createError(400, "Chỉ có thể xác nhận đặt đoàn sau khi đã nhận đặt cọc");
   gb.status = "confirmed";
   await gb.save();
+
+  // Gửi socket notification và lưu vào database cho khách hàng
+  try {
+    console.log(`📢 [Confirm Group Booking] Bắt đầu gửi notification cho customer - group booking ${gb._id}`);
+    
+    await gb.populate("requesterId", "fullName email phoneNumber");
+    
+    // Lấy userId từ requesterId hoặc từ requesterEmail (nếu có user với email đó)
+    let userId: string | null = null;
+    if (gb.requesterId) {
+      const requester = gb.requesterId as any;
+      userId = requester._id.toString();
+      console.log(`   ✅ Tìm thấy userId từ requesterId: ${userId}`);
+    } else if (gb.requesterEmail) {
+      // Nếu không có requesterId, tìm user theo email
+      console.log(`   🔍 Tìm user theo email: ${gb.requesterEmail}`);
+      const userByEmail = await User.findOne({ email: gb.requesterEmail, role: "customer" });
+      if (userByEmail) {
+        userId = userByEmail._id.toString();
+        console.log(`   ✅ Tìm thấy userId từ email: ${userId}`);
+      } else {
+        console.log(`   ⚠️ Không tìm thấy user với email: ${gb.requesterEmail}`);
+      }
+    }
+    
+    if (userId) {
+      const notificationMessage = `Đặt phòng nhóm của bạn đã được xác nhận hoàn tất. Chúng tôi rất mong được phục vụ bạn!`;
+      
+      console.log(`📢 [Confirm Group Booking] Gửi notification đến user ${userId} cho group booking ${gb._id}`);
+      
+      // Lưu notification vào database
+      const notification = await notificationsService.create({
+        type: "group_booking_confirmed",
+        title: "Đặt phòng nhóm đã được xác nhận hoàn tất",
+        message: notificationMessage,
+        userId: userId,
+        recipients: [{
+          userId: userId,
+          role: "customer",
+          read: false,
+        }],
+        metadata: {
+          groupBookingId: gb._id.toString(),
+          requesterName: gb.requesterName,
+          requesterPhone: gb.requesterPhone,
+          requesterEmail: gb.requesterEmail,
+          quoteAmount: gb.quoteAmount,
+          paidAmount: gb.paidAmount,
+          roomCount: gb.roomCount,
+          peopleCount: gb.peopleCount,
+        },
+      });
+      console.log(`✅ Đã lưu notification vào database: ${notification._id}`);
+      
+      // Gửi socket notification
+      const socketNotification = {
+        type: "group_booking_confirmed",
+        groupBooking: {
+          _id: gb._id.toString(),
+          requesterName: gb.requesterName,
+          checkIn: gb.checkIn,
+          checkOut: gb.checkOut,
+          quoteAmount: gb.quoteAmount,
+          paidAmount: gb.paidAmount,
+          roomCount: gb.roomCount,
+          peopleCount: gb.peopleCount,
+        },
+        message: notificationMessage,
+        timestamp: new Date().toISOString(),
+      };
+      
+      console.log(`📤 [Confirm Group Booking] Gửi socket notification đến user ${userId}`);
+      console.log(`   Event: group_booking_update`);
+      console.log(`   Data:`, JSON.stringify(socketNotification, null, 2));
+      console.log(`   UserId type: ${typeof userId}, value: ${userId}`);
+      
+      // Đảm bảo userId là string
+      const userIdStr = userId.toString();
+      console.log(`   UserId string: ${userIdStr}`);
+      
+      socketService.sendToUser(userIdStr, "group_booking_update", socketNotification);
+      console.log(`✅ Đã gửi socket notification và lưu notification xác nhận hoàn tất đến customer ${userIdStr}`);
+    } else {
+      console.log(`⚠️ ⚠️ ⚠️ Không tìm thấy user để gửi notification cho group booking ${gb._id}`);
+      console.log(`   requesterEmail: ${gb.requesterEmail}`);
+      console.log(`   requesterId: ${gb.requesterId}`);
+    }
+  } catch (notificationError) {
+    console.error("❌ ❌ ❌ Lỗi gửi notification xác nhận hoàn tất cho customer:", notificationError);
+    console.error("❌ Error details:", notificationError);
+    if (notificationError instanceof Error) {
+      console.error("❌ Error stack:", notificationError.stack);
+    }
+  }
+
   return gb;
 };
 
