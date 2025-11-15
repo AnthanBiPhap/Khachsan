@@ -24,6 +24,21 @@ export const fetchServiceBookings = async (page = 1, limit = 10) => {
   }
 };
 
+export const getServiceBookingById = async (id: string) => {
+  try {
+    const res = await fetch(`${env.API_URL}/api/v1/serviceBookings/${id}`);
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.message || "Failed to fetch service booking");
+    }
+    const response = await res.json();
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching service booking:", error);
+    throw error;
+  }
+};
+
 export const deleteServiceBooking = async (id: string) => {
   const res = await fetch(`${env.API_URL}/api/v1/serviceBookings/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete service booking");

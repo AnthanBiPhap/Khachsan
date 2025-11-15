@@ -5,7 +5,6 @@ import {
   NumberOutlined, 
   DollarOutlined, 
   EditOutlined, 
-  DeleteOutlined, 
   EyeOutlined,
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -126,30 +125,14 @@ export const serviceBookingsColumns = (
   {
     title: (
       <Space>
-        <EditOutlined style={{ color: '#722ed1' }} />
+        <EyeOutlined style={{ color: '#722ed1' }} />
         <span>Thao tác</span>
       </Space>
     ),
     key: "actions",
     render: (_, r) => (
       <Space>
-        <Button 
-          type="link" 
-          size="small" 
-          icon={<EditOutlined />}
-          onClick={() => handleEdit(r)}
-        >
-          Sửa
-        </Button>
-        <Button 
-          type="link" 
-          size="small" 
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleDelete(r._id)}
-        >
-          Xóa
-        </Button>
+        {/* Nút sửa đã bị ẩn */}
         {handleDetail && (
           <Button 
             type="link" 

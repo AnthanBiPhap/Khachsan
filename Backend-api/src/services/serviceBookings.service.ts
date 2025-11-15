@@ -1,5 +1,31 @@
 import createError from "http-errors";
 import ServiceBooking from "../models/serviceBookings.model";
+import Booking from "../models/bookings.model";
+
+// Hàm helper để tự động cập nhật trạng thái service booking
+const autoUpdateServiceBookingStatus = async (serviceBooking: any) => {
+  const now = new Date();
+  const scheduledAt = new Date(serviceBooking.scheduledAt);
+  
+  // Nếu quá thời gian scheduledAt và status là "reserved", chuyển sang "completed"
+  if (serviceBooking.status === "reserved" && scheduledAt < now) {
+    serviceBooking.status = "completed";
+    await serviceBooking.save();
+  }
+  
+  // Nếu booking bị hoàn tiền hoặc hủy, chuyển service booking sang "cancelled"
+  if (serviceBooking.bookingId) {
+    const booking = await Booking.findById(serviceBooking.bookingId);
+    if (booking && (booking.paymentStatus === "refunded" || booking.paymentStatus === "cancelled")) {
+      if (serviceBooking.status !== "cancelled") {
+        serviceBooking.status = "cancelled";
+        await serviceBooking.save();
+      }
+    }
+  }
+  
+  return serviceBooking;
+};
 
 const getAll = async (query: any) => {
   const pageNum = Number(query.page) || 1;
@@ -15,6 +41,45 @@ const getAll = async (query: any) => {
   if (query.serviceId) where.serviceId = query.serviceId;
   if (query.customerId) where.customerId = query.customerId;
   if (query.status) where.status = query.status;
+
+  // Tự động cập nhật trạng thái cho các service booking "reserved" đã quá thời gian
+  const now = new Date();
+  const updateReservedQuery: any = {
+    status: "reserved",
+    scheduledAt: { $lt: now }
+  };
+  if (query.bookingId) updateReservedQuery.bookingId = query.bookingId;
+  if (query.serviceId) updateReservedQuery.serviceId = query.serviceId;
+  if (query.customerId) updateReservedQuery.customerId = query.customerId;
+  
+  await ServiceBooking.updateMany(
+    updateReservedQuery,
+    {
+      $set: { status: "completed" }
+    }
+  );
+
+  // Tự động cập nhật trạng thái cho các service booking có booking bị hoàn tiền/hủy
+  const cancelledBookings = await Booking.find({
+    paymentStatus: { $in: ["refunded", "cancelled"] }
+  }).select("_id");
+  
+  if (cancelledBookings.length > 0) {
+    const cancelledBookingIds = cancelledBookings.map(b => b._id);
+    const updateCancelledQuery: any = {
+      bookingId: { $in: cancelledBookingIds },
+      status: { $ne: "cancelled" }
+    };
+    if (query.serviceId) updateCancelledQuery.serviceId = query.serviceId;
+    if (query.customerId) updateCancelledQuery.customerId = query.customerId;
+    
+    await ServiceBooking.updateMany(
+      updateCancelledQuery,
+      {
+        $set: { status: "cancelled" }
+      }
+    );
+  }
 
   const serviceBookings = await ServiceBooking.find(where)
     .populate({
@@ -77,30 +142,72 @@ const getAll = async (query: any) => {
 };
 
 const getById = async (id: string) => {
-  const serviceBooking = await ServiceBooking.findById(id)
-    .populate({
-      path: "bookingId",
-      select: "_id checkIn checkOut status guestInfo guests",
-      populate: [
-        {
-          path: "roomId",
-          select: "roomNumber typeId",
-          populate: {
-            path: "typeId",
-            select: "name pricePerNight",
-          },
-        },
-        {
-          path: "customerId",
-          select: "fullName email phoneNumber",
-        },
-      ],
-    })
-    .populate("serviceId", "name price description unit")
-    .populate("customerId", "fullName email phoneNumber");
+  let serviceBooking = await ServiceBooking.findById(id);
 
   if (!serviceBooking) {
     throw createError(404, "Service booking not found");
+  }
+
+  // Tự động cập nhật trạng thái trước khi populate (chỉ update nếu cần)
+  const now = new Date();
+  const scheduledAt = new Date(serviceBooking.scheduledAt);
+  
+  // Nếu quá thời gian scheduledAt và status là "reserved", chuyển sang "completed"
+  if (serviceBooking.status === "reserved" && scheduledAt < now) {
+    serviceBooking.status = "completed";
+    await serviceBooking.save();
+  }
+  
+  // Nếu booking bị hoàn tiền hoặc hủy, chuyển service booking sang "cancelled"
+  // Chỉ check nếu status chưa phải cancelled để tránh query không cần thiết
+  if (serviceBooking.bookingId && serviceBooking.status !== "cancelled") {
+    const booking = await Booking.findById(serviceBooking.bookingId);
+    if (booking && (booking.paymentStatus === "refunded" || booking.paymentStatus === "cancelled")) {
+      serviceBooking.status = "cancelled";
+      await serviceBooking.save();
+    }
+  }
+
+  // Populate sau khi đã update trạng thái
+  // Chỉ populate bookingId nếu nó tồn tại
+  if (serviceBooking.bookingId) {
+    try {
+      // Populate bookingId với tất cả thông tin cần thiết, kể cả khi booking đã bị hủy/hoàn thành
+      await serviceBooking.populate({
+        path: "bookingId",
+        select: "_id checkIn checkOut status paymentStatus guestInfo guests guestCount services",
+        populate: [
+          {
+            path: "roomId",
+            select: "roomNumber typeId",
+            populate: {
+              path: "typeId",
+              select: "name pricePerNight",
+            },
+          },
+          {
+            path: "customerId",
+            select: "fullName email phoneNumber",
+          },
+        ],
+      });
+    } catch (error) {
+      // Nếu populate booking thất bại (booking đã bị xóa), vẫn tiếp tục với các populate khác
+      console.warn("Failed to populate bookingId:", error);
+      // Không set bookingId về null, giữ nguyên để có thể hiển thị ID
+    }
+  }
+  
+  try {
+    await serviceBooking.populate("serviceId", "name price description unit");
+  } catch (error) {
+    console.warn("Failed to populate serviceId:", error);
+  }
+  
+  try {
+    await serviceBooking.populate("customerId", "fullName email phoneNumber");
+  } catch (error) {
+    console.warn("Failed to populate customerId:", error);
   }
 
   // Nếu không có customerId nhưng có bookingId.customerId, gán lại

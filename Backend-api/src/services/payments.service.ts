@@ -1,6 +1,7 @@
 import Payment from "../models/payments.model";
 import Booking from "../models/bookings.model";
 import GroupBooking from "../models/groupBooking.model";
+import ServiceBooking from "../models/serviceBookings.model";
 import createError from 'http-errors';
 
 const GROUP_DEPOSIT_RATE = Number(process.env.GROUP_DEPOSIT_RATE ?? 0.5);
@@ -304,6 +305,19 @@ const updateStatus = async (id: string, status: string, additionalData: any = {}
       paymentStatus: bookingPaymentStatus,
       updatedAt: new Date()
     });
+
+    // Cập nhật trạng thái service booking nếu booking bị hoàn tiền hoặc hủy
+    if (status === "refunded" || status === "cancelled") {
+      await ServiceBooking.updateMany(
+        {
+          bookingId: payment.bookingId,
+          status: { $ne: "cancelled" }
+        },
+        {
+          $set: { status: "cancelled" }
+        }
+      );
+    }
   }
   
   // Cập nhật trạng thái group booking tương ứng với payment status

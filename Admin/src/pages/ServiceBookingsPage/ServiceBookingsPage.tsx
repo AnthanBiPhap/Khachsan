@@ -13,6 +13,7 @@ import type { ServiceBookingItem } from "../../types/serviceBooking";
 import {
   fetchServiceBookings,
   deleteServiceBooking,
+  getServiceBookingById
 } from "../../services/serviceBookings.service";
 import { env } from "../../constanst/getEnvs";
 import { serviceBookingsColumns } from "../../components/ServiceBookings/ServiceBookingsColumns";
@@ -262,9 +263,15 @@ export default function ServiceBookingsPage() {
             setOpenForm(true);
           },
           handleDelete,
-          (record) => {
-            setDetailItem(record);
-            setOpenDetail(true);
+          async (record) => {
+            try {
+              // Fetch chi tiết từ API để đảm bảo có đầy đủ thông tin
+              const detail = await getServiceBookingById(record._id);
+              setDetailItem(detail);
+              setOpenDetail(true);
+            } catch (error: any) {
+              message.error(error.message || "Không thể tải chi tiết lịch dịch vụ");
+            }
           }
         )}
         dataSource={filteredItems}
@@ -359,75 +366,78 @@ export default function ServiceBookingsPage() {
 
             <Descriptions.Item label="Thông tin đặt phòng" span={2}>
               <div style={{ marginTop: 8 }}>
-                {detailItem.bookingId ? (
-                  <div>
-                    <div>
-                      Phòng:{" "}
-                      {(detailItem.bookingId as any)?.roomId?.roomNumber ||
-                        "N/A"}
-                    </div>
-                    <div>
-                      Loại phòng:{" "}
-                      {(detailItem.bookingId as any)?.roomId?.typeId?.name ||
-                        "N/A"}
-                    </div>
-                    <div>
-                      Nhận phòng:{" "}
-                      {(detailItem.bookingId as any)?.checkIn
-                        ? new Date(
-                            (detailItem.bookingId as any).checkIn
-                          ).toLocaleString("vi-VN")
-                        : "N/A"}
-                    </div>
-                    <div>
-                      Trả phòng:{" "}
-                      {(detailItem.bookingId as any)?.checkOut
-                        ? new Date(
-                            (detailItem.bookingId as any).checkOut
-                          ).toLocaleString("vi-VN")
-                        : "N/A"}
-                    </div>
-                    <div>
-                      Số khách: {(detailItem.bookingId as any)?.guests || "N/A"}
-                    </div>
-
-                    {/* Hiển thị danh sách dịch vụ đã đặt */}
-                    {(detailItem.bookingId as any)?.services?.length > 0 && (
-                      <div style={{ marginTop: 8 }}>
+                {(() => {
+                  const booking = detailItem.bookingId as any;
+                  
+                  // Kiểm tra xem có bookingId và có thông tin phòng không
+                  if (booking && (booking.roomId || booking.checkIn || booking.checkOut)) {
+                    return (
+                      <div>
+                        {booking.roomId?.roomNumber && (
+                          <div>
+                            Phòng: {booking.roomId.roomNumber}
+                          </div>
+                        )}
+                        {booking.roomId?.typeId?.name && (
+                          <div>
+                            Loại phòng: {booking.roomId.typeId.name}
+                          </div>
+                        )}
+                        {booking.checkIn && (
+                          <div>
+                            Nhận phòng: {new Date(booking.checkIn).toLocaleString("vi-VN")}
+                          </div>
+                        )}
+                        {booking.checkOut && (
+                          <div>
+                            Trả phòng: {new Date(booking.checkOut).toLocaleString("vi-VN")}
+                          </div>
+                        )}
                         <div>
-                          <strong>Dịch vụ đã đặt:</strong>
-                        </div>
-                        <List
-                          size="small"
-                          bordered
-                          dataSource={
-                            (detailItem.bookingId as any)?.services || []
+                          Số khách: {
+                            booking.guests && Array.isArray(booking.guests)
+                              ? booking.guests.length
+                              : booking.guestCount || "Chưa có thông tin"
                           }
-                          renderItem={(service: any) => (
-                            <List.Item>
-                              <div style={{ width: "100%" }}>
-                                <div>{service.name}</div>
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                  }}
-                                >
-                                  <span>Số lượng: {service.quantity}</span>
-                                  <span>
-                                    {service.price?.toLocaleString("vi-VN")} VNĐ
-                                  </span>
-                                </div>
-                              </div>
-                            </List.Item>
-                          )}
-                        />
+                        </div>
+
+                        {/* Hiển thị danh sách dịch vụ đã đặt */}
+                        {booking.services && booking.services.length > 0 && (
+                          <div style={{ marginTop: 8 }}>
+                            <div>
+                              <strong>Dịch vụ đã đặt:</strong>
+                            </div>
+                            <List
+                              size="small"
+                              bordered
+                              dataSource={booking.services}
+                              renderItem={(service: any) => (
+                                <List.Item>
+                                  <div style={{ width: "100%" }}>
+                                    <div>{service.name}</div>
+                                    <div
+                                      style={{
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                      }}
+                                    >
+                                      <span>Số lượng: {service.quantity}</span>
+                                      <span>
+                                        {service.price?.toLocaleString("vi-VN")} VNĐ
+                                      </span>
+                                    </div>
+                                  </div>
+                                </List.Item>
+                              )}
+                            />
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
-                ) : (
-                  "Không có thông tin đặt phòng"
-                )}
+                    );
+                  }
+                  
+                  return "Không có thông tin đặt phòng";
+                })()}
               </div>
             </Descriptions.Item>
 
@@ -438,29 +448,44 @@ export default function ServiceBookingsPage() {
                   const customer =
                     detailItem.customerId ||
                     (detailItem.bookingId as any)?.customerId;
-                  if (customer) {
+                  if (customer && (customer.fullName || customer.email || customer.phoneNumber)) {
                     return (
                       <div>
                         <div>Tên: {customer.fullName || "Chưa có tên"}</div>
-                        <div>Điện thoại: {customer.phoneNumber || "N/A"}</div>
-                        <div>Email: {customer.email || "N/A"}</div>
+                        <div>Điện thoại: {customer.phoneNumber || "Chưa có số điện thoại"}</div>
+                        <div>Email: {customer.email || "Chưa có email"}</div>
                       </div>
                     );
                   }
 
                   // Nếu không có customerId, kiểm tra guestInfo trong booking
                   const guestInfo = (detailItem.bookingId as any)?.guestInfo;
-                  if (guestInfo) {
+                  if (guestInfo && (guestInfo.fullName || guestInfo.phoneNumber)) {
                     return (
                       <div>
                         <div>Tên: {guestInfo.fullName || "Chưa có tên"}</div>
-                        <div>Số CMND/CCCD: {guestInfo.idNumber || "N/A"}</div>
-                        <div>Tuổi: {guestInfo.age || "N/A"}</div>
-                        <div>Điện thoại: {guestInfo.phoneNumber || "N/A"}</div>
+                        <div>Số CMND/CCCD: {guestInfo.idNumber || "Chưa có CMND/CCCD"}</div>
+                        <div>Tuổi: {guestInfo.age || "Chưa có thông tin tuổi"}</div>
+                        <div>Điện thoại: {guestInfo.phoneNumber || "Chưa có số điện thoại"}</div>
                       </div>
                     );
                   }
 
+                  // Nếu không có guestInfo, kiểm tra guests array trong booking
+                  const guests = (detailItem.bookingId as any)?.guests;
+                  if (guests && Array.isArray(guests) && guests.length > 0) {
+                    const mainGuest = guests.find((g: any) => g?.isMainGuest) || guests[0];
+                    if (mainGuest && (mainGuest.fullName || mainGuest.phoneNumber)) {
+                      return (
+                        <div>
+                          <div>Tên: {mainGuest.fullName || "Chưa có tên"}</div>
+                          <div>Số CMND/CCCD: {mainGuest.idNumber || "Chưa có CMND/CCCD"}</div>
+                          <div>Điện thoại: {mainGuest.phoneNumber || "Chưa có số điện thoại"}</div>
+                          <div>Email: {mainGuest.email || "Chưa có email"}</div>
+                        </div>
+                      );
+                    }
+                  }
 
                   // Nếu không có thông tin nào
                   return "Không có thông tin khách hàng";

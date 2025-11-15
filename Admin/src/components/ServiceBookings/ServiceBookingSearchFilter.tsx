@@ -58,9 +58,11 @@ export default function ServiceBookingSearchFilter({
           marginBottom: 16,
           minHeight: '120px',
         }}
-        bodyStyle={{
-          padding: '16px',
-          minHeight: '88px',
+        styles={{
+          body: {
+            padding: '16px',
+            minHeight: '88px',
+          }
         }}
       >
         <Row gutter={[16, 16]} style={{ minHeight: '56px' }}>
