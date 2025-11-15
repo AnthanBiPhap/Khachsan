@@ -390,7 +390,14 @@ const approve = async (id: string) => {
 
 const uploadMembers = async (id: string, members: any[]) => {
   const gb = await GroupBooking.findById(id)
-    .populate("allocatedRoomIds", "roomNumber");
+    .populate({
+      path: "allocatedRoomIds",
+      select: "roomNumber typeId",
+      populate: {
+        path: "typeId",
+        select: "capacity"
+      }
+    });
   if (!gb) throw createError(404, "Group booking not found");
   
   // Cho phép upload khi đã có báo giá (quoted hoặc awaiting_payment)
@@ -402,10 +409,19 @@ const uploadMembers = async (id: string, members: any[]) => {
     throw createError(400, "Chưa có phòng được phân bổ, không thể upload danh sách");
   }
 
-  // Lấy danh sách số phòng hợp lệ
-  const validRoomNumbers = (gb.allocatedRoomIds as any[])
-    .map((r: any) => String(r.roomNumber || "").trim())
-    .filter(Boolean);
+  // Lấy danh sách số phòng hợp lệ và capacity của từng phòng
+  const roomInfoMap = new Map<string, { roomNumber: string; capacity: number }>();
+  const validRoomNumbers: string[] = [];
+  
+  (gb.allocatedRoomIds as any[]).forEach((r: any) => {
+    const roomNumber = String(r.roomNumber || "").trim();
+    if (roomNumber) {
+      const roomType = r.typeId as any;
+      const capacity = roomType?.capacity || 0;
+      validRoomNumbers.push(roomNumber);
+      roomInfoMap.set(roomNumber, { roomNumber, capacity });
+    }
+  });
   
   if (validRoomNumbers.length === 0) {
     throw createError(400, "Không có số phòng hợp lệ");
@@ -429,6 +445,9 @@ const uploadMembers = async (id: string, members: any[]) => {
     );
   }
   
+  // Đếm số người trong từng phòng
+  const roomGuestCount = new Map<string, number>();
+  
   const processedMembers = validMembers.map((m: any) => {
     const roomNumber = String(m.roomNumber || "").trim();
     
@@ -438,6 +457,12 @@ const uploadMembers = async (id: string, members: any[]) => {
         400,
         `Số phòng "${roomNumber}" không hợp lệ. Danh sách phòng hợp lệ: ${validRoomNumbers.join(", ")}`
       );
+    }
+    
+    // Đếm số người trong phòng
+    if (roomNumber) {
+      const currentCount = roomGuestCount.get(roomNumber) || 0;
+      roomGuestCount.set(roomNumber, currentCount + 1);
     }
     
     // Parse dateOfBirth từ string YYYY-MM-DD thành Date object với local time
@@ -477,6 +502,19 @@ const uploadMembers = async (id: string, members: any[]) => {
       roomNumber: roomNumber || undefined,
     };
   });
+
+  // Kiểm tra capacity của từng phòng
+  for (const [roomNumber, guestCount] of roomGuestCount.entries()) {
+    const roomInfo = roomInfoMap.get(roomNumber);
+    if (roomInfo && roomInfo.capacity > 0) {
+      if (guestCount > roomInfo.capacity) {
+        throw createError(
+          400,
+          `Phòng ${roomNumber} chỉ có thể chứa tối đa ${roomInfo.capacity} người. Bạn đang đặt ${guestCount} người trong phòng này.`
+        );
+      }
+    }
+  }
 
   gb.members = processedMembers;
   gb.status = "info_uploaded";

@@ -198,6 +198,23 @@ const create = async (payload: any) => {
     throw createError(400, "Danh sách khách hàng là bắt buộc");
   }
 
+  // Check room capacity
+  const room = await Room.findById(roomId).populate('typeId', 'capacity');
+  if (!room) {
+    throw createError(404, "Không tìm thấy phòng");
+  }
+  
+  const roomType = room.typeId as any;
+  if (roomType && roomType.capacity) {
+    const guestCount = payload.guests.length;
+    if (guestCount > roomType.capacity) {
+      throw createError(
+        400,
+        `Phòng ${room.roomNumber} chỉ có thể chứa tối đa ${roomType.capacity} người. Bạn đang đặt ${guestCount} người.`
+      );
+    }
+  }
+
   // Set isMainGuest for the first guest if not specified
   const guestsWithMainFlag = payload.guests.map((guest: any, index: number) => ({
     ...guest,
@@ -220,7 +237,8 @@ const create = async (payload: any) => {
       }))
     });
     
-    const room = await Room.findById(roomId).populate('typeId', 'pricePerNight extraHourPrice');
+    // Populate thêm các field cần thiết cho tính giá
+    await room.populate('typeId', 'pricePerNight extraHourPrice');
     if (room && room.typeId) {
       const pricePerNight = (room.typeId as any).pricePerNight;
       const extraHourPrice = (room.typeId as any).extraHourPrice || 0;
@@ -562,6 +580,24 @@ const updateById = async (id: string, payload: any) => {
         400,
         `Cần ít nhất 2 giờ để dọn phòng trước đặt đoàn. Check-out muộn nhất có thể là ${maxCheckOut.toLocaleString('vi-VN')}`
       );
+    }
+  }
+
+  // Check room capacity if guests are being updated
+  if (payload.guests && Array.isArray(payload.guests) && payload.guests.length > 0) {
+    const roomIdToCheck = payload.roomId || booking.roomId;
+    const room = await Room.findById(roomIdToCheck).populate('typeId', 'capacity');
+    if (room) {
+      const roomType = room.typeId as any;
+      if (roomType && roomType.capacity) {
+        const guestCount = payload.guests.length;
+        if (guestCount > roomType.capacity) {
+          throw createError(
+            400,
+            `Phòng ${room.roomNumber} chỉ có thể chứa tối đa ${roomType.capacity} người. Bạn đang đặt ${guestCount} người.`
+          );
+        }
+      }
     }
   }
 
