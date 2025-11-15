@@ -62,8 +62,15 @@ export default function GroupBookingPage() {
     }
 
     // Validate form
-    if (!requesterName || !requesterPhone || !checkIn || !checkOut || !peopleCount || !roomCount) {
-      message.warning('Vui lòng nhập đủ tên, điện thoại, ngày vào/ra, số khách và số phòng.');
+    if (!requesterName || !requesterPhone || !requesterEmail || !checkIn || !checkOut || !peopleCount || !roomCount) {
+      message.warning('Vui lòng nhập đủ tên, điện thoại, email, ngày vào/ra, số khách và số phòng.');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(requesterEmail.trim())) {
+      message.warning('Email không hợp lệ. Vui lòng kiểm tra lại.');
       return;
     }
 
@@ -89,7 +96,7 @@ export default function GroupBookingPage() {
         requesterId: user?._id || undefined,
         requesterName,
         requesterPhone,
-        requesterEmail: requesterEmail || undefined,
+        requesterEmail: requesterEmail.trim(),
         checkIn: normalizeCheckIn(checkIn),
         checkOut: normalizeCheckOut(checkOut),
         peopleCount: Number(peopleCount),
@@ -483,14 +490,16 @@ export default function GroupBookingPage() {
                         <Col xs={24} sm={12}>
                           <div>
                             <div style={{ marginBottom: 8, fontWeight: 500, color: '#262626' }}>
-                              Email
+                              Email <span style={{ color: '#ff4d4f' }}>*</span>
                             </div>
                             <Input 
                               size="large" 
-                              placeholder="Email (không bắt buộc)" 
+                              type="email"
+                              placeholder="Email (bắt buộc)" 
                               value={requesterEmail} 
                               onChange={(e) => setRequesterEmail(e.target.value)}
                               style={{ width: '100%' }}
+                              required
                             />
                           </div>
                         </Col>

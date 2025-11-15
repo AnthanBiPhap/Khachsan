@@ -18,7 +18,7 @@ const groupBookingSchema = new Schema(
     requesterId: { type: Schema.Types.ObjectId, ref: "User", required: false },
     requesterName: { type: String, required: true },
     requesterPhone: { type: String, required: true },
-    requesterEmail: { type: String, required: false },
+    requesterEmail: { type: String, required: true },
 
     checkIn: { type: Date, required: true },
     checkOut: { type: Date, required: true },

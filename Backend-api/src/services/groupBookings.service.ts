@@ -8,6 +8,7 @@ import invoicesService from "./invoices.service";
 import paymentsService from "./payments.service";
 import socketService from "./socket.service";
 import notificationsService from "./notifications.service";
+import emailService from "./email.service";
 
 const GROUP_DEPOSIT_RATE = Number(process.env.GROUP_DEPOSIT_RATE ?? 0.5);
 const GROUP_DEPOSIT_PERCENT_LABEL = `${Math.round(GROUP_DEPOSIT_RATE * 100)}%`;
@@ -21,7 +22,7 @@ type CreateGroupBookingPayload = {
   requesterId?: string;
   requesterName: string;
   requesterPhone: string;
-  requesterEmail?: string;
+  requesterEmail: string;
   checkIn: string | Date;
   checkOut: string | Date;
   peopleCount: number;
@@ -30,6 +31,17 @@ type CreateGroupBookingPayload = {
 };
 
 const create = async (payload: CreateGroupBookingPayload) => {
+  // Validate email
+  if (!payload.requesterEmail || !payload.requesterEmail.trim()) {
+    throw createError(400, "Email là bắt buộc để đặt phòng nhóm");
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(payload.requesterEmail.trim())) {
+    throw createError(400, "Email không hợp lệ");
+  }
+
   // Normalize check-in và check-out với giờ cụ thể
   // Check-in: 14:00, Check-out: 12:00 (giống booking thường)
   const normalizeCheckIn = (date: Date | string): Date => {
@@ -46,6 +58,7 @@ const create = async (payload: CreateGroupBookingPayload) => {
 
   const normalizedPayload = {
     ...payload,
+    requesterEmail: payload.requesterEmail.trim(),
     checkIn: normalizeCheckIn(payload.checkIn),
     checkOut: normalizeCheckOut(payload.checkOut),
     status: "pending_approval" as const,
@@ -136,6 +149,55 @@ const create = async (payload: CreateGroupBookingPayload) => {
     // Không throw error để không làm crash API, nhưng vẫn log chi tiết
     if (notificationError instanceof Error) {
       console.error("Error stack:", notificationError.stack);
+    }
+  }
+
+  // Gửi email xác nhận đặt phòng nhóm cho khách hàng
+  try {
+    console.log(`📧 Bắt đầu gửi email xác nhận cho group booking ${gb._id}`);
+    
+    const customerEmail = gb.requesterEmail || (gb.requesterId as any)?.email;
+    
+    if (!customerEmail) {
+      console.warn(`⚠️ Không có email để gửi xác nhận cho group booking ${gb._id}`);
+    } else {
+      // Lấy thông tin phòng nếu đã được phân bổ
+      let allocatedRooms: Array<{ roomNumber: string; typeName?: string }> | undefined;
+      if (gb.allocatedRoomIds && gb.allocatedRoomIds.length > 0) {
+        await gb.populate({
+          path: "allocatedRoomIds",
+          select: "roomNumber typeId",
+          populate: {
+            path: "typeId",
+            select: "name"
+          }
+        });
+        allocatedRooms = (gb.allocatedRoomIds as any[]).map((room: any) => ({
+          roomNumber: room.roomNumber || "N/A",
+          typeName: room.typeId?.name
+        }));
+      }
+
+      await emailService.sendGroupBookingConfirmation({
+        to: customerEmail,
+        groupBookingId: gb._id.toString(),
+        requesterName: gb.requesterName,
+        checkIn: gb.checkIn,
+        checkOut: gb.checkOut,
+        peopleCount: gb.peopleCount,
+        roomCount: gb.roomCount,
+        quoteAmount: gb.quoteAmount,
+        status: gb.status,
+        allocatedRooms,
+      });
+      
+      console.log(`✅ Đã gửi email xác nhận group booking đến ${customerEmail}`);
+    }
+  } catch (emailError) {
+    console.error("❌ Lỗi gửi email xác nhận group booking:", emailError);
+    // Không throw error để không làm crash API, nhưng vẫn log chi tiết
+    if (emailError instanceof Error) {
+      console.error("Error stack:", emailError.stack);
     }
   }
 

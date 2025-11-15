@@ -7,7 +7,7 @@ export interface CreateGroupBookingPayload {
   requesterId?: string;
   requesterName: string;
   requesterPhone: string;
-  requesterEmail?: string;
+  requesterEmail: string;
   checkIn: string;
   checkOut: string;
   peopleCount: number;
