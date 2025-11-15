@@ -43,6 +43,14 @@ const createSchema = yup
         .string()
         .trim()
         .matches(/^(0[1-9][0-9]{8,9}|\+84[1-9][0-9]{8,9})$/, 'Số điện thoại không hợp lệ. Vui lòng nhập đúng số Việt Nam (10 số bắt đầu bằng 0 hoặc +84).')
+        .test('not-all-same', 'Số điện thoại không hợp lệ. Không được nhập tất cả số giống nhau.', (value) => {
+          if (!value) return true;
+          // Loại bỏ +84 để kiểm tra
+          const digits = value.replace(/^\+84/, '0');
+          // Kiểm tra không phải tất cả số giống nhau
+          const firstDigit = digits[0];
+          return !digits.split('').every(digit => digit === firstDigit);
+        })
         .required('Số điện thoại là bắt buộc'),
       password: yup
         .string()
@@ -90,6 +98,14 @@ const updateByIdSchema = yup
         .string()
         .trim()
         .matches(/^(0[1-9][0-9]{8,9}|\+84[1-9][0-9]{8,9})$/, 'Số điện thoại không hợp lệ. Vui lòng nhập đúng số Việt Nam (10 số bắt đầu bằng 0 hoặc +84).')
+        .test('not-all-same', 'Số điện thoại không hợp lệ. Không được nhập tất cả số giống nhau.', (value) => {
+          if (!value) return true;
+          // Loại bỏ +84 để kiểm tra
+          const digits = value.replace(/^\+84/, '0');
+          // Kiểm tra không phải tất cả số giống nhau
+          const firstDigit = digits[0];
+          return !digits.split('').every(digit => digit === firstDigit);
+        })
         .optional(),
       password: yup
         .string()

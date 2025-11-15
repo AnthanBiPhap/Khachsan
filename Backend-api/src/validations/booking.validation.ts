@@ -2,11 +2,50 @@ import * as yup from "yup";
 
 // Guest validation schema
 const guestSchema = yup.object({
-  fullName: yup.string().min(2).max(100).required("Tên khách hàng là bắt buộc"),
-  idNumber: yup.string().min(9).max(20).required("Số CMND/CCCD là bắt buộc"),
-  dateOfBirth: yup.date().required("Ngày sinh là bắt buộc"),
-  phoneNumber: yup.string().min(6).max(20).required("Số điện thoại là bắt buộc"),
-  email: yup.string().email("Email không hợp lệ").optional(),
+  fullName: yup
+    .string()
+    .min(2, "Họ tên phải có ít nhất 2 ký tự")
+    .max(100, "Họ tên không được vượt quá 100 ký tự")
+    .required("Họ tên là bắt buộc"),
+  idNumber: yup
+    .string()
+    .trim()
+    .matches(/^[0-9]{9,12}$/, "Số CMND/CCCD không hợp lệ. Vui lòng nhập 9-12 chữ số.")
+    .test('not-all-same', 'Số CMND/CCCD không hợp lệ. Không được nhập tất cả số giống nhau.', (value) => {
+      if (!value) return true;
+      // Kiểm tra không phải tất cả số giống nhau
+      const firstDigit = value[0];
+      return !value.split('').every(digit => digit === firstDigit);
+    })
+    .required("Số CMND/CCCD là bắt buộc"),
+  dateOfBirth: yup
+    .date()
+    .nullable()
+    .transform((value, originalValue) => {
+      // Chuyển empty string thành null
+      if (originalValue === '' || originalValue === null || originalValue === undefined) {
+        return null;
+      }
+      return value;
+    })
+    .required("Ngày sinh là bắt buộc"),
+  phoneNumber: yup
+    .string()
+    .trim()
+    .matches(/^(0[1-9][0-9]{8,9}|\+84[1-9][0-9]{8,9})$/, "Số điện thoại không hợp lệ. Vui lòng nhập đúng số Việt Nam (10 số bắt đầu bằng 0 hoặc +84).")
+    .test('not-all-same', 'Số điện thoại không hợp lệ. Không được nhập tất cả số giống nhau.', (value) => {
+      if (!value) return true;
+      // Loại bỏ +84 để kiểm tra
+      const digits = value.replace(/^\+84/, '0');
+      // Kiểm tra không phải tất cả số giống nhau
+      const firstDigit = digits[0];
+      return !digits.split('').every(digit => digit === firstDigit);
+    })
+    .required("Số điện thoại là bắt buộc"),
+  email: yup
+    .string()
+    .email("Email không hợp lệ. Vui lòng nhập đúng định dạng email (ví dụ: example@email.com)")
+    .optional(),
   isMainGuest: yup.boolean().optional(),
 });
 
