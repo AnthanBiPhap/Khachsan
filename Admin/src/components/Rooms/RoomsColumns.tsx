@@ -3,12 +3,10 @@ import {
   HomeOutlined, 
   SettingOutlined, 
   EditOutlined, 
-  DeleteOutlined, 
   EyeOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
   CloseCircleOutlined,
-  ExclamationCircleOutlined,
   DollarOutlined,
   UserOutlined,
   CalendarOutlined
@@ -30,6 +28,7 @@ export const roomsColumns = (
     ),
     key: "roomNumber",
     dataIndex: "roomNumber",
+    align: 'center',
     render: (value: string, record) => {
       const content = (
         <Space>
@@ -41,15 +40,19 @@ export const roomsColumns = (
           <Typography.Text strong>{value}</Typography.Text>
         </Space>
       );
-      return handleDetail ? (
-        <Button 
-          type="link" 
-          onClick={() => handleDetail(record)}
-          style={{ padding: 0, height: 'auto' }}
-        >
-          {content}
-        </Button>
-      ) : content;
+      return (
+        <div style={{ textAlign: 'center' }}>
+          {handleDetail ? (
+            <Button 
+              type="link" 
+              onClick={() => handleDetail(record)}
+              style={{ padding: 0, height: 'auto' }}
+            >
+              {content}
+            </Button>
+          ) : content}
+        </div>
+      );
     },
   },
   {
@@ -88,61 +91,26 @@ export const roomsColumns = (
   {
     title: (
       <Space>
-        <SettingOutlined style={{ color: '#fa8c16' }} />
-        <span>Tiện nghi</span>
-      </Space>
-    ),
-    key: "amenities",
-    render: (_, record) => {
-      const amenities = record.amenities || [];
-      const maxDisplay = 3; // Chỉ hiển thị tối đa 3 tiện nghi
-      const displayAmenities = amenities.slice(0, maxDisplay);
-      const remainingCount = amenities.length - maxDisplay;
-      
-      return (
-        <Space wrap>
-          {displayAmenities.map((a) => (
-            <Tag key={a} color="blue" icon={<SettingOutlined />}>
-              {a}
-            </Tag>
-          ))}
-          {remainingCount > 0 && (
-            <Tooltip title={`${amenities.slice(maxDisplay).join(', ')}`} placement="topLeft">
-              <Tag color="default" style={{ cursor: 'pointer' }}>
-                +{remainingCount} khác
-              </Tag>
-            </Tooltip>
-          )}
-          {amenities.length === 0 && (
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              Không có tiện nghi
-            </Typography.Text>
-          )}
-        </Space>
-      );
-    },
-  },
-  {
-    title: (
-      <Space>
         <CheckCircleOutlined style={{ color: '#722ed1' }} />
         <span>Trạng thái</span>
       </Space>
     ),
     dataIndex: "status",
     key: "status",
+    align: 'center',
     render: (status: string) => {
       const map: Record<string, { color: string; text: string; icon: React.ReactNode }> = {
         available: { color: "green", text: "Sẵn sàng", icon: <CheckCircleOutlined /> },
-        occupied: { color: "blue", text: "Đang ở", icon: <ExclamationCircleOutlined /> },
         maintenance: { color: "orange", text: "Bảo trì", icon: <ClockCircleOutlined /> },
         unavailable: { color: "red", text: "Không khả dụng", icon: <CloseCircleOutlined /> },
       };
       const v = map[status] || { color: "default", text: status, icon: null };
       return (
-        <Tag color={v.color} icon={v.icon}>
-          {v.text}
-        </Tag>
+        <div style={{ textAlign: 'center' }}>
+          <Tag color={v.color} icon={v.icon}>
+            {v.text}
+          </Tag>
+        </div>
       );
     },
   },
@@ -188,15 +156,6 @@ export const roomsColumns = (
           onClick={() => handleEdit(r)}
         >
           Sửa
-        </Button>
-        <Button 
-          type="link" 
-          size="small" 
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleDelete(r._id)}
-        >
-          Xóa
         </Button>
         {handleDetail && (
           <Button 

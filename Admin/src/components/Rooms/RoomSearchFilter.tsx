@@ -108,9 +108,8 @@ export default function RoomSearchFilter({
               >
                 <Select.Option value="all">Tất cả trạng thái</Select.Option>
                 <Select.Option value="available">Có sẵn</Select.Option>
-                <Select.Option value="occupied">Đã thuê</Select.Option>
                 <Select.Option value="maintenance">Bảo trì</Select.Option>
-                <Select.Option value="cleaning">Đang dọn dẹp</Select.Option>
+                <Select.Option value="unavailable">Không khả dụng</Select.Option>
               </Select>
             </div>
           </Col>

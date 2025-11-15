@@ -85,6 +85,72 @@ const updateById = async (id: string, payload: any) => {
       throw createError(400, "Another room with this number already exists");
   }
 
+  // Kiểm tra trạng thái trước khi đổi
+  if (payload.status && payload.status !== room.status) {
+    const newStatus = payload.status;
+    const now = new Date();
+
+    // Nếu đổi sang maintenance hoặc unavailable, cần check xem phòng có booking active không
+    if (newStatus === 'maintenance' || newStatus === 'unavailable') {
+      // Check booking thường
+      const activeBooking = await Booking.findOne({
+        roomId: id,
+        paymentStatus: { $ne: "cancelled" },
+        checkOut: { $gt: now }, // Booking chưa kết thúc
+      });
+
+      if (activeBooking) {
+        throw createError(
+          400,
+          `Không thể đổi trạng thái phòng sang "${newStatus === 'maintenance' ? 'Bảo trì' : 'Không khả dụng'}" vì phòng đang có booking đang hoạt động (Mã booking: ${activeBooking._id})`
+        );
+      }
+
+      // Check group booking
+      const activeGroupBooking = await GroupBooking.findOne({
+        allocatedRoomIds: id,
+        status: { $nin: ["cancelled", "rejected", "refunded"] },
+        checkOut: { $gt: now }, // Group booking chưa kết thúc
+      });
+
+      if (activeGroupBooking) {
+        throw createError(
+          400,
+          `Không thể đổi trạng thái phòng sang "${newStatus === 'maintenance' ? 'Bảo trì' : 'Không khả dụng'}" vì phòng đang có booking đoàn đang hoạt động (Mã booking: ${activeGroupBooking._id})`
+        );
+      }
+    }
+
+    // Nếu đổi từ checked_in sang available, cần check xem có booking trong tương lai không
+    if ((room.status === 'occupied' || room.status === 'checked_in') && newStatus === 'available') {
+      const futureBooking = await Booking.findOne({
+        roomId: id,
+        paymentStatus: { $ne: "cancelled" },
+        checkIn: { $gt: now }, // Booking trong tương lai
+      });
+
+      if (futureBooking) {
+        throw createError(
+          400,
+          `Không thể đổi trạng thái phòng sang "Sẵn sàng" vì phòng đã có booking trong tương lai (Mã booking: ${futureBooking._id})`
+        );
+      }
+
+      const futureGroupBooking = await GroupBooking.findOne({
+        allocatedRoomIds: id,
+        status: { $nin: ["cancelled", "rejected", "refunded"] },
+        checkIn: { $gt: now }, // Group booking trong tương lai
+      });
+
+      if (futureGroupBooking) {
+        throw createError(
+          400,
+          `Không thể đổi trạng thái phòng sang "Sẵn sàng" vì phòng đã có booking đoàn trong tương lai (Mã booking: ${futureGroupBooking._id})`
+        );
+      }
+    }
+  }
+
   const cleanUpdates = Object.fromEntries(
     Object.entries(payload).filter(
       ([_, v]) => v !== "" && v !== null && v !== undefined

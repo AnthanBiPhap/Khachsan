@@ -21,8 +21,7 @@ import {
   PictureOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  CloseCircleOutlined,
-  ExclamationCircleOutlined
+  CloseCircleOutlined
 } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 import axios from "axios";
@@ -171,12 +170,6 @@ export default function RoomsForm({ open, room, onCancel, onSave, loading }: Roo
                     <Space>
                       <CheckCircleOutlined style={{ color: '#52c41a' }} />
                       <span>Sẵn sàng</span>
-                    </Space>
-                  </Select.Option>
-                  <Select.Option value="occupied">
-                    <Space>
-                      <ExclamationCircleOutlined style={{ color: '#faad14' }} />
-                      <span>Đang ở</span>
                     </Space>
                   </Select.Option>
                   <Select.Option value="maintenance">

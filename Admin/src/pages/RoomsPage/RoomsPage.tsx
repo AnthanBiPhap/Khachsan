@@ -287,20 +287,20 @@ export default function RoomsPage() {
                   color={
                     detailItem.status === "available"
                       ? "green"
-                      : detailItem.status === "occupied"
-                      ? "blue"
                       : detailItem.status === "maintenance"
                       ? "orange"
-                      : "red"
+                      : detailItem.status === "unavailable"
+                      ? "red"
+                      : "default"
                   }
                 >
                   {detailItem.status === "available"
                     ? "Sẵn sàng"
-                    : detailItem.status === "occupied"
-                    ? "Đang sử dụng"
                     : detailItem.status === "maintenance"
                     ? "Bảo trì"
-                    : "Không khả dụng"}
+                    : detailItem.status === "unavailable"
+                    ? "Không khả dụng"
+                    : detailItem.status || "-"}
                 </Tag>
               </Descriptions.Item>
               <Descriptions.Item label="Tiện nghi">

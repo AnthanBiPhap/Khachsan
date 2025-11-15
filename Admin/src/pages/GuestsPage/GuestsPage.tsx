@@ -274,6 +274,7 @@ export default function GuestsPage() {
       title: "Tuổi",
       dataIndex: "age",
       key: "age",
+      align: 'center',
       render: (age: number) => age ? `${age} tuổi` : "-",
     },
     {
@@ -299,13 +300,14 @@ export default function GuestsPage() {
     {
       title: "Số khách",
       key: "guestCount",
+      align: 'center',
       render: (_: unknown, record: Guest) => {
         const guestCount = record.bookingType === 'group' 
           ? (record.bookingData?.peopleCount || record.bookingData?.members?.length || 0)
           : (record.bookingData?.guestCount || record.bookingData?.guests?.length || 0);
         const hasAdditionalGuests = guestCount > 1;
         return (
-          <div>
+          <div style={{ textAlign: 'center' }}>
             <Tag color="cyan" icon={<UserOutlined />}>
               {guestCount} người
             </Tag>
