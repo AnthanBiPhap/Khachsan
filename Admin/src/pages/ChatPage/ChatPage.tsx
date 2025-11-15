@@ -176,11 +176,24 @@ export default function ChatPage() {
     try {
       setLoading(true);
       const result = await chatService.getConversations(1, 50);
-      setConversations(result.conversations);
+      
+      // Lọc bỏ các conversation có participant với userId null (user đã bị xóa)
+      const validConversations = result.conversations.filter((conv) => {
+        if (!conv?.participants || !Array.isArray(conv.participants)) {
+          return false;
+        }
+        // Kiểm tra xem có ít nhất một participant hợp lệ (có userId và userId._id)
+        const hasValidParticipant = conv.participants.some(
+          (p) => p?.userId && p.userId._id && p.userId._id !== user?._id
+        );
+        return hasValidParticipant;
+      });
+      
+      setConversations(validConversations);
       
       // Load unread count
       const unreadMap: Record<string, number> = {};
-      result.conversations.forEach((conv) => {
+      validConversations.forEach((conv) => {
         const count = conv.unreadCount?.[user?._id || ""] || 0;
         if (count > 0) {
           unreadMap[conv._id] = count;
@@ -436,9 +449,12 @@ export default function ChatPage() {
 
   // Get other participant
   const getOtherParticipant = (conversation: Conversation) => {
+    if (!conversation?.participants || !Array.isArray(conversation.participants)) {
+      return null;
+    }
     return conversation.participants.find(
-      (p) => p.userId._id !== user?._id
-    )?.userId;
+      (p) => p?.userId && p.userId._id && p.userId._id !== user?._id
+    )?.userId || null;
   };
 
   // Get last message preview
@@ -459,7 +475,7 @@ export default function ChatPage() {
           </Space>
         }
         style={{ width: 350, height: "100%", display: "flex", flexDirection: "column" }}
-        bodyStyle={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: 0 }}
+        styles={{ body: { flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: 0 } }}
       >
         <div style={{ flex: 1, overflowY: "auto" }}>
           {loading && conversations.length === 0 ? (
@@ -546,7 +562,7 @@ export default function ChatPage() {
           )
         }
         style={{ flex: 1, height: "100%", display: "flex", flexDirection: "column" }}
-        bodyStyle={{ flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: 0 }}
+        styles={{ body: { flex: 1, overflow: "hidden", display: "flex", flexDirection: "column", padding: 0 } }}
       >
         {selectedConversation ? (
           <>
