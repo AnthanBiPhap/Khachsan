@@ -102,7 +102,7 @@ const updateById = async (id: string, payload: any) => {
       if (activeBooking) {
         throw createError(
           400,
-          `Không thể đổi trạng thái phòng sang "${newStatus === 'maintenance' ? 'Bảo trì' : 'Không khả dụng'}" vì phòng đang có booking đang hoạt động (Mã booking: ${activeBooking._id})`
+          `Không thể đổi trạng thái phòng sang "${newStatus === 'maintenance' ? 'Bảo trì' : 'Không khả dụng'}" vì phòng đang có booking đang hoạt động`
         );
       }
 
@@ -116,7 +116,7 @@ const updateById = async (id: string, payload: any) => {
       if (activeGroupBooking) {
         throw createError(
           400,
-          `Không thể đổi trạng thái phòng sang "${newStatus === 'maintenance' ? 'Bảo trì' : 'Không khả dụng'}" vì phòng đang có booking đoàn đang hoạt động (Mã booking: ${activeGroupBooking._id})`
+          `Không thể đổi trạng thái phòng sang "${newStatus === 'maintenance' ? 'Bảo trì' : 'Không khả dụng'}" vì phòng đang có booking đoàn đang hoạt động`
         );
       }
     }
@@ -132,7 +132,7 @@ const updateById = async (id: string, payload: any) => {
       if (futureBooking) {
         throw createError(
           400,
-          `Không thể đổi trạng thái phòng sang "Sẵn sàng" vì phòng đã có booking trong tương lai (Mã booking: ${futureBooking._id})`
+          `Không thể đổi trạng thái phòng sang "Sẵn sàng" vì phòng đã có booking trong tương lai`
         );
       }
 
@@ -145,7 +145,7 @@ const updateById = async (id: string, payload: any) => {
       if (futureGroupBooking) {
         throw createError(
           400,
-          `Không thể đổi trạng thái phòng sang "Sẵn sàng" vì phòng đã có booking đoàn trong tương lai (Mã booking: ${futureGroupBooking._id})`
+          `Không thể đổi trạng thái phòng sang "Sẵn sàng" vì phòng đã có booking đoàn trong tương lai`
         );
       }
     }

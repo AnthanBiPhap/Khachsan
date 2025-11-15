@@ -1,4 +1,4 @@
-import { Space, Tag, Image, Avatar, Typography, Button, Tooltip } from "antd";
+import { Space, Tag, Avatar, Typography, Button, Tooltip } from "antd";
 import { 
   SettingOutlined, 
   DollarOutlined, 
@@ -7,8 +7,7 @@ import {
   EyeOutlined,
   CheckCircleOutlined,
   EyeInvisibleOutlined,
-  CloseCircleOutlined,
-  PictureOutlined
+  CloseCircleOutlined
 } from "@ant-design/icons";
 import type { ColumnsType } from "antd/es/table";
 import type { ServiceItem } from "../../types/service";
@@ -123,41 +122,6 @@ export const servicesColumns = (
         </Tag>
       );
     },
-  },
-  {
-    title: (
-      <Space>
-        <PictureOutlined style={{ color: '#13c2c2' }} />
-        <span>Ảnh</span>
-      </Space>
-    ),
-    key: "images",
-    render: (_, r) => (
-      r.images && r.images.length ? (
-        <Space>
-          <PictureOutlined style={{ color: '#13c2c2' }} />
-          <Image 
-            src={r.images[0]} 
-            width={60} 
-            height={40} 
-            style={{ 
-              objectFit: "cover", 
-              borderRadius: '6px',
-              border: '2px solid #f0f0f0'
-            }}
-            preview={{ src: r.images[0] }}
-            fallback="https://via.placeholder.com/60x40"
-          />
-        </Space>
-      ) : (
-        <Space>
-          <PictureOutlined style={{ color: '#d9d9d9' }} />
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Không có ảnh
-          </Typography.Text>
-        </Space>
-      )
-    ),
   },
   {
     title: (
