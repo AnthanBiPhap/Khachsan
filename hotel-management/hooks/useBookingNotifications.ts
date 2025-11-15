@@ -25,7 +25,7 @@ interface BookingUpdateNotification {
 }
 
 interface GroupBookingUpdateNotification {
-  type: 'group_booking_approved' | 'group_booking_quoted' | 'group_booking_paid' | 'group_booking_confirmed';
+  type: 'group_booking_approved' | 'group_booking_quoted' | 'group_booking_paid' | 'group_booking_confirmed' | 'group_booking_refunded';
   groupBooking: {
     _id: string;
     requesterName: string;
@@ -35,6 +35,7 @@ interface GroupBookingUpdateNotification {
     peopleCount: number;
     quoteAmount?: number;
     paidAmount?: number;
+    refundAmount?: number;
   };
   message: string;
   timestamp: string;
@@ -226,6 +227,12 @@ export function useBookingNotifications() {
           break;
         case 'group_booking_confirmed':
           toast.success('Đặt phòng nhóm đã được xác nhận hoàn tất!', {
+            description: data.message,
+            duration: 5000,
+          });
+          break;
+        case 'group_booking_refunded':
+          toast.info('Hoàn tiền đã được xử lý', {
             description: data.message,
             duration: 5000,
           });

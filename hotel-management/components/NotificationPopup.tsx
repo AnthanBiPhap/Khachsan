@@ -72,6 +72,8 @@ export default function NotificationPopup() {
         return 'Đã thanh toán đầy đủ đặt phòng nhóm';
       case 'group_booking_confirmed':
         return 'Đặt phòng nhóm đã được xác nhận hoàn tất';
+      case 'group_booking_refunded':
+        return 'Hoàn tiền đã được xử lý';
       default:
         return 'Thông báo mới';
     }
@@ -93,6 +95,8 @@ export default function NotificationPopup() {
         return 'bg-green-50 border-green-200';
       case 'group_booking_confirmed':
         return 'bg-green-50 border-green-200';
+      case 'group_booking_refunded':
+        return 'bg-orange-50 border-orange-200';
       default:
         return 'bg-gray-50 border-gray-200';
     }

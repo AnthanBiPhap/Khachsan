@@ -119,6 +119,8 @@ export default function NotificationsPage() {
         return 'border-l-green-500';
       case 'group_booking_confirmed':
         return 'border-l-green-500';
+      case 'group_booking_refunded':
+        return 'border-l-orange-500';
       default:
         return 'border-l-gray-300';
     }
