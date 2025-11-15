@@ -879,6 +879,69 @@ const updateById = async (id: string, payload: any) => {
       console.error("❌ Lỗi gửi email hủy phòng:", emailError);
       // Không throw error để không làm crash API
     }
+
+    // Gửi socket notification và lưu vào database cho khách hàng
+    try {
+      if (updatedBooking.customerId) {
+        const customer = await User.findById(updatedBooking.customerId);
+        if (customer) {
+          const room = updatedBooking.roomId as any;
+          const roomNumber = room?.roomNumber || "N/A";
+          const refundAmount = updatedBooking.paidAmount || updatedBooking.totalPrice || 0;
+          
+          const notificationMessage = `Đặt phòng của bạn đã được hủy và hoàn tiền ${new Intl.NumberFormat("vi-VN").format(refundAmount)} VND`;
+          
+          // Lưu notification vào database
+          await notificationsService.create({
+            type: "booking_refunded",
+            title: "Hoàn tiền thành công",
+            message: notificationMessage,
+            bookingId: updatedBooking._id,
+            userId: customer._id,
+            bookingData: {
+              bookingId: updatedBooking._id,
+              customerId: customer._id,
+              roomId: updatedBooking.roomId,
+              checkIn: updatedBooking.checkIn,
+              checkOut: updatedBooking.checkOut,
+              totalPrice: updatedBooking.totalPrice,
+              paymentStatus: updatedBooking.paymentStatus,
+              source: updatedBooking.source,
+              guestCount: updatedBooking.guestCount,
+              guests: updatedBooking.guests,
+            },
+            recipients: [{
+              userId: customer._id,
+              role: "customer",
+              read: false,
+            }],
+            metadata: {
+              refundAmount: refundAmount,
+            },
+          });
+          
+          // Gửi socket notification
+          const socketNotification = {
+            type: "booking_refunded",
+            booking: {
+              _id: updatedBooking._id.toString(),
+              roomNumber: roomNumber,
+              checkIn: updatedBooking.checkIn,
+              checkOut: updatedBooking.checkOut,
+              totalPrice: updatedBooking.totalPrice,
+              refundAmount: refundAmount,
+            },
+            message: notificationMessage,
+            timestamp: new Date().toISOString(),
+          };
+          
+          socketService.sendToUser(customer._id.toString(), "booking_update", socketNotification);
+          console.log(`✅ Đã gửi socket notification và lưu notification hoàn tiền đến customer ${customer._id}`);
+        }
+      }
+    } catch (socketError) {
+      console.error("❌ Lỗi gửi socket notification hoàn tiền:", socketError);
+    }
   }
 
   // Log cancelled transition (hủy phòng không hoàn tiền hoặc hủy trước khi thanh toán)
@@ -939,6 +1002,63 @@ const updateById = async (id: string, payload: any) => {
     } catch (emailError) {
       console.error("❌ Lỗi gửi email hủy phòng:", emailError);
       // Không throw error để không làm crash API
+    }
+
+    // Gửi socket notification và lưu vào database cho khách hàng
+    try {
+      if (updatedBooking.customerId) {
+        const customer = await User.findById(updatedBooking.customerId);
+        if (customer) {
+          const room = updatedBooking.roomId as any;
+          const roomNumber = room?.roomNumber || "N/A";
+          const notificationMessage = `Đặt phòng của bạn đã được hủy`;
+          
+          // Lưu notification vào database
+          await notificationsService.create({
+            type: "booking_cancelled",
+            title: "Đặt phòng đã bị hủy",
+            message: notificationMessage,
+            bookingId: updatedBooking._id,
+            userId: customer._id,
+            bookingData: {
+              bookingId: updatedBooking._id,
+              customerId: customer._id,
+              roomId: updatedBooking.roomId,
+              checkIn: updatedBooking.checkIn,
+              checkOut: updatedBooking.checkOut,
+              totalPrice: updatedBooking.totalPrice,
+              paymentStatus: updatedBooking.paymentStatus,
+              source: updatedBooking.source,
+              guestCount: updatedBooking.guestCount,
+              guests: updatedBooking.guests,
+            },
+            recipients: [{
+              userId: customer._id,
+              role: "customer",
+              read: false,
+            }],
+          });
+          
+          // Gửi socket notification
+          const socketNotification = {
+            type: "booking_cancelled",
+            booking: {
+              _id: updatedBooking._id.toString(),
+              roomNumber: roomNumber,
+              checkIn: updatedBooking.checkIn,
+              checkOut: updatedBooking.checkOut,
+              totalPrice: updatedBooking.totalPrice,
+            },
+            message: notificationMessage,
+            timestamp: new Date().toISOString(),
+          };
+          
+          socketService.sendToUser(customer._id.toString(), "booking_update", socketNotification);
+          console.log(`✅ Đã gửi socket notification và lưu notification hủy phòng đến customer ${customer._id}`);
+        }
+      }
+    } catch (socketError) {
+      console.error("❌ Lỗi gửi socket notification hủy phòng:", socketError);
     }
   }
 
@@ -1088,6 +1208,68 @@ const updateById = async (id: string, payload: any) => {
         });
         
         console.log(`✅ Đã gửi email xác nhận thanh toán đủ đến ${customerEmail}`);
+      }
+
+      // Gửi socket notification và lưu vào database cho khách hàng
+      try {
+        if (updatedBooking.customerId) {
+          const customer = await User.findById(updatedBooking.customerId);
+          if (customer) {
+            const room = updatedBooking.roomId as any;
+            const roomNumber = room?.roomNumber || "N/A";
+            const paidAmount = updatedBooking.paidAmount || updatedBooking.totalPrice;
+            const notificationMessage = `Đặt phòng của bạn đã được xác nhận thanh toán đủ ${new Intl.NumberFormat("vi-VN").format(paidAmount)} VND`;
+            
+            // Lưu notification vào database
+            await notificationsService.create({
+              type: "booking_paid",
+              title: "Thanh toán thành công",
+              message: notificationMessage,
+              bookingId: updatedBooking._id,
+              userId: customer._id,
+              bookingData: {
+                bookingId: updatedBooking._id,
+                customerId: customer._id,
+                roomId: updatedBooking.roomId,
+                checkIn: updatedBooking.checkIn,
+                checkOut: updatedBooking.checkOut,
+                totalPrice: updatedBooking.totalPrice,
+                paymentStatus: updatedBooking.paymentStatus,
+                source: updatedBooking.source,
+                guestCount: updatedBooking.guestCount,
+                guests: updatedBooking.guests,
+              },
+              recipients: [{
+                userId: customer._id,
+                role: "customer",
+                read: false,
+              }],
+              metadata: {
+                paidAmount: paidAmount,
+              },
+            });
+            
+            // Gửi socket notification
+            const socketNotification = {
+              type: "booking_paid",
+              booking: {
+                _id: updatedBooking._id.toString(),
+                roomNumber: roomNumber,
+                checkIn: updatedBooking.checkIn,
+                checkOut: updatedBooking.checkOut,
+                totalPrice: updatedBooking.totalPrice,
+                paidAmount: paidAmount,
+              },
+              message: notificationMessage,
+              timestamp: new Date().toISOString(),
+            };
+            
+            socketService.sendToUser(customer._id.toString(), "booking_update", socketNotification);
+            console.log(`✅ Đã gửi socket notification và lưu notification thanh toán đủ đến customer ${customer._id}`);
+          }
+        }
+      } catch (socketError) {
+        console.error("❌ Lỗi gửi socket notification thanh toán đủ:", socketError);
       }
     } catch (emailError) {
       console.error("❌ Lỗi gửi email xác nhận thanh toán:", emailError);

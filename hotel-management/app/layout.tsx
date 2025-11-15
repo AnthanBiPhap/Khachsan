@@ -4,11 +4,12 @@ import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
 import { Analytics } from "@vercel/analytics/next";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
 import CustomerChat from "@/components/ui/customer-chat";
 import AIChatBubble from "@/components/ui/ai-chat-bubble";
 import { Header } from "@/components/header";
+import BookingNotificationListener from "@/components/BookingNotificationListener";
 
 export const metadata: Metadata = {
   title: "Miko Hotel - Đặt phòng khách sạn trực tuyến",
@@ -38,6 +39,7 @@ export default function RootLayout({
         className={`font-sans antialiased ${GeistSans.variable} ${GeistMono.variable} min-h-screen`}
       >
         <AuthProvider>
+          <BookingNotificationListener />
           <Header />
           <main className="">
             <Suspense
