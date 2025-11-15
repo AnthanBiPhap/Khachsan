@@ -44,8 +44,15 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
       res.locals.user = user;
 
       next();
-    } catch (err) {
-      return next(createError(401, 'Forbidden'));
+    } catch (err: any) {
+      // Token không hợp lệ, hết hạn, hoặc có lỗi khi verify
+      if (err.name === 'TokenExpiredError') {
+        return next(createError(401, 'Token đã hết hạn. Vui lòng đăng nhập lại.'));
+      }
+      if (err.name === 'JsonWebTokenError') {
+        return next(createError(401, 'Token không hợp lệ. Vui lòng đăng nhập lại.'));
+      }
+      return next(createError(401, 'Xác thực thất bại. Vui lòng đăng nhập lại.'));
     }
 };
 
