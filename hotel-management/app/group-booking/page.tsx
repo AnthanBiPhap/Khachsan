@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
-import { DatePicker, Input, InputNumber, Button, message, Card, Space, Upload, Tabs, Tag, Steps, Divider, Alert, Empty, Descriptions, Form, Row, Col } from 'antd';
+import { DatePicker, Input, InputNumber, Button, message, Card, Space, Upload, Tabs, Tag, Steps, Divider, Alert, Empty, Descriptions, Form, Row, Col, Table, Modal } from 'antd';
 import dayjs from 'dayjs';
 import type { UploadProps } from 'antd';
-import { DownloadOutlined, UploadOutlined, CopyOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { DownloadOutlined, UploadOutlined, CopyOutlined, ClockCircleOutlined, EyeOutlined } from '@ant-design/icons';
 import { groupBookingService, type GroupBooking } from '@/services/groupBookingService';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -28,6 +28,7 @@ export default function GroupBookingPage() {
   const { user } = useAuth();
   const [loadingCreate, setLoadingCreate] = useState(false);
   const [requestId, setRequestId] = useState<string>("");
+  const [showMembersModal, setShowMembersModal] = useState(false);
   const [createdId, setCreatedId] = useState<string>("");
   const [currentStatus, setCurrentStatus] = useState<GroupBookingStatus | ''>('');
   const [isPolling, setIsPolling] = useState<boolean>(false);
@@ -918,45 +919,16 @@ export default function GroupBookingPage() {
                       </Descriptions>
                       {hasUploadedMembers && groupDetail.members && groupDetail.members.length > 0 && (
                         <div style={{ marginTop: 20 }}>
-                          <div style={{ marginBottom: 12, fontWeight: 600, fontSize: 15, color: '#262626' }}>
-                            Danh sách thành viên đã upload ({groupDetail.members.length} người)
-                          </div>
-                          <div style={{ 
-                            padding: 16, 
-                            background: '#f6ffed', 
-                            borderRadius: 8,
-                            border: '1px solid #b7eb8f',
-                            maxHeight: 300,
-                            overflowY: 'auto'
-                          }}>
-                            <div style={{ display: 'grid', gap: 8 }}>
-                              {groupDetail.members.map((member: any, index: number) => (
-                                <div 
-                                  key={index}
-                                  style={{ 
-                                    padding: 12, 
-                                    background: '#fff', 
-                                    borderRadius: 4,
-                                    border: '1px solid #d9f7be',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center'
-                                  }}
-                                >
-                                  <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 500, marginBottom: 4 }}>
-                                      {member.isLeader && <Tag color="gold" style={{ marginRight: 8 }}>Trưởng đoàn</Tag>}
-                                      {member.fullName || '—'}
-                                    </div>
-                                    <div style={{ fontSize: 12, color: '#8c8c8c' }}>
-                                      {member.phoneNumber && `📞 ${member.phoneNumber}`}
-                                      {member.email && ` • ✉️ ${member.email}`}
-                                      {member.roomNumber && ` • 🏠 Phòng ${member.roomNumber}`}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
+                          <div style={{ marginBottom: 12, fontWeight: 600, fontSize: 15, color: '#262626', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>Danh sách thành viên đã upload ({groupDetail.members.length} người)</span>
+                            <Button 
+                              type="link" 
+                              icon={<EyeOutlined />}
+                              onClick={() => setShowMembersModal(true)}
+                              style={{ padding: 0 }}
+                            >
+                              Xem chi tiết
+                            </Button>
                           </div>
                         </div>
                       )}
@@ -1354,6 +1326,87 @@ export default function GroupBookingPage() {
           ]}
         />
       </Card>
+
+      {/* Modal hiển thị danh sách thành viên */}
+      <Modal
+        title={`Danh sách thành viên (${groupDetail?.members?.length || 0} người)`}
+        open={showMembersModal}
+        onCancel={() => setShowMembersModal(false)}
+        footer={[
+          <Button key="close" onClick={() => setShowMembersModal(false)}>
+            Đóng
+          </Button>
+        ]}
+        width={1000}
+      >
+        {groupDetail?.members && groupDetail.members.length > 0 ? (
+          <Table
+            dataSource={groupDetail.members.map((member: any, index: number) => ({
+              ...member,
+              key: index,
+            }))}
+            columns={[
+              {
+                title: 'STT',
+                dataIndex: 'key',
+                key: 'stt',
+                width: 60,
+                render: (_, __, index) => index + 1,
+              },
+              {
+                title: 'Họ và tên',
+                dataIndex: 'fullName',
+                key: 'fullName',
+                render: (text: string, record: any) => (
+                  <span>
+                    {record.isLeader && <Tag color="gold" style={{ marginRight: 8 }}>Trưởng đoàn</Tag>}
+                    {text || '—'}
+                  </span>
+                ),
+              },
+              {
+                title: 'CMND/CCCD',
+                dataIndex: 'idNumber',
+                key: 'idNumber',
+                render: (text: string) => text || '—',
+              },
+              {
+                title: 'Ngày sinh',
+                dataIndex: 'dateOfBirth',
+                key: 'dateOfBirth',
+                render: (date: string | Date) => {
+                  if (!date) return '—';
+                  const d = new Date(date);
+                  return d.toLocaleDateString('vi-VN');
+                },
+              },
+              {
+                title: 'Số điện thoại',
+                dataIndex: 'phoneNumber',
+                key: 'phoneNumber',
+                render: (text: string) => text || '—',
+              },
+              {
+                title: 'Email',
+                dataIndex: 'email',
+                key: 'email',
+                render: (text: string) => text || '—',
+              },
+              {
+                title: 'Phòng',
+                dataIndex: 'roomNumber',
+                key: 'roomNumber',
+                render: (text: string) => text ? <Tag color="blue">Phòng {text}</Tag> : '—',
+              },
+            ]}
+            pagination={false}
+            scroll={{ y: 400 }}
+            size="middle"
+          />
+        ) : (
+          <Empty description="Chưa có danh sách thành viên" />
+        )}
+      </Modal>
     </div>
   );
 }
