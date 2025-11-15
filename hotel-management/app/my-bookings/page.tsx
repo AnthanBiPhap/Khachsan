@@ -524,10 +524,10 @@ export default function MyBookingsPage() {
                                     <ClockIcon className="h-3 w-3 mr-1" />
                                     Đang xử lý hoàn tiền
                                   </span>
-                                ) : booking.paymentStatus === 'paid' ? (
+                                ) : booking.paymentStatus === 'paid' || booking.paymentStatus === 'partial_paid' ? (
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                                     <CheckCircle className="h-3 w-3 mr-1" />
-                                    Đã thanh toán
+                                    {booking.paymentStatus === 'partial_paid' ? 'Đã thanh toán một phần' : 'Đã thanh toán'}
                                   </span>
                                 ) : (
                                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
@@ -558,7 +558,7 @@ export default function MyBookingsPage() {
                                 <span className="text-sm text-blue-700">Số tiền hoàn:</span>
                                 <span className="text-sm font-medium text-blue-900">
                                   {booking.paymentStatus === 'refunded' 
-                                    ? formatCurrency(Number(booking.totalPrice) || 0)
+                                    ? formatCurrency(Number(booking.paidAmount) || Number(booking.totalPrice) || 0)
                                     : '0 VND'
                                   }
                                 </span>
@@ -610,7 +610,7 @@ export default function MyBookingsPage() {
                               </div>
                             )}
                             
-                            {booking.paymentStatus === 'paid' && !canCancel(booking.createdAt) && (
+                            {(booking.paymentStatus === 'paid' || booking.paymentStatus === 'partial_paid') && !canCancel(booking.createdAt) && (
                               <div className="mt-3 p-2 bg-red-50 rounded-md border border-red-200">
                                 <p className="text-xs text-red-700">
                                   ⚠️ Không thể hủy phòng vì đã quá 24 giờ kể từ khi đặt phòng. Thời gian hủy phòng đã hết hạn.
@@ -665,7 +665,7 @@ export default function MyBookingsPage() {
                           setActionLoadingId(booking._id);
                           await bookingService.updateBooking(booking._id, {
                             paymentStatus: 'cancelled',
-                            note: 'Khách hàng hủy đặt phòng',
+                            note: 'Khách hàng hủy đặt phòng (chưa thanh toán)',
                           });
                           // cập nhật lại danh sách
                           await fetchBookings();
@@ -691,7 +691,7 @@ export default function MyBookingsPage() {
                       Không thể hủy phòng (đã quá 24 giờ)
                     </Button>
                   )}
-                  {booking.paymentStatus === 'paid' && canCancel(booking.createdAt) && (
+                  {(booking.paymentStatus === 'paid' || booking.paymentStatus === 'partial_paid') && canCancel(booking.createdAt) && (
                     <Button
                       variant="outline"
                       className="text-red-600 border-red-200 hover:bg-red-50 w-full sm:w-auto"
@@ -734,7 +734,7 @@ export default function MyBookingsPage() {
                     </Button>
                   )}
                   
-                  {booking.paymentStatus === 'paid' && !canCancel(booking.createdAt) && (
+                  {(booking.paymentStatus === 'paid' || booking.paymentStatus === 'partial_paid') && !canCancel(booking.createdAt) && (
                     <Button
                       variant="outline"
                       className="text-gray-400 border-gray-200 cursor-not-allowed w-full sm:w-auto"
