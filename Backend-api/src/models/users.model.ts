@@ -24,7 +24,8 @@ const userSchema = new Schema(
         phoneNumber: {
             type: String,
             required: [true, 'Số điện thoại là bắt buộc'],
-            trim: true
+            trim: true,
+            match: [/^(0[1-9][0-9]{8,9}|\+84[1-9][0-9]{8,9})$/, 'Số điện thoại không hợp lệ. Vui lòng nhập số điện thoại Việt Nam (bắt đầu bằng 0 hoặc +84)']
         },
         dateOfBirth: {
             type: Date,
