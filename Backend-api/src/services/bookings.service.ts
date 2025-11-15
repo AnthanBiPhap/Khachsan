@@ -75,25 +75,123 @@ const getById = async (id: string) => {
 const create = async (payload: any) => {
   const { roomId, checkIn, checkOut, services = [], extendHours = 0 } = payload;
 
-  // check trùng phòng với Booking khác
+  const newCheckIn = new Date(checkIn);
+  const newCheckOut = new Date(checkOut);
+  
+  // Thêm extra hours vào checkOut nếu có
+  if (extendHours > 0) {
+    newCheckOut.setHours(newCheckOut.getHours() + extendHours);
+  }
+
+  // check trùng phòng với Booking khác (overlap)
   const conflictBooking = await Booking.findOne({
     roomId,
-    paymentStatus: { $ne: "cancelled" }, // hoặc $nin: ["cancelled"]
-    checkIn: { $lt: new Date(checkOut) },
-    checkOut: { $gt: new Date(checkIn) },
+    paymentStatus: { $ne: "cancelled" },
+    checkIn: { $lt: newCheckOut },
+    checkOut: { $gt: newCheckIn },
   });
   if (conflictBooking)
     throw createError(400, "Phòng đã được đặt trong khoảng thời gian này");
 
+  // Check khoảng cách 2 giờ dọn phòng với booking trước đó
+  // Tìm booking kết thúc trước check-in của booking mới
+  const previousBooking = await Booking.findOne({
+    roomId,
+    paymentStatus: { $ne: "cancelled" },
+    checkOut: { $lte: newCheckIn }, // Booking kết thúc trước hoặc bằng check-in mới
+  }).sort({ checkOut: -1 }); // Lấy booking kết thúc gần nhất
+
+  if (previousBooking) {
+    const timeDiff = newCheckIn.getTime() - new Date(previousBooking.checkOut).getTime();
+    const hoursDiff = timeDiff / (1000 * 60 * 60); // Chuyển sang giờ
+    
+    if (hoursDiff < 2) {
+      const prevCheckOut = new Date(previousBooking.checkOut);
+      const minCheckIn = new Date(prevCheckOut);
+      minCheckIn.setHours(minCheckIn.getHours() + 2); // Thêm 2 giờ
+      throw createError(
+        400,
+        `Cần ít nhất 2 giờ để dọn phòng. Check-in sớm nhất có thể là ${minCheckIn.toLocaleString('vi-VN')}`
+      );
+    }
+  }
+
+  // Check khoảng cách 2 giờ dọn phòng với booking sau đó
+  // Tìm booking bắt đầu sau check-out của booking mới
+  const nextBooking = await Booking.findOne({
+    roomId,
+    paymentStatus: { $ne: "cancelled" },
+    checkIn: { $gte: newCheckOut }, // Booking bắt đầu sau hoặc bằng check-out mới
+  }).sort({ checkIn: 1 }); // Lấy booking bắt đầu sớm nhất
+
+  if (nextBooking) {
+    const timeDiff = new Date(nextBooking.checkIn).getTime() - newCheckOut.getTime();
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+    
+    if (hoursDiff < 2) {
+      const nextCheckIn = new Date(nextBooking.checkIn);
+      const maxCheckOut = new Date(nextCheckIn);
+      maxCheckOut.setHours(maxCheckOut.getHours() - 2); // Trừ 2 giờ
+      throw createError(
+        400,
+        `Cần ít nhất 2 giờ để dọn phòng. Check-out muộn nhất có thể là ${maxCheckOut.toLocaleString('vi-VN')}`
+      );
+    }
+  }
+
   // check trùng phòng với GroupBooking đã được allocate
   const conflictGroupBooking = await GroupBooking.findOne({
     allocatedRoomIds: roomId,
-    status: { $nin: ["cancelled", "rejected", "refunded"] }, // Loại các status không còn hiệu lực
-    checkIn: { $lt: new Date(checkOut) },
-    checkOut: { $gt: new Date(checkIn) },
+    status: { $nin: ["cancelled", "rejected", "refunded"] },
+    checkIn: { $lt: newCheckOut },
+    checkOut: { $gt: newCheckIn },
   });
   if (conflictGroupBooking)
     throw createError(400, "Phòng đã được đặt theo đoàn trong khoảng thời gian này");
+
+  // Check khoảng cách 2 giờ với group booking trước đó
+  const previousGroupBooking = await GroupBooking.findOne({
+    allocatedRoomIds: roomId,
+    status: { $nin: ["cancelled", "rejected", "refunded"] },
+    checkOut: { $lte: newCheckIn },
+  }).sort({ checkOut: -1 });
+
+  if (previousGroupBooking) {
+    const timeDiff = newCheckIn.getTime() - new Date(previousGroupBooking.checkOut).getTime();
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+    
+    if (hoursDiff < 2) {
+      const prevCheckOut = new Date(previousGroupBooking.checkOut);
+      const minCheckIn = new Date(prevCheckOut);
+      minCheckIn.setHours(minCheckIn.getHours() + 2);
+      throw createError(
+        400,
+        `Cần ít nhất 2 giờ để dọn phòng sau đặt đoàn. Check-in sớm nhất có thể là ${minCheckIn.toLocaleString('vi-VN')}`
+      );
+    }
+  }
+
+  // Check khoảng cách 2 giờ với group booking sau đó
+  const nextGroupBooking = await GroupBooking.findOne({
+    allocatedRoomIds: roomId,
+    status: { $nin: ["cancelled", "rejected", "refunded"] },
+    checkIn: { $gte: newCheckOut },
+  }).sort({ checkIn: 1 });
+
+  if (nextGroupBooking) {
+    const timeDiff = new Date(nextGroupBooking.checkIn).getTime() - newCheckOut.getTime();
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+    
+    if (hoursDiff < 2) {
+      const nextCheckIn = new Date(nextGroupBooking.checkIn);
+      const maxCheckOut = new Date(nextCheckIn);
+      maxCheckOut.setHours(maxCheckOut.getHours() - 2);
+      throw createError(
+        400,
+        `Cần ít nhất 2 giờ để dọn phòng trước đặt đoàn. Check-out muộn nhất có thể là ${maxCheckOut.toLocaleString('vi-VN')}`
+      );
+    }
+  }
 
   // Validate guests array
   if (!payload.guests || !Array.isArray(payload.guests) || payload.guests.length === 0) {
@@ -345,30 +443,127 @@ const updateById = async (id: string, payload: any) => {
   const booking = await getById(id);
 
   const roomId = payload.roomId ?? booking.roomId;
-  const checkIn = payload.checkIn ?? booking.checkIn;
-  const checkOut = payload.checkOut ?? booking.checkOut;
+  let checkIn = payload.checkIn ? new Date(payload.checkIn) : booking.checkIn;
+  let checkOut = payload.checkOut ? new Date(payload.checkOut) : booking.checkOut;
+  const extendHours = payload.extendHours || 0;
   const services = payload.services || booking.services || [];
 
-  // check trùng phòng với Booking khác
+  // Thêm extra hours vào checkOut nếu có
+  if (extendHours > 0) {
+    checkOut = new Date(checkOut);
+    checkOut.setHours(checkOut.getHours() + extendHours);
+  }
+
+  // check trùng phòng với Booking khác (overlap)
   const conflictBooking = await Booking.findOne({
     _id: { $ne: id },
     roomId,
     paymentStatus: { $ne: "cancelled" },
-    checkIn: { $lt: new Date(checkOut) },
-    checkOut: { $gt: new Date(checkIn) },
+    checkIn: { $lt: checkOut },
+    checkOut: { $gt: checkIn },
   });
   if (conflictBooking)
     throw createError(400, "Phòng đã được đặt trong khoảng thời gian này");
 
+  // Check khoảng cách 2 giờ dọn phòng với booking trước đó
+  const previousBooking = await Booking.findOne({
+    _id: { $ne: id },
+    roomId,
+    paymentStatus: { $ne: "cancelled" },
+    checkOut: { $lte: checkIn },
+  }).sort({ checkOut: -1 });
+
+  if (previousBooking) {
+    const timeDiff = checkIn.getTime() - new Date(previousBooking.checkOut).getTime();
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+    
+    if (hoursDiff < 2) {
+      const prevCheckOut = new Date(previousBooking.checkOut);
+      const minCheckIn = new Date(prevCheckOut);
+      minCheckIn.setHours(minCheckIn.getHours() + 2);
+      throw createError(
+        400,
+        `Cần ít nhất 2 giờ để dọn phòng. Check-in sớm nhất có thể là ${minCheckIn.toLocaleString('vi-VN')}`
+      );
+    }
+  }
+
+  // Check khoảng cách 2 giờ dọn phòng với booking sau đó
+  const nextBooking = await Booking.findOne({
+    _id: { $ne: id },
+    roomId,
+    paymentStatus: { $ne: "cancelled" },
+    checkIn: { $gte: checkOut },
+  }).sort({ checkIn: 1 });
+
+  if (nextBooking) {
+    const timeDiff = new Date(nextBooking.checkIn).getTime() - checkOut.getTime();
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+    
+    if (hoursDiff < 2) {
+      const nextCheckIn = new Date(nextBooking.checkIn);
+      const maxCheckOut = new Date(nextCheckIn);
+      maxCheckOut.setHours(maxCheckOut.getHours() - 2);
+      throw createError(
+        400,
+        `Cần ít nhất 2 giờ để dọn phòng. Check-out muộn nhất có thể là ${maxCheckOut.toLocaleString('vi-VN')}`
+      );
+    }
+  }
+
   // check trùng phòng với GroupBooking đã được allocate
   const conflictGroupBooking = await GroupBooking.findOne({
     allocatedRoomIds: roomId,
-    status: { $nin: ["cancelled", "rejected", "refunded"] }, // Loại các status không còn hiệu lực
-    checkIn: { $lt: new Date(checkOut) },
-    checkOut: { $gt: new Date(checkIn) },
+    status: { $nin: ["cancelled", "rejected", "refunded"] },
+    checkIn: { $lt: checkOut },
+    checkOut: { $gt: checkIn },
   });
   if (conflictGroupBooking)
     throw createError(400, "Phòng đã được đặt theo đoàn trong khoảng thời gian này");
+
+  // Check khoảng cách 2 giờ với group booking trước đó
+  const previousGroupBooking = await GroupBooking.findOne({
+    allocatedRoomIds: roomId,
+    status: { $nin: ["cancelled", "rejected", "refunded"] },
+    checkOut: { $lte: checkIn },
+  }).sort({ checkOut: -1 });
+
+  if (previousGroupBooking) {
+    const timeDiff = checkIn.getTime() - new Date(previousGroupBooking.checkOut).getTime();
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+    
+    if (hoursDiff < 2) {
+      const prevCheckOut = new Date(previousGroupBooking.checkOut);
+      const minCheckIn = new Date(prevCheckOut);
+      minCheckIn.setHours(minCheckIn.getHours() + 2);
+      throw createError(
+        400,
+        `Cần ít nhất 2 giờ để dọn phòng sau đặt đoàn. Check-in sớm nhất có thể là ${minCheckIn.toLocaleString('vi-VN')}`
+      );
+    }
+  }
+
+  // Check khoảng cách 2 giờ với group booking sau đó
+  const nextGroupBooking = await GroupBooking.findOne({
+    allocatedRoomIds: roomId,
+    status: { $nin: ["cancelled", "rejected", "refunded"] },
+    checkIn: { $gte: checkOut },
+  }).sort({ checkIn: 1 });
+
+  if (nextGroupBooking) {
+    const timeDiff = new Date(nextGroupBooking.checkIn).getTime() - checkOut.getTime();
+    const hoursDiff = timeDiff / (1000 * 60 * 60);
+    
+    if (hoursDiff < 2) {
+      const nextCheckIn = new Date(nextGroupBooking.checkIn);
+      const maxCheckOut = new Date(nextCheckIn);
+      maxCheckOut.setHours(maxCheckOut.getHours() - 2);
+      throw createError(
+        400,
+        `Cần ít nhất 2 giờ để dọn phòng trước đặt đoàn. Check-out muộn nhất có thể là ${maxCheckOut.toLocaleString('vi-VN')}`
+      );
+    }
+  }
 
   if (payload.services) {
     // 1. Xóa tất cả dịch vụ cũ của booking này
