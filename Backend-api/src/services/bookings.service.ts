@@ -837,6 +837,109 @@ const updateById = async (id: string, payload: any) => {
       action: "refunded",
       note: payload.note || "Hoàn tiền cho đặt phòng",
     });
+
+    // Gửi email xác nhận hủy phòng khi admin duyệt hoàn tiền
+    try {
+      await updatedBooking.populate("customerId", "fullName email phoneNumber");
+      await updatedBooking.populate("roomId", "roomNumber typeId");
+      
+      // Lấy email từ customer hoặc main guest
+      let customerEmail: string | null = null;
+      let guestName: string = "Khách hàng";
+      
+      if (updatedBooking.customerId && (updatedBooking.customerId as any).email) {
+        customerEmail = (updatedBooking.customerId as any).email;
+        guestName = (updatedBooking.customerId as any)?.fullName || guestName;
+      } else {
+        const mainGuest = updatedBooking.guests?.find((g: any) => g.isMainGuest) || updatedBooking.guests?.[0];
+        customerEmail = mainGuest?.email || null;
+        guestName = mainGuest?.fullName || guestName;
+      }
+
+      if (customerEmail) {
+        const room = updatedBooking.roomId as any;
+        const roomNumber = room?.roomNumber || "N/A";
+        const refundAmount = updatedBooking.paidAmount || updatedBooking.totalPrice || 0;
+
+        await emailService.sendBookingCancellation({
+          to: customerEmail,
+          bookingId: updatedBooking._id.toString(),
+          guestName: guestName,
+          roomNumber: roomNumber,
+          checkIn: updatedBooking.checkIn,
+          checkOut: updatedBooking.checkOut,
+          totalPrice: updatedBooking.totalPrice,
+          refundAmount: refundAmount,
+          cancellationReason: payload.note || "Admin đã duyệt hủy phòng và hoàn tiền",
+        });
+        
+        console.log(`✅ Đã gửi email hủy phòng đến ${customerEmail}`);
+      }
+    } catch (emailError) {
+      console.error("❌ Lỗi gửi email hủy phòng:", emailError);
+      // Không throw error để không làm crash API
+    }
+  }
+
+  // Log cancelled transition (hủy phòng không hoàn tiền hoặc hủy trước khi thanh toán)
+  if (updatedBooking.paymentStatus === "cancelled" && previousPaymentStatus !== "cancelled") {
+    // Xác định actorName dựa trên loại khách hàng
+    let actorName = "Admin";
+    if (updatedBooking.customerId) {
+      const customer = await User.findById(updatedBooking.customerId);
+      actorName = customer?.fullName || "Khách hàng online";
+    } else {
+      const mainGuest = updatedBooking.guests?.find((g: any) => g.isMainGuest);
+      actorName = mainGuest?.fullName || "Khách hàng walk-in";
+    }
+
+    await bookingStatusService.create({
+      bookingId: updatedBooking._id.toString(),
+      actorId: updatedBooking.customerId || undefined,
+      actorName: actorName,
+      action: "cancelled",
+      note: payload.note || "Hủy đặt phòng",
+    });
+
+    // Gửi email xác nhận hủy phòng
+    try {
+      await updatedBooking.populate("customerId", "fullName email phoneNumber");
+      await updatedBooking.populate("roomId", "roomNumber typeId");
+      
+      // Lấy email từ customer hoặc main guest
+      let customerEmail: string | null = null;
+      let guestName: string = "Khách hàng";
+      
+      if (updatedBooking.customerId && (updatedBooking.customerId as any).email) {
+        customerEmail = (updatedBooking.customerId as any).email;
+        guestName = (updatedBooking.customerId as any)?.fullName || guestName;
+      } else {
+        const mainGuest = updatedBooking.guests?.find((g: any) => g.isMainGuest) || updatedBooking.guests?.[0];
+        customerEmail = mainGuest?.email || null;
+        guestName = mainGuest?.fullName || guestName;
+      }
+
+      if (customerEmail) {
+        const room = updatedBooking.roomId as any;
+        const roomNumber = room?.roomNumber || "N/A";
+
+        await emailService.sendBookingCancellation({
+          to: customerEmail,
+          bookingId: updatedBooking._id.toString(),
+          guestName: guestName,
+          roomNumber: roomNumber,
+          checkIn: updatedBooking.checkIn,
+          checkOut: updatedBooking.checkOut,
+          totalPrice: updatedBooking.totalPrice,
+          cancellationReason: payload.note || "Đặt phòng đã được hủy",
+        });
+        
+        console.log(`✅ Đã gửi email hủy phòng đến ${customerEmail}`);
+      }
+    } catch (emailError) {
+      console.error("❌ Lỗi gửi email hủy phòng:", emailError);
+      // Không throw error để không làm crash API
+    }
   }
 
   // Log refund requested transition (khách gửi yêu cầu)
@@ -889,6 +992,107 @@ const updateById = async (id: string, payload: any) => {
       action: "failed",
       note: payload.note || "Thanh toán thất bại",
     });
+  }
+
+  // Log paid transition và gửi email xác nhận thanh toán đủ kèm hóa đơn
+  if (updatedBooking.paymentStatus === "paid" && previousPaymentStatus !== "paid") {
+    // Xác định actorName dựa trên loại khách hàng
+    let actorName = "Admin";
+    if (updatedBooking.customerId) {
+      const customer = await User.findById(updatedBooking.customerId);
+      actorName = customer?.fullName || "Khách hàng online";
+    } else {
+      const mainGuest = updatedBooking.guests?.find((g: any) => g.isMainGuest);
+      actorName = mainGuest?.fullName || "Khách hàng walk-in";
+    }
+
+    await bookingStatusService.create({
+      bookingId: updatedBooking._id.toString(),
+      actorId: updatedBooking.customerId || undefined,
+      actorName: actorName,
+      action: "paid",
+      note: payload.note || "Đã thanh toán đủ",
+    });
+
+    // Gửi email xác nhận thanh toán đủ kèm hóa đơn
+    try {
+      await updatedBooking.populate("customerId", "fullName email phoneNumber");
+      await updatedBooking.populate("roomId", "roomNumber typeId");
+      
+      // Lấy email từ customer hoặc main guest
+      let customerEmail: string | null = null;
+      let guestName: string = "Khách hàng";
+      
+      if (updatedBooking.customerId && (updatedBooking.customerId as any).email) {
+        customerEmail = (updatedBooking.customerId as any).email;
+        guestName = (updatedBooking.customerId as any)?.fullName || guestName;
+      } else {
+        const mainGuest = updatedBooking.guests?.find((g: any) => g.isMainGuest) || updatedBooking.guests?.[0];
+        customerEmail = mainGuest?.email || null;
+        guestName = mainGuest?.fullName || guestName;
+      }
+
+      if (customerEmail) {
+        const room = updatedBooking.roomId as any;
+        const roomNumber = room?.roomNumber || "N/A";
+
+        // Tìm hoặc tạo invoice (đảm bảo invoice đã được tạo)
+        let invoice = await Invoice.findOne({ bookingId: updatedBooking._id });
+        
+        // Nếu chưa có invoice, tạo mới
+        if (!invoice) {
+          try {
+            invoice = await invoicesService.create({
+              bookingId: updatedBooking._id,
+              customerId: (updatedBooking as any).customerId?._id,
+              totalAmount: updatedBooking.totalPrice,
+              paidAmount: updatedBooking.paidAmount || updatedBooking.totalPrice,
+              remainingAmount: 0,
+              paymentStatus: "paid",
+              status: "paid",
+              issuedAt: new Date(),
+            });
+            console.log(`✅ Đã tạo invoice mới cho booking ${updatedBooking._id}`);
+          } catch (invoiceError) {
+            console.error("❌ Lỗi tạo invoice:", invoiceError);
+            // Vẫn gửi email nhưng không có PDF
+          }
+        }
+
+        let invoicePdfBuffer: Buffer | undefined = undefined;
+        let invoiceFileName: string | undefined = undefined;
+
+        if (invoice) {
+          try {
+            // Tạo PDF hóa đơn
+            invoicePdfBuffer = await invoicesService.printInvoice(invoice._id.toString());
+            invoiceFileName = `HoaDon_${invoice._id.toString()}.pdf`;
+            console.log(`✅ Đã tạo PDF hóa đơn: ${invoiceFileName}`);
+          } catch (pdfError) {
+            console.error("❌ Lỗi tạo PDF hóa đơn:", pdfError);
+            // Vẫn gửi email nhưng không có PDF
+          }
+        }
+
+        await emailService.sendPaymentConfirmation({
+          to: customerEmail,
+          bookingId: updatedBooking._id.toString(),
+          guestName: guestName,
+          roomNumber: roomNumber,
+          checkIn: updatedBooking.checkIn,
+          checkOut: updatedBooking.checkOut,
+          totalPrice: updatedBooking.totalPrice,
+          paidAmount: updatedBooking.paidAmount || updatedBooking.totalPrice,
+          invoicePdfBuffer: invoicePdfBuffer,
+          invoiceFileName: invoiceFileName,
+        });
+        
+        console.log(`✅ Đã gửi email xác nhận thanh toán đủ đến ${customerEmail}`);
+      }
+    } catch (emailError) {
+      console.error("❌ Lỗi gửi email xác nhận thanh toán:", emailError);
+      // Không throw error để không làm crash API
+    }
   }
 
   // If extend hours or checkOut changed forward, log extension

@@ -900,11 +900,421 @@ const sendPasswordResetConfirmation = async (data: PasswordResetConfirmationData
   }
 };
 
+interface BookingCancellationEmailData {
+  to: string;
+  bookingId: string;
+  guestName: string;
+  roomNumber: string;
+  checkIn: Date;
+  checkOut: Date;
+  totalPrice: number;
+  refundAmount?: number;
+  cancellationReason?: string;
+}
+
+// Hàm gửi email xác nhận hủy phòng
+const sendBookingCancellation = async (data: BookingCancellationEmailData) => {
+  try {
+    console.log(`📧 Email service: Bắt đầu gửi email hủy phòng đến ${data.to}`);
+    
+    const transporter = createTransporter();
+    
+    // Verify transporter connection
+    await transporter.verify();
+    console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
+    
+    // Format ngày tháng
+    const formatDate = (date: Date) => {
+      return new Date(date).toLocaleString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
+    // Format tiền VND
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+      }).format(amount);
+    };
+
+    const mailOptions = {
+      from: `"Khách sạn" <${env.GMAIL_USER}>`,
+      to: data.to,
+      subject: "Xác nhận hủy đặt phòng",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+              background-color: #f9f9f9;
+            }
+            .header {
+              background-color: #ff9800;
+              color: white;
+              padding: 20px;
+              text-align: center;
+              border-radius: 5px 5px 0 0;
+            }
+            .content {
+              background-color: white;
+              padding: 30px;
+              border-radius: 0 0 5px 5px;
+            }
+            .booking-info {
+              background-color: #f5f5f5;
+              padding: 15px;
+              border-radius: 5px;
+              margin: 20px 0;
+            }
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 8px 0;
+              border-bottom: 1px solid #ddd;
+            }
+            .info-row:last-child {
+              border-bottom: none;
+            }
+            .label {
+              font-weight: bold;
+              color: #666;
+            }
+            .value {
+              color: #333;
+            }
+            .refund-highlight {
+              color: #4CAF50;
+              font-size: 18px;
+              font-weight: bold;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #ddd;
+              color: #666;
+              font-size: 12px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>📋 Đặt phòng đã được hủy</h1>
+            </div>
+            <div class="content">
+              <p>Xin chào <strong>${data.guestName}</strong>,</p>
+              
+              <p>Đặt phòng của bạn đã được hủy thành công. Thông tin chi tiết như sau:</p>
+              
+              <div class="booking-info">
+                <h2 style="margin-top: 0; color: #ff9800;">Thông tin đặt phòng đã hủy</h2>
+                
+                <div class="info-row">
+                  <span class="label">Mã đặt phòng:</span>
+                  <span class="value"><strong>${data.bookingId}</strong></span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">Số phòng:</span>
+                  <span class="value"><strong>${data.roomNumber}</strong></span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">Ngày nhận phòng:</span>
+                  <span class="value">${formatDate(data.checkIn)}</span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">Ngày trả phòng:</span>
+                  <span class="value">${formatDate(data.checkOut)}</span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">Tổng tiền:</span>
+                  <span class="value">${formatCurrency(data.totalPrice)}</span>
+                </div>
+                
+                ${data.refundAmount ? `
+                <div class="info-row">
+                  <span class="label">Số tiền hoàn lại:</span>
+                  <span class="value refund-highlight">${formatCurrency(data.refundAmount)}</span>
+                </div>
+                ` : ''}
+              </div>
+              
+              ${data.cancellationReason ? `
+              <p><strong>Lý do hủy:</strong> ${data.cancellationReason}</p>
+              ` : ''}
+              
+              <p><strong>Lưu ý:</strong></p>
+              <ul>
+                ${data.refundAmount ? `
+                <li>Số tiền hoàn lại sẽ được xử lý trong vòng 5-7 ngày làm việc</li>
+                <li>Tiền sẽ được hoàn về phương thức thanh toán ban đầu của bạn</li>
+                ` : ''}
+                <li>Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ với chúng tôi</li>
+                <li>Chúng tôi rất tiếc vì sự bất tiện này</li>
+              </ul>
+              
+              <p>Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!</p>
+              
+              <p>Trân trọng,<br><strong>Đội ngũ Khách sạn</strong></p>
+            </div>
+            
+            <div class="footer">
+              <p>Email này được gửi tự động, vui lòng không trả lời trực tiếp.</p>
+              <p>Nếu có thắc mắc, vui lòng liên hệ qua số hotline hoặc email hỗ trợ.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email hủy phòng đã được gửi đến ${data.to}:`, info.messageId);
+    return info;
+  } catch (error) {
+    console.error("❌ Lỗi gửi email hủy phòng:", error);
+    throw error;
+  }
+};
+
+interface PaymentConfirmationEmailData {
+  to: string;
+  bookingId: string;
+  guestName: string;
+  roomNumber: string;
+  checkIn: Date;
+  checkOut: Date;
+  totalPrice: number;
+  paidAmount: number;
+  invoicePdfBuffer?: Buffer;
+  invoiceFileName?: string;
+}
+
+// Hàm gửi email xác nhận thanh toán đủ kèm hóa đơn
+const sendPaymentConfirmation = async (data: PaymentConfirmationEmailData) => {
+  try {
+    console.log(`📧 Email service: Bắt đầu gửi email xác nhận thanh toán đến ${data.to}`);
+    
+    const transporter = createTransporter();
+    
+    // Verify transporter connection
+    await transporter.verify();
+    console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
+    
+    // Format ngày tháng
+    const formatDate = (date: Date) => {
+      return new Date(date).toLocaleString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
+    // Format tiền VND
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+      }).format(amount);
+    };
+
+    const attachments: any[] = [];
+    
+    // Đính kèm PDF hóa đơn nếu có
+    if (data.invoicePdfBuffer && data.invoiceFileName) {
+      attachments.push({
+        filename: data.invoiceFileName,
+        content: data.invoicePdfBuffer,
+        contentType: 'application/pdf',
+      });
+    }
+
+    const mailOptions = {
+      from: `"Khách sạn" <${env.GMAIL_USER}>`,
+      to: data.to,
+      subject: "Xác nhận thanh toán đủ - Hóa đơn",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+              background-color: #f9f9f9;
+            }
+            .header {
+              background-color: #4CAF50;
+              color: white;
+              padding: 20px;
+              text-align: center;
+              border-radius: 5px 5px 0 0;
+            }
+            .content {
+              background-color: white;
+              padding: 30px;
+              border-radius: 0 0 5px 5px;
+            }
+            .booking-info {
+              background-color: #f5f5f5;
+              padding: 15px;
+              border-radius: 5px;
+              margin: 20px 0;
+            }
+            .info-row {
+              display: flex;
+              justify-content: space-between;
+              padding: 8px 0;
+              border-bottom: 1px solid #ddd;
+            }
+            .info-row:last-child {
+              border-bottom: none;
+            }
+            .label {
+              font-weight: bold;
+              color: #666;
+            }
+            .value {
+              color: #333;
+            }
+            .paid-highlight {
+              color: #4CAF50;
+              font-size: 18px;
+              font-weight: bold;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #ddd;
+              color: #666;
+              font-size: 12px;
+            }
+            .invoice-note {
+              background-color: #e3f2fd;
+              border-left: 4px solid #2196F3;
+              padding: 15px;
+              margin: 20px 0;
+              border-radius: 4px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>✅ Thanh toán thành công</h1>
+            </div>
+            <div class="content">
+              <p>Xin chào <strong>${data.guestName}</strong>,</p>
+              
+              <p>Cảm ơn bạn đã thanh toán! Đặt phòng của bạn đã được xác nhận thanh toán đủ. Thông tin chi tiết như sau:</p>
+              
+              <div class="booking-info">
+                <h2 style="margin-top: 0; color: #4CAF50;">Thông tin đặt phòng</h2>
+                
+                <div class="info-row">
+                  <span class="label">Mã đặt phòng:</span>
+                  <span class="value"><strong>${data.bookingId}</strong></span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">Số phòng:</span>
+                  <span class="value"><strong>${data.roomNumber}</strong></span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">Ngày nhận phòng:</span>
+                  <span class="value">${formatDate(data.checkIn)}</span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">Ngày trả phòng:</span>
+                  <span class="value">${formatDate(data.checkOut)}</span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">Tổng tiền:</span>
+                  <span class="value">${formatCurrency(data.totalPrice)}</span>
+                </div>
+                
+                <div class="info-row">
+                  <span class="label">Đã thanh toán:</span>
+                  <span class="value paid-highlight">${formatCurrency(data.paidAmount)}</span>
+                </div>
+              </div>
+              
+              <div class="invoice-note">
+                <p><strong>📄 Hóa đơn:</strong></p>
+                <p>Hóa đơn thanh toán đã được đính kèm trong email này. Vui lòng kiểm tra file PDF đính kèm.</p>
+              </div>
+              
+              <p><strong>Lưu ý:</strong></p>
+              <ul>
+                <li>Vui lòng lưu giữ email này và hóa đơn để làm bằng chứng thanh toán</li>
+                <li>Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ với chúng tôi</li>
+                <li>Chúng tôi rất hân hạnh được phục vụ bạn!</li>
+              </ul>
+              
+              <p>Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!</p>
+              
+              <p>Trân trọng,<br><strong>Đội ngũ Khách sạn</strong></p>
+            </div>
+            
+            <div class="footer">
+              <p>Email này được gửi tự động, vui lòng không trả lời trực tiếp.</p>
+              <p>Nếu có thắc mắc, vui lòng liên hệ qua số hotline hoặc email hỗ trợ.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      attachments: attachments.length > 0 ? attachments : undefined,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email xác nhận thanh toán đã được gửi đến ${data.to}:`, info.messageId);
+    return info;
+  } catch (error) {
+    console.error("❌ Lỗi gửi email xác nhận thanh toán:", error);
+    throw error;
+  }
+};
+
 export default {
   sendBookingConfirmation,
   sendGroupBookingConfirmation,
   sendEmailVerification,
   sendPasswordResetOTP,
   sendPasswordResetConfirmation,
+  sendBookingCancellation,
+  sendPaymentConfirmation,
 };
 
