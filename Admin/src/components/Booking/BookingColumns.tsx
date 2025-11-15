@@ -22,6 +22,8 @@ export const bookingColumns = (
   {
     title: "Khách hàng",
     key: "customer",
+    align: 'center',
+    width: 200,
     render: (_, r) => {
       // Lấy thông tin khách chính từ mảng guests
       const mainGuest = r.guests?.find(guest => guest.isMainGuest) || r.guests?.[0];
@@ -30,14 +32,14 @@ export const bookingColumns = (
       const guestCount = r.guestCount || r.guests?.length || 0;
       
       const content = (
-        <div style={{ textAlign: 'center' }}>
+        <div style={{ textAlign: 'center', width: '100%' }}>
           <Typography.Text strong>{fullName}</Typography.Text>
           <br />
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             {emailOrPhone}
           </Typography.Text>
           {guestCount > 1 && (
-            <div>
+            <div style={{ marginTop: 4 }}>
               <Tag color="blue" style={{ fontSize: 12 }}>
                 +{guestCount - 1} khách khác
               </Tag>
@@ -49,7 +51,7 @@ export const bookingColumns = (
         <Button 
           type="link" 
           onClick={() => handleDetail(r)}
-          style={{ padding: 0, height: 'auto' }}
+          style={{ padding: 0, height: 'auto', width: '100%', textAlign: 'center' }}
         >
           {content}
         </Button>
@@ -65,6 +67,7 @@ export const bookingColumns = (
     ),
     dataIndex: "source",
     key: "source",
+    align: 'center',
     filters: [
       { text: 'Online', value: 'online' },
       { text: 'Trực tiếp', value: 'walk_in' },
@@ -87,6 +90,7 @@ export const bookingColumns = (
       </Space>
     ),
     key: "room",
+    align: 'center',
     render: (_, r) => {
       const roomNumber = r.roomId?.roomNumber || r.roomId?._id || '-';
       const content = (
@@ -198,6 +202,8 @@ export const bookingColumns = (
       </Space>
     ),
     key: "actions",
+    width: 120,
+    align: 'center',
     render: (_, r) => (
       <Space>
         <Button 
@@ -207,15 +213,6 @@ export const bookingColumns = (
           onClick={() => handleEdit(r)}
         >
           Sửa
-        </Button>
-        <Button 
-          type="link" 
-          size="small" 
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleDelete(r._id)}
-        >
-          Xóa
         </Button>
         {handleDetail && (
           <Button 
