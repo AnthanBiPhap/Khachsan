@@ -4,7 +4,6 @@ import {
   DollarOutlined, 
   ClockCircleOutlined, 
   EditOutlined, 
-  DeleteOutlined, 
   EyeOutlined,
   CheckCircleOutlined,
   EyeInvisibleOutlined,
@@ -177,15 +176,6 @@ export const servicesColumns = (
           onClick={() => handleEdit(r)}
         >
           Sửa
-        </Button>
-        <Button 
-          type="link" 
-          size="small" 
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleDelete(r._id)}
-        >
-          Xóa
         </Button>
         {handleDetail && (
           <Button 

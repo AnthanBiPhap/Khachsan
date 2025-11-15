@@ -1,5 +1,6 @@
 import createError from "http-errors";
 import RoomType from "../models/roomTypes.model";
+import Room from "../models/rooms.model";
 
 const getAll = async (query: any) => {
   const page = Number(query.page) || 1;
@@ -69,6 +70,16 @@ const create = async (payload: any) => {
 
 const updateById = async (id: string, payload: any) => {
   const roomType = await getById(id);
+
+  // Kiểm tra xem có phòng nào đang sử dụng loại phòng này không
+  const roomsUsingThisType = await Room.find({ typeId: id });
+  if (roomsUsingThisType.length > 0) {
+    const roomNumbers = roomsUsingThisType.map(r => r.roomNumber).join(', ');
+    throw createError(
+      400,
+      `Không thể chỉnh sửa loại phòng này vì có ${roomsUsingThisType.length} phòng đang sử dụng: ${roomNumbers}`
+    );
+  }
 
   if (payload.name && payload.name !== roomType.name) {
     const dup = await RoomType.findOne({ name: payload.name, _id: { $ne: id } });
