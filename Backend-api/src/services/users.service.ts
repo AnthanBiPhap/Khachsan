@@ -1,6 +1,8 @@
 import createError from 'http-errors';
 import User from '../models/users.model';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import emailService from './email.service';
 /**
  * Service :
  * - Nhận đầu vào từ controller
@@ -66,21 +68,57 @@ const create = async (payload: any) => {
         throw createError(400, 'Số điện thoại đã được sử dụng. Vui lòng chọn số điện thoại khác.');
     }
     
+    // Tạo token xác nhận email (chỉ cho customer, admin và staff không cần xác nhận)
+    const isCustomer = !payload.role || payload.role === 'customer';
+    let emailVerificationToken = undefined;
+    let emailVerificationTokenExpires = undefined;
+    
+    if (isCustomer) {
+        // Tạo token ngẫu nhiên
+        emailVerificationToken = crypto.randomBytes(32).toString('hex');
+        // Token hết hạn sau 24 giờ
+        emailVerificationTokenExpires = new Date();
+        emailVerificationTokenExpires.setHours(emailVerificationTokenExpires.getHours() + 24);
+    }
+    
     const user = new User({
         fullName: payload.fullName,
         email: payload.email,
         phoneNumber: payload.phoneNumber,
         password: payload.password,
         dateOfBirth: payload.dateOfBirth || undefined,
-        role: payload.role,
+        role: payload.role || 'customer',
         isActive: payload.isActive,
-        preferences: payload.preferences || []
-       
+        preferences: payload.preferences || [],
+        emailVerified: !isCustomer, // Admin và staff mặc định đã verified
+        emailVerificationToken: emailVerificationToken,
+        emailVerificationTokenExpires: emailVerificationTokenExpires
     });
+    
     // lưu vào database
     await user.save();
-    // trả về item được tạo ra
-    return user;
+    
+    // Gửi email xác nhận cho customer
+    if (isCustomer && emailVerificationToken) {
+        try {
+            await emailService.sendEmailVerification({
+                to: user.email,
+                fullName: user.fullName,
+                verificationToken: emailVerificationToken
+            });
+            console.log(`✅ Đã gửi email xác nhận đến ${user.email}`);
+        } catch (emailError) {
+            console.error("❌ Lỗi gửi email xác nhận:", emailError);
+            // Không throw error để không làm crash quá trình đăng ký
+            // User vẫn được tạo, nhưng cần xác nhận email sau
+        }
+    }
+    
+    // trả về item được tạo ra (không trả về password và token)
+    const userResponse = user.toObject();
+    delete userResponse.password;
+    delete userResponse.emailVerificationToken;
+    return userResponse;
 }
 
 const updateById = async (id: string, payload: any) => {

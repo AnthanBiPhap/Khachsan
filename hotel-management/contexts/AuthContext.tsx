@@ -85,8 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       setIsLoading(true);
       await authService.register(userData);
-      // Auto login after registration
-      await login(userData.email, userData.password);
+      // Không tự động đăng nhập sau khi đăng ký
+      // User cần xác nhận email trước khi có thể đăng nhập
     } catch (error) {
       console.error('Registration failed', error);
       throw error;

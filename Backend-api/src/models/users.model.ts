@@ -45,6 +45,18 @@ const userSchema = new Schema(
             type: Array,
             default: ['tham quan','ăn uống','thể thao','phim ảnh','sách','game','du lịch','thư giãn','thăm bảo tàng','thăm vườn quốc gia']
         },
+        emailVerified: {
+            type: Boolean,
+            default: false
+        },
+        emailVerificationToken: {
+            type: String,
+            required: false
+        },
+        emailVerificationTokenExpires: {
+            type: Date,
+            required: false
+        },
         deletedAt: {
             type: Date,
             default: null

@@ -522,8 +522,144 @@ const sendGroupBookingConfirmation = async (data: GroupBookingConfirmationEmailD
   }
 };
 
+interface EmailVerificationData {
+  to: string;
+  fullName: string;
+  verificationToken: string;
+}
+
+// Hàm gửi email xác nhận đăng ký
+const sendEmailVerification = async (data: EmailVerificationData) => {
+  try {
+    console.log(`📧 Email service: Bắt đầu gửi email xác nhận đến ${data.to}`);
+    
+    const transporter = createTransporter();
+    
+    // Verify transporter connection
+    await transporter.verify();
+    console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
+    
+    // Tạo link xác nhận (cần lấy từ env hoặc config)
+    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+    const verificationLink = `${frontendUrl}/auth/verify-email?token=${data.verificationToken}`;
+
+    const mailOptions = {
+      from: `"Khách sạn" <${env.GMAIL_USER}>`,
+      to: data.to,
+      subject: "Xác nhận địa chỉ email của bạn",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+              background-color: #f9f9f9;
+            }
+            .header {
+              background-color: #4CAF50;
+              color: white;
+              padding: 20px;
+              text-align: center;
+              border-radius: 5px 5px 0 0;
+            }
+            .content {
+              background-color: white;
+              padding: 30px;
+              border-radius: 0 0 5px 5px;
+            }
+            .button {
+              display: inline-block;
+              padding: 12px 30px;
+              background-color: white;
+              color: #4CAF50;
+              text-decoration: none;
+              border: 2px solid #4CAF50;
+              border-radius: 5px;
+              margin: 20px 0;
+              font-weight: bold;
+            }
+            .button:hover {
+              background-color: #4CAF50;
+              color: white;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #ddd;
+              color: #666;
+              font-size: 12px;
+            }
+            .warning {
+              background-color: #fff3cd;
+              border-left: 4px solid #ffc107;
+              padding: 15px;
+              margin: 20px 0;
+              border-radius: 4px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎉 Chào mừng bạn đến với chúng tôi!</h1>
+            </div>
+            <div class="content">
+              <p>Xin chào <strong>${data.fullName}</strong>,</p>
+              
+              <p>Cảm ơn bạn đã đăng ký tài khoản tại khách sạn của chúng tôi!</p>
+              
+              <p>Để hoàn tất quá trình đăng ký và kích hoạt tài khoản, vui lòng xác nhận địa chỉ email của bạn bằng cách nhấp vào nút bên dưới:</p>
+              
+              <div style="text-align: center;">
+                <a href="${verificationLink}" class="button">Xác nhận email</a>
+              </div>
+              
+              <div class="warning">
+                <p><strong>⚠️ Lưu ý quan trọng:</strong></p>
+                <ul>
+                  <li>Link xác nhận sẽ hết hạn sau 24 giờ</li>
+                  <li>Nếu bạn không thực hiện xác nhận, bạn sẽ không thể đăng nhập vào tài khoản</li>
+                  <li>Nếu bạn không tạo tài khoản này, vui lòng bỏ qua email này</li>
+                </ul>
+              </div>
+              
+              <p>Nếu bạn gặp bất kỳ vấn đề nào, vui lòng liên hệ với chúng tôi qua email hỗ trợ.</p>
+              
+              <p>Trân trọng,<br><strong>Đội ngũ Khách sạn</strong></p>
+            </div>
+            
+            <div class="footer">
+              <p>Email này được gửi tự động, vui lòng không trả lời trực tiếp.</p>
+              <p>Nếu có thắc mắc, vui lòng liên hệ qua số hotline hoặc email hỗ trợ.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email xác nhận đã được gửi đến ${data.to}:`, info.messageId);
+    return info;
+  } catch (error) {
+    console.error("❌ Lỗi gửi email xác nhận:", error);
+    throw error;
+  }
+};
+
 export default {
   sendBookingConfirmation,
   sendGroupBookingConfirmation,
+  sendEmailVerification,
 };
 

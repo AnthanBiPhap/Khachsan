@@ -84,7 +84,10 @@ export default function RegisterPage() {
     try {
       const { confirmPassword, ...userData } = formData;
       await register(userData);
-      router.push('/');
+      // Hiển thị thông báo thành công và yêu cầu xác nhận email
+      setError('');
+      // Redirect đến trang thông báo xác nhận email
+      router.push('/auth/verify-email-pending');
     } catch (error: any) {
       console.error('Registration error:', error);
       setError(error.message || 'Đăng ký thất bại. Vui lòng thử lại sau.');

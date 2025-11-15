@@ -12,6 +12,22 @@ const login = async(req: Request, res: Response, next: NextFunction) => {
     }
 }
 
+const verifyEmail = async(req: Request, res: Response, next: NextFunction) => {
+    try{
+        const { token } = req.query;
+        if (!token || typeof token !== 'string') {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Token xác nhận là bắt buộc' 
+            });
+        }
+        const result = await authService.verifyEmail(token);
+        sendJsonSuccess(res, result, httpStatus.OK.statusCode, httpStatus.OK.message);
+    } catch (error) {
+        next(error);
+    }
+}
+
 const getProfile = async(req: Request, res: Response, next: NextFunction) => {
     try{
         const user = await authService.getProfile(res);
@@ -22,5 +38,6 @@ const getProfile = async(req: Request, res: Response, next: NextFunction) => {
 }
 export default {
     login,
+    verifyEmail,
     getProfile
 }

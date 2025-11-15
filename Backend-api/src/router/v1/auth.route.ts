@@ -6,6 +6,7 @@ import { authenticateToken } from '../../middlewares/auth.middleware';
 const router = express.Router();
 
 router.post('/login',validateSchemaYup(authValidation.loginSchema), authController.login);
+router.get('/verify-email', authController.verifyEmail);
 router.get('/get-profile', authenticateToken, authController.getProfile);
 
 export default router;

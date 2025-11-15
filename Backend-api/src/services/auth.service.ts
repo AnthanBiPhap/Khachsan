@@ -16,6 +16,11 @@ const login = async (email: string, password: string) => {
         throw createError(403, 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.');
     }
     
+    // Kiểm tra email đã được xác nhận chưa (chỉ cho customer)
+    if(user.role === 'customer' && !user.emailVerified) {
+        throw createError(403, 'Vui lòng xác nhận email trước khi đăng nhập. Kiểm tra hộp thư email của bạn để tìm link xác nhận.');
+    }
+    
     const isMatch = await bcrypt.compare(password, user.password);
     if(!isMatch) {
         throw createError(401, 'Invalid email or password');
@@ -42,11 +47,39 @@ const login = async (email: string, password: string) => {
         refreshToken
       };
     }
-    const getProfile = async (res: Response) => {
+const getProfile = async (res: Response) => {
         const { user } = res.locals;
         return user;
     }
+
+const verifyEmail = async (token: string) => {
+    // Tìm user với token hợp lệ và chưa hết hạn
+    const user = await User.findOne({
+        emailVerificationToken: token,
+        emailVerificationTokenExpires: { $gt: new Date() },
+        deletedAt: null
+    });
+
+    if (!user) {
+        throw createError(400, 'Token xác nhận không hợp lệ hoặc đã hết hạn. Vui lòng yêu cầu gửi lại email xác nhận.');
+    }
+
+    // Kiểm tra xem email đã được xác nhận chưa
+    if (user.emailVerified) {
+        throw createError(400, 'Email đã được xác nhận trước đó.');
+    }
+
+    // Cập nhật trạng thái xác nhận email
+    user.emailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationTokenExpires = undefined;
+    await user.save();
+
+    return { message: 'Email đã được xác nhận thành công. Bạn có thể đăng nhập ngay bây giờ.' };
+}
+
 export default {
     login,
-    getProfile
+    getProfile,
+    verifyEmail
 }
