@@ -31,17 +31,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const loadUser = async () => {
       try {
         const userData = await authService.getCurrentUser();
-        setUser(userData);
-      } catch (error) {
+        if (userData) {
+          setUser(userData);
+        } else {
+          // Nếu không lấy được user (có thể bị block hoặc token hết hạn)
+          // Xóa user và redirect về login
+          setUser(null);
+          const token = localStorage.getItem('token');
+          if (token) {
+            // Có token nhưng không lấy được user -> có thể bị block
+            authService.logout();
+            router.push('/auth/login');
+          }
+        }
+      } catch (error: any) {
         console.error('Failed to load user', error);
         setUser(null);
+        // Nếu lỗi 403 (blocked) hoặc 401 (unauthorized), logout và redirect
+        if (error?.response?.status === 403 || error?.response?.status === 401) {
+          authService.logout();
+          router.push('/auth/login');
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     loadUser();
-  }, []);
+  }, [router]);
 
   const login = async (email: string, password: string) => {
     try {

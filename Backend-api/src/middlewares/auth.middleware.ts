@@ -23,16 +23,23 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 
     try {
       const decoded = jwt.verify(token, env.JWT_SECRET as string) as decodedJWT;
-      //try verify user exits in database
+      //try verify user exits in database (chỉ lấy user chưa bị xóa)
       const user = await User
       .findOne({
-        _id: decoded._id
+        _id: decoded._id,
+        deletedAt: null
       })
       .select('-password -__v');
 
       if (!user) {
         return next(createError(401, 'Unauthorized'));
       }
+      
+      // Kiểm tra tài khoản có bị vô hiệu hóa không
+      if(user.status === 'blocked') {
+        return next(createError(403, 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.'));
+      }
+      
       //Đăng ký biến user global trong app
       res.locals.user = user;
 

@@ -151,8 +151,8 @@ const authService = {
         response: error.response?.data,
         status: error.response?.status,
       });
-      // Xóa token nếu không hợp lệ
-      if (error.response?.status === 401) {
+      // Xóa token nếu không hợp lệ hoặc bị block
+      if (error.response?.status === 401 || error.response?.status === 403) {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         delete api.defaults.headers.common['Authorization'];
