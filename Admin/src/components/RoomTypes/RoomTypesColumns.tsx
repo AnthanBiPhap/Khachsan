@@ -5,7 +5,6 @@ import {
   UserOutlined, 
   SettingOutlined, 
   EditOutlined, 
-  DeleteOutlined, 
   EyeOutlined,
   CalendarOutlined,
   PlusOutlined
@@ -85,34 +84,6 @@ export const roomTypesColumns = (
   {
     title: (
       <Space>
-        <SettingOutlined style={{ color: '#722ed1' }} />
-        <span>Tiện nghi</span>
-      </Space>
-    ),
-    key: "amenities",
-    render: (_, r) => (
-      <Space wrap>
-        {(r.amenities || []).slice(0, 5).map((a) => (
-          <Tag key={a} color="blue" icon={<SettingOutlined />}>
-            {a}
-          </Tag>
-        ))}
-        {(r.amenities || []).length > 5 && (
-          <Tag color="purple" icon={<PlusOutlined />}>
-            +{(r.amenities || []).length - 5}
-          </Tag>
-        )}
-        {(!r.amenities || r.amenities.length === 0) && (
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Không có tiện nghi
-          </Typography.Text>
-        )}
-      </Space>
-    ),
-  },
-  {
-    title: (
-      <Space>
         <CalendarOutlined style={{ color: '#13c2c2' }} />
         <span>Ngày tạo/cập nhật</span>
       </Space>
@@ -152,15 +123,6 @@ export const roomTypesColumns = (
           onClick={() => handleEdit(r)}
         >
           Sửa
-        </Button>
-        <Button 
-          type="link" 
-          size="small" 
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleDelete(r._id)}
-        >
-          Xóa
         </Button>
         {handleDetail && (
           <Button 
