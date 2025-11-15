@@ -657,9 +657,254 @@ const sendEmailVerification = async (data: EmailVerificationData) => {
   }
 };
 
+interface PasswordResetOTPData {
+  to: string;
+  fullName: string;
+  otp: string;
+}
+
+// Hàm gửi email OTP đặt lại mật khẩu
+const sendPasswordResetOTP = async (data: PasswordResetOTPData) => {
+  try {
+    console.log(`📧 Email service: Bắt đầu gửi email OTP đến ${data.to}`);
+    
+    const transporter = createTransporter();
+    
+    // Verify transporter connection
+    await transporter.verify();
+    console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
+
+    const mailOptions = {
+      from: `"Khách sạn" <${env.GMAIL_USER}>`,
+      to: data.to,
+      subject: "Mã xác nhận đặt lại mật khẩu",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+              background-color: #f9f9f9;
+            }
+            .header {
+              background-color: #2196F3;
+              color: white;
+              padding: 20px;
+              text-align: center;
+              border-radius: 5px 5px 0 0;
+            }
+            .content {
+              background-color: white;
+              padding: 30px;
+              border-radius: 0 0 5px 5px;
+            }
+            .otp-box {
+              background-color: #f5f5f5;
+              border: 2px dashed #2196F3;
+              padding: 20px;
+              text-align: center;
+              border-radius: 5px;
+              margin: 20px 0;
+            }
+            .otp-code {
+              font-size: 32px;
+              font-weight: bold;
+              color: #2196F3;
+              letter-spacing: 8px;
+              font-family: 'Courier New', monospace;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #ddd;
+              color: #666;
+              font-size: 12px;
+            }
+            .warning {
+              background-color: #fff3cd;
+              border-left: 4px solid #ffc107;
+              padding: 15px;
+              margin: 20px 0;
+              border-radius: 4px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔐 Đặt lại mật khẩu</h1>
+            </div>
+            <div class="content">
+              <p>Xin chào <strong>${data.fullName}</strong>,</p>
+              
+              <p>Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn.</p>
+              
+              <p>Vui lòng sử dụng mã xác nhận sau để tiếp tục quá trình đặt lại mật khẩu:</p>
+              
+              <div class="otp-box">
+                <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">Mã xác nhận của bạn:</p>
+                <div class="otp-code">${data.otp}</div>
+              </div>
+              
+              <div class="warning">
+                <p><strong>⚠️ Lưu ý quan trọng:</strong></p>
+                <ul>
+                  <li>Mã xác nhận này chỉ có hiệu lực trong 10 phút</li>
+                  <li>Không chia sẻ mã này với bất kỳ ai</li>
+                  <li>Nếu bạn không yêu cầu đặt lại mật khẩu, vui lòng bỏ qua email này</li>
+                </ul>
+              </div>
+              
+              <p>Nếu bạn gặp bất kỳ vấn đề nào, vui lòng liên hệ với chúng tôi qua email hỗ trợ.</p>
+              
+              <p>Trân trọng,<br><strong>Đội ngũ Khách sạn</strong></p>
+            </div>
+            
+            <div class="footer">
+              <p>Email này được gửi tự động, vui lòng không trả lời trực tiếp.</p>
+              <p>Nếu có thắc mắc, vui lòng liên hệ qua số hotline hoặc email hỗ trợ.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email OTP đã được gửi đến ${data.to}:`, info.messageId);
+    return info;
+  } catch (error) {
+    console.error("❌ Lỗi gửi email OTP:", error);
+    throw error;
+  }
+};
+
+interface PasswordResetConfirmationData {
+  to: string;
+  fullName: string;
+}
+
+// Hàm gửi email xác nhận đã đặt lại mật khẩu thành công
+const sendPasswordResetConfirmation = async (data: PasswordResetConfirmationData) => {
+  try {
+    console.log(`📧 Email service: Bắt đầu gửi email xác nhận đặt lại mật khẩu đến ${data.to}`);
+    
+    const transporter = createTransporter();
+    
+    // Verify transporter connection
+    await transporter.verify();
+    console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
+
+    const mailOptions = {
+      from: `"Khách sạn" <${env.GMAIL_USER}>`,
+      to: data.to,
+      subject: "Mật khẩu đã được đặt lại thành công",
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              line-height: 1.6;
+              color: #333;
+            }
+            .container {
+              max-width: 600px;
+              margin: 0 auto;
+              padding: 20px;
+              background-color: #f9f9f9;
+            }
+            .header {
+              background-color: #4CAF50;
+              color: white;
+              padding: 20px;
+              text-align: center;
+              border-radius: 5px 5px 0 0;
+            }
+            .content {
+              background-color: white;
+              padding: 30px;
+              border-radius: 0 0 5px 5px;
+            }
+            .footer {
+              text-align: center;
+              margin-top: 30px;
+              padding-top: 20px;
+              border-top: 1px solid #ddd;
+              color: #666;
+              font-size: 12px;
+            }
+            .warning {
+              background-color: #fff3cd;
+              border-left: 4px solid #ffc107;
+              padding: 15px;
+              margin: 20px 0;
+              border-radius: 4px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>✅ Mật khẩu đã được đặt lại</h1>
+            </div>
+            <div class="content">
+              <p>Xin chào <strong>${data.fullName}</strong>,</p>
+              
+              <p>Mật khẩu của bạn đã được đặt lại thành công vào lúc ${new Date().toLocaleString('vi-VN')}.</p>
+              
+              <div class="warning">
+                <p><strong>⚠️ Lưu ý bảo mật:</strong></p>
+                <ul>
+                  <li>Nếu bạn không thực hiện thay đổi này, vui lòng liên hệ với chúng tôi ngay lập tức</li>
+                  <li>Đảm bảo mật khẩu mới của bạn là mạnh và không chia sẻ với ai</li>
+                  <li>Nếu bạn nghi ngờ tài khoản bị xâm nhập, vui lòng thay đổi mật khẩu ngay</li>
+                </ul>
+              </div>
+              
+              <p>Bạn có thể đăng nhập ngay bây giờ với mật khẩu mới.</p>
+              
+              <p>Nếu bạn gặp bất kỳ vấn đề nào, vui lòng liên hệ với chúng tôi qua email hỗ trợ.</p>
+              
+              <p>Trân trọng,<br><strong>Đội ngũ Khách sạn</strong></p>
+            </div>
+            
+            <div class="footer">
+              <p>Email này được gửi tự động, vui lòng không trả lời trực tiếp.</p>
+              <p>Nếu có thắc mắc, vui lòng liên hệ qua số hotline hoặc email hỗ trợ.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email xác nhận đặt lại mật khẩu đã được gửi đến ${data.to}:`, info.messageId);
+    return info;
+  } catch (error) {
+    console.error("❌ Lỗi gửi email xác nhận đặt lại mật khẩu:", error);
+    throw error;
+  }
+};
+
 export default {
   sendBookingConfirmation,
   sendGroupBookingConfirmation,
   sendEmailVerification,
+  sendPasswordResetOTP,
+  sendPasswordResetConfirmation,
 };
 

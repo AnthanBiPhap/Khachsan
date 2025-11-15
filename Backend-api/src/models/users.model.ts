@@ -57,6 +57,14 @@ const userSchema = new Schema(
             type: Date,
             required: false
         },
+        passwordResetOTP: {
+            type: String,
+            required: false
+        },
+        passwordResetOTPExpires: {
+            type: Date,
+            required: false
+        },
         deletedAt: {
             type: Date,
             default: null

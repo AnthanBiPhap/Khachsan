@@ -36,8 +36,60 @@ const getProfile = async(req: Request, res: Response, next: NextFunction) => {
         next(error);
     }
 }
+
+const requestForgotPassword = async(req: Request, res: Response, next: NextFunction) => {
+    try{
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email là bắt buộc' 
+            });
+        }
+        const result = await authService.requestForgotPassword(email);
+        sendJsonSuccess(res, result, httpStatus.OK.statusCode, httpStatus.OK.message);
+    } catch (error) {
+        next(error);
+    }
+}
+
+const verifyOTP = async(req: Request, res: Response, next: NextFunction) => {
+    try{
+        const { email, otp } = req.body;
+        if (!email || !otp) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email và mã OTP là bắt buộc' 
+            });
+        }
+        const result = await authService.verifyOTP(email, otp);
+        sendJsonSuccess(res, result, httpStatus.OK.statusCode, httpStatus.OK.message);
+    } catch (error) {
+        next(error);
+    }
+}
+
+const resetPassword = async(req: Request, res: Response, next: NextFunction) => {
+    try{
+        const { email, otp, newPassword } = req.body;
+        if (!email || !otp || !newPassword) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Email, mã OTP và mật khẩu mới là bắt buộc' 
+            });
+        }
+        const result = await authService.resetPassword(email, otp, newPassword);
+        sendJsonSuccess(res, result, httpStatus.OK.statusCode, httpStatus.OK.message);
+    } catch (error) {
+        next(error);
+    }
+}
+
 export default {
     login,
     verifyEmail,
-    getProfile
+    getProfile,
+    requestForgotPassword,
+    verifyOTP,
+    resetPassword
 }
