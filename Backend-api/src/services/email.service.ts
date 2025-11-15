@@ -310,6 +310,30 @@ interface GroupBookingConfirmedEmailData {
   roomCount: number;
 }
 
+interface GroupBookingRefundedEmailData {
+  to: string;
+  groupBookingId: string;
+  requesterName: string;
+  checkIn: Date;
+  checkOut: Date;
+  refundAmount: number;
+  note?: string;
+}
+
+interface GroupBookingFullPaymentEmailData {
+  to: string;
+  groupBookingId: string;
+  requesterName: string;
+  checkIn: Date;
+  checkOut: Date;
+  peopleCount: number;
+  roomCount: number;
+  totalAmount: number;
+  paidAmount: number;
+  invoicePdfBuffer?: Buffer;
+  invoiceFileName?: string;
+}
+
 // Hàm gửi email xác nhận đặt phòng nhóm
 const sendGroupBookingConfirmation = async (data: GroupBookingConfirmationEmailData) => {
   try {
@@ -1002,6 +1026,253 @@ const sendGroupBookingConfirmed = async (data: GroupBookingConfirmedEmailData) =
     return info;
   } catch (error) {
     console.error("❌ Lỗi gửi email xác nhận group booking:", error);
+    throw error;
+  }
+};
+
+// Hàm gửi email thông báo admin đã hoàn tiền group booking
+const sendGroupBookingRefunded = async (data: GroupBookingRefundedEmailData) => {
+  try {
+    console.log(`📧 Email service: Bắt đầu gửi email hoàn tiền group booking đến ${data.to}`);
+    
+    const transporter = createTransporter();
+    
+    // Verify transporter connection
+    await transporter.verify();
+    console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
+    
+    // Format ngày tháng
+    const formatDate = (date: Date) => {
+      return new Date(date).toLocaleString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
+    // Format tiền VND
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+      }).format(amount);
+    };
+
+    const checkInDate = formatDate(data.checkIn);
+    const checkOutDate = formatDate(data.checkOut);
+    const formattedRefundAmount = formatCurrency(data.refundAmount);
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Hoàn tiền đặt phòng nhóm</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Hoàn tiền đã được xử lý</h1>
+        </div>
+        
+        <div style="background-color: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+          <p style="font-size: 16px; color: #333;">Xin chào <strong>${data.requesterName}</strong>,</p>
+          
+          <p style="font-size: 16px; color: #333;">
+            Chúng tôi thông báo rằng <strong>yêu cầu hoàn tiền của bạn đã được xử lý</strong>.
+          </p>
+          
+          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #1890ff; margin-top: 0;">Thông tin đặt phòng:</h3>
+            <p style="margin: 8px 0;"><strong>Mã đặt phòng:</strong> ${data.groupBookingId}</p>
+            <p style="margin: 8px 0;"><strong>Ngày nhận phòng:</strong> ${checkInDate}</p>
+            <p style="margin: 8px 0;"><strong>Ngày trả phòng:</strong> ${checkOutDate}</p>
+          </div>
+
+          <div style="background-color: #fff3e0; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #ff9800;">
+            <h3 style="color: #ff9800; margin-top: 0; text-align: center;">Số tiền hoàn</h3>
+            <p style="text-align: center; font-size: 32px; font-weight: bold; color: #ff9800; margin: 10px 0;">
+              ${formattedRefundAmount}
+            </p>
+          </div>
+
+          ${data.note ? `
+          <div style="background-color: #f0f9ff; padding: 20px; border-left: 4px solid #1890ff; margin: 20px 0; border-radius: 4px;">
+            <h3 style="color: #1890ff; margin-top: 0;">Ghi chú:</h3>
+            <p style="color: #333; margin: 10px 0; white-space: pre-wrap;">${data.note}</p>
+          </div>
+          ` : ''}
+
+          <div style="background-color: #fff7e6; padding: 20px; border-left: 4px solid #faad14; margin: 20px 0; border-radius: 4px;">
+            <h3 style="color: #faad14; margin-top: 0;">Lưu ý:</h3>
+            <ul style="padding-left: 20px; margin: 10px 0;">
+              <li style="margin: 8px 0;">Số tiền hoàn sẽ được chuyển về tài khoản của bạn trong vòng 3-5 ngày làm việc</li>
+              <li style="margin: 8px 0;">Nếu bạn có thắc mắc về thời gian hoàn tiền, vui lòng liên hệ với chúng tôi</li>
+              <li style="margin: 8px 0;">Cảm ơn bạn đã tin tưởng và sử dụng dịch vụ của chúng tôi</li>
+            </ul>
+          </div>
+
+          <p style="font-size: 16px; color: #333; margin-top: 30px;">
+            Chúng tôi rất mong được phục vụ bạn trong tương lai!
+          </p>
+          
+          <p style="font-size: 14px; color: #666; margin-top: 30px;">
+            Trân trọng,<br>
+            <strong>Đội ngũ Miko Hotel</strong>
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const mailOptions = {
+      from: `"Miko Hotel" <${env.GMAIL_USER}>`,
+      to: data.to,
+      subject: `Hoàn tiền đặt phòng nhóm - Mã: ${data.groupBookingId}`,
+      html: htmlContent,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email hoàn tiền group booking đã được gửi đến ${data.to}:`, info.messageId);
+    return info;
+  } catch (error) {
+    console.error("❌ Lỗi gửi email hoàn tiền group booking:", error);
+    throw error;
+  }
+};
+
+// Hàm gửi email thông báo thanh toán đủ toàn bộ group booking kèm hóa đơn
+const sendGroupBookingFullPayment = async (data: GroupBookingFullPaymentEmailData) => {
+  try {
+    console.log(`📧 Email service: Bắt đầu gửi email thanh toán đủ group booking đến ${data.to}`);
+    
+    const transporter = createTransporter();
+    
+    // Verify transporter connection
+    await transporter.verify();
+    console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
+    
+    // Format ngày tháng
+    const formatDate = (date: Date) => {
+      return new Date(date).toLocaleString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
+    // Format tiền VND
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+      }).format(amount);
+    };
+
+    const checkInDate = formatDate(data.checkIn);
+    const checkOutDate = formatDate(data.checkOut);
+    const formattedTotalAmount = formatCurrency(data.totalAmount);
+    const formattedPaidAmount = formatCurrency(data.paidAmount);
+
+    const attachments: any[] = [];
+    
+    // Đính kèm PDF hóa đơn nếu có
+    if (data.invoicePdfBuffer && data.invoiceFileName) {
+      attachments.push({
+        filename: data.invoiceFileName,
+        content: data.invoicePdfBuffer,
+        contentType: 'application/pdf',
+      });
+      console.log(`✅ Đã đính kèm PDF hóa đơn: ${data.invoiceFileName}`);
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Thanh toán đủ đặt phòng nhóm</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Thanh toán thành công</h1>
+        </div>
+        
+        <div style="background-color: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+          <p style="font-size: 16px; color: #333;">Xin chào <strong>${data.requesterName}</strong>,</p>
+          
+          <p style="font-size: 16px; color: #333;">
+            Cảm ơn bạn đã thanh toán! <strong>Đặt phòng nhóm của bạn đã được xác nhận thanh toán đủ</strong>.
+          </p>
+          
+          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #1890ff; margin-top: 0;">Thông tin đặt phòng:</h3>
+            <p style="margin: 8px 0;"><strong>Mã đặt phòng:</strong> ${data.groupBookingId}</p>
+            <p style="margin: 8px 0;"><strong>Ngày nhận phòng:</strong> ${checkInDate}</p>
+            <p style="margin: 8px 0;"><strong>Ngày trả phòng:</strong> ${checkOutDate}</p>
+            <p style="margin: 8px 0;"><strong>Số phòng:</strong> ${data.roomCount} phòng</p>
+            <p style="margin: 8px 0;"><strong>Số người:</strong> ${data.peopleCount} người</p>
+          </div>
+
+          <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #1890ff;">
+            <h3 style="color: #1890ff; margin-top: 0; text-align: center;">Thông tin thanh toán</h3>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e0e0e0;">
+              <span style="color: #666;">Tổng tiền:</span>
+              <span style="font-weight: bold; color: #333;">${formattedTotalAmount}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 10px 0;">
+              <span style="color: #666;">Đã thanh toán:</span>
+              <span style="font-size: 20px; font-weight: bold; color: #52c41a;">${formattedPaidAmount}</span>
+            </div>
+          </div>
+
+          ${data.invoicePdfBuffer ? `
+          <div style="background-color: #e3f2fd; padding: 20px; border-left: 4px solid #2196F3; margin: 20px 0; border-radius: 4px;">
+            <h3 style="color: #2196F3; margin-top: 0;">Hóa đơn:</h3>
+            <p style="margin: 10px 0;">Hóa đơn thanh toán đã được đính kèm trong email này. Vui lòng kiểm tra file PDF đính kèm.</p>
+          </div>
+          ` : ''}
+
+          <div style="background-color: #fff7e6; padding: 20px; border-left: 4px solid #faad14; margin: 20px 0; border-radius: 4px;">
+            <h3 style="color: #faad14; margin-top: 0;">Lưu ý:</h3>
+            <ul style="padding-left: 20px; margin: 10px 0;">
+              <li style="margin: 8px 0;">Vui lòng lưu giữ email này và hóa đơn để làm bằng chứng thanh toán</li>
+              <li style="margin: 8px 0;">Đặt phòng của bạn đã được xác nhận hoàn tất</li>
+              <li style="margin: 8px 0;">Nếu bạn có bất kỳ thắc mắc nào, vui lòng liên hệ với chúng tôi</li>
+            </ul>
+          </div>
+
+          <p style="font-size: 16px; color: #333; margin-top: 30px;">
+            Cảm ơn bạn đã sử dụng dịch vụ của chúng tôi!
+          </p>
+          
+          <p style="font-size: 14px; color: #666; margin-top: 30px;">
+            Trân trọng,<br>
+            <strong>Đội ngũ Miko Hotel</strong>
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const mailOptions = {
+      from: `"Miko Hotel" <${env.GMAIL_USER}>`,
+      to: data.to,
+      subject: `Thanh toán đủ đặt phòng nhóm - Hóa đơn - Mã: ${data.groupBookingId}`,
+      html: htmlContent,
+      attachments: attachments.length > 0 ? attachments : undefined,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email thanh toán đủ group booking đã được gửi đến ${data.to}:`, info.messageId);
+    return info;
+  } catch (error) {
+    console.error("❌ Lỗi gửi email thanh toán đủ group booking:", error);
     throw error;
   }
 };
@@ -1793,6 +2064,8 @@ export default {
   sendGroupBookingQuoted,
   sendGroupBookingRejected,
   sendGroupBookingConfirmed,
+  sendGroupBookingRefunded,
+  sendGroupBookingFullPayment,
   sendEmailVerification,
   sendPasswordResetOTP,
   sendPasswordResetConfirmation,

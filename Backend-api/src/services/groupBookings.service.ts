@@ -1047,8 +1047,9 @@ const markFullPayment = async (
   );
   await gb.save();
 
+  // Tìm hoặc tạo invoice và gửi email với PDF
+  let invoice = await Invoice.findOne({ groupBookingId: gb._id });
   try {
-    const invoice = await Invoice.findOne({ groupBookingId: gb._id });
     if (invoice) {
       await invoicesService.updateById(invoice._id.toString(), {
         totalAmount: gb.quoteAmount,
@@ -1057,9 +1058,64 @@ const markFullPayment = async (
         paymentStatus: "paid",
         status: "paid",
       });
+    } else {
+      // Nếu chưa có invoice, tạo mới
+      try {
+        invoice = await invoicesService.create({
+          groupBookingId: gb._id.toString(),
+          customerId: gb.requesterId || undefined,
+          totalAmount: gb.quoteAmount,
+          paidAmount: gb.quoteAmount,
+          remainingAmount: 0,
+          paymentStatus: "paid",
+          status: "paid",
+          issuedAt: new Date(),
+        });
+        console.log(`✅ Đã tạo invoice mới cho group booking ${gb._id}`);
+      } catch (createInvoiceError) {
+        console.error("❌ Lỗi tạo invoice:", createInvoiceError);
+      }
     }
   } catch (invoiceError) {
     console.error(`❌ Lỗi cập nhật invoice khi tất toán group booking ${gb._id}:`, invoiceError);
+  }
+
+  // Gửi email thông báo thanh toán đủ với PDF hóa đơn
+  try {
+    if (gb.requesterEmail) {
+      let invoicePdfBuffer: Buffer | undefined = undefined;
+      let invoiceFileName: string | undefined = undefined;
+
+      if (invoice) {
+        try {
+          // Tạo PDF hóa đơn
+          invoicePdfBuffer = await invoicesService.printInvoice(invoice._id.toString());
+          invoiceFileName = `HoaDon_GroupBooking_${gb._id.toString()}.pdf`;
+          console.log(`✅ Đã tạo PDF hóa đơn: ${invoiceFileName}`);
+        } catch (pdfError) {
+          console.error("❌ Lỗi tạo PDF hóa đơn:", pdfError);
+          // Vẫn gửi email nhưng không có PDF
+        }
+      }
+
+      await emailService.sendGroupBookingFullPayment({
+        to: gb.requesterEmail,
+        groupBookingId: gb._id.toString(),
+        requesterName: gb.requesterName,
+        checkIn: gb.checkIn,
+        checkOut: gb.checkOut,
+        peopleCount: gb.peopleCount,
+        roomCount: gb.roomCount,
+        totalAmount: gb.quoteAmount,
+        paidAmount: gb.quoteAmount,
+        invoicePdfBuffer: invoicePdfBuffer,
+        invoiceFileName: invoiceFileName,
+      });
+      console.log(`✅ Đã gửi email thanh toán đủ group booking với hóa đơn đến ${gb.requesterEmail}`);
+    }
+  } catch (emailError) {
+    console.error("❌ Lỗi gửi email thanh toán đủ group booking:", emailError);
+    // Không throw error để không ảnh hưởng đến flow chính
   }
 
   try {
@@ -1609,6 +1665,25 @@ const markRefunded = async (
       paidAmount: 0,
       remainingAmount: 0,
     });
+  }
+
+  // Gửi email thông báo hoàn tiền
+  try {
+    if (gb.requesterEmail) {
+      await emailService.sendGroupBookingRefunded({
+        to: gb.requesterEmail,
+        groupBookingId: gb._id.toString(),
+        requesterName: gb.requesterName,
+        checkIn: gb.checkIn,
+        checkOut: gb.checkOut,
+        refundAmount: refundAmount,
+        note: options?.note,
+      });
+      console.log(`✅ Đã gửi email hoàn tiền group booking đến ${gb.requesterEmail}`);
+    }
+  } catch (emailError) {
+    console.error("❌ Lỗi gửi email hoàn tiền group booking:", emailError);
+    // Không throw error để không ảnh hưởng đến flow chính
   }
 
   return gb;
