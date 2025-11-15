@@ -69,7 +69,7 @@ export const bookingColumns = (
     key: "source",
     align: 'center',
     filters: [
-      { text: 'Online', value: 'online' },
+      { text: 'Trực tuyến', value: 'online' },
       { text: 'Trực tiếp', value: 'walk_in' },
     ],
     onFilter: (value, record) => record.source === value,
@@ -78,7 +78,7 @@ export const bookingColumns = (
         color={r.source === 'online' ? 'blue' : 'purple'}
         icon={r.source === 'online' ? <GlobalOutlined /> : <ShopOutlined />}
       >
-        {r.source === 'online' ? 'Online' : 'Trực tiếp'}
+        {r.source === 'online' ? 'Trực tuyến' : 'Trực tiếp'}
       </Tag>
     )
   },

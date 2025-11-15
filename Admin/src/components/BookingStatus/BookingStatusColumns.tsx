@@ -20,44 +20,69 @@ export const bookingStatusColumns = (
   handleDetail?: (record: BookingStatusLog) => void
 ): ColumnsType<BookingStatusLog> => [
   {
+    title: "Người thao tác",
+    key: "actor",
+    align: 'center',
+    render: (_, record) => {
+      // Xác định tên người thao tác
+      const actorName = record.actorName || record.actorId?.fullName || "Admin / Lễ tân";
+      
+      // Xác định thông tin liên lạc
+      let contactInfo = "-";
+      if (record.actorId?.phoneNumber || record.actorId?.email) {
+        // Có actorId (admin/staff hoặc khách hàng online)
+        contactInfo = record.actorId?.phoneNumber || record.actorId?.email || "-";
+      } else if (record.actorName && record.bookingId?.guests && record.bookingId.guests.length > 0) {
+        // Khách hàng walk_in - tìm thông tin liên lạc từ mảng guests
+        const mainGuest = record.bookingId.guests.find((guest: BookingStatusGuestInfo) => 
+          guest.fullName === record.actorName
+        );
+        if (mainGuest) {
+          contactInfo = mainGuest.phoneNumber || mainGuest.email || "-";
+        }
+      }
+
+      return (
+        <div style={{ textAlign: 'center' }}>
+          <Typography.Text strong>{actorName}</Typography.Text>
+          <br />
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {contactInfo}
+          </Typography.Text>
+          {!record.actorId && record.actorName && (
+            <div style={{ marginTop: 2, display: 'flex', justifyContent: 'center' }}>
+              <Tag size="small" color="orange" style={{ fontSize: 10 }}>
+                Walk-in
+              </Tag>
+            </div>
+          )}
+        </div>
+      );
+    },
+  },
+  {
     title: "Booking",
     key: "booking",
     render: (_, record) => {
-      // Sử dụng logic mới với mảng guests
-      let customerName = "Khách walk-in";
-      
-      if (record.bookingId?.customerId?.fullName) {
-        // Khách hàng online
-        customerName = record.bookingId.customerId.fullName;
-      } else if (record.bookingId?.guests && record.bookingId.guests.length > 0) {
-        // Khách hàng walk_in - lấy tên khách chính
-        const mainGuest = record.bookingId.guests.find((guest: BookingStatusGuestInfo) => guest.isMainGuest) || record.bookingId.guests[0];
-        customerName = mainGuest?.fullName || "Khách walk-in";
-      }
-
       const content = (
-        <div>
-          <Typography.Text strong>{customerName}</Typography.Text>
-          <br />
-          <Space direction="vertical" size={0} style={{ alignItems: 'flex-start' }}>
-            <Space size={4} style={{ alignItems: 'center' }}>
-              <CalendarOutlined style={{ color: '#52c41a', fontSize: 12, width: 12 }} />
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                Nhận: {record.bookingId?.checkIn
-                  ? new Date(record.bookingId.checkIn).toLocaleString("vi-VN")
-                  : "-"}
-              </Typography.Text>
-            </Space>
-            <Space size={4} style={{ alignItems: 'center' }}>
-              <CalendarOutlined style={{ color: '#ff4d4f', fontSize: 12, width: 12 }} />
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                Trả: {record.bookingId?.checkOut
-                  ? new Date(record.bookingId.checkOut).toLocaleString("vi-VN")
-                  : "-"}
-              </Typography.Text>
-            </Space>
+        <Space direction="vertical" size={0} style={{ alignItems: 'flex-start' }}>
+          <Space size={4} style={{ alignItems: 'center' }}>
+            <CalendarOutlined style={{ color: '#52c41a', fontSize: 12, width: 12 }} />
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Nhận: {record.bookingId?.checkIn
+                ? new Date(record.bookingId.checkIn).toLocaleString("vi-VN")
+                : "-"}
+            </Typography.Text>
           </Space>
-        </div>
+          <Space size={4} style={{ alignItems: 'center' }}>
+            <CalendarOutlined style={{ color: '#ff4d4f', fontSize: 12, width: 12 }} />
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Trả: {record.bookingId?.checkOut
+                ? new Date(record.bookingId.checkOut).toLocaleString("vi-VN")
+                : "-"}
+            </Typography.Text>
+          </Space>
+        </Space>
       );
 
       return handleDetail ? (
@@ -80,6 +105,7 @@ export const bookingStatusColumns = (
     ),
     dataIndex: "bookingId",
     key: "bookingType",
+    align: 'center',
     render: (_, record) => {
       // Sử dụng source của booking để xác định hình thức đặt
       const bookingSource = record?.bookingId?.source;
@@ -90,48 +116,8 @@ export const bookingStatusColumns = (
           color={isOnline ? "blue" : "purple"}
           icon={isOnline ? <GlobalOutlined /> : <ShopOutlined />}
         >
-          {isOnline ? "Online" : "Offline"}
+          {isOnline ? "Trực tuyến" : "Trực tiếp"}
         </Tag>
-      );
-    },
-  },
-  {
-    title: "Người thao tác",
-    key: "actor",
-    render: (_, record) => {
-      // Xác định tên người thao tác
-      const actorName = record.actorName || record.actorId?.fullName || "Admin / Lễ tân";
-      
-      // Xác định thông tin liên lạc
-      let contactInfo = "-";
-      if (record.actorId?.phoneNumber || record.actorId?.email) {
-        // Có actorId (admin/staff hoặc khách hàng online)
-        contactInfo = record.actorId?.phoneNumber || record.actorId?.email || "-";
-      } else if (record.actorName && record.bookingId?.guests && record.bookingId.guests.length > 0) {
-        // Khách hàng walk_in - tìm thông tin liên lạc từ mảng guests
-        const mainGuest = record.bookingId.guests.find((guest: BookingStatusGuestInfo) => 
-          guest.fullName === record.actorName
-        );
-        if (mainGuest) {
-          contactInfo = mainGuest.phoneNumber || mainGuest.email || "-";
-        }
-      }
-
-      return (
-        <div>
-          <Typography.Text strong>{actorName}</Typography.Text>
-          <br />
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {contactInfo}
-          </Typography.Text>
-          {!record.actorId && record.actorName && (
-            <div style={{ marginTop: 2 }}>
-              <Tag size="small" color="orange" style={{ fontSize: 10 }}>
-                Walk-in
-              </Tag>
-            </div>
-          )}
-        </div>
       );
     },
   },
@@ -192,23 +178,6 @@ export const bookingStatusColumns = (
     key: "actions",
     render: (_, r) => (
       <Space>
-        {/* <Button 
-          type="link" 
-          size="small" 
-          icon={<EditOutlined />}
-          onClick={() => handleEdit(r)}
-        >
-          Sửa
-        </Button> */}
-        <Button 
-          type="link" 
-          size="small" 
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleDelete(r._id)}
-        >
-          Xóa
-        </Button>
         {handleDetail && (
           <Button 
             type="link" 
