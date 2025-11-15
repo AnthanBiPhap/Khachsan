@@ -43,6 +43,10 @@ const userSchema = new Schema(
         preferences: {
             type: Array,
             default: ['tham quan','ăn uống','thể thao','phim ảnh','sách','game','du lịch','thư giãn','thăm bảo tàng','thăm vườn quốc gia']
+        },
+        deletedAt: {
+            type: Date,
+            default: null
         }
     },
     {

@@ -8,6 +8,7 @@ import LoginPage from "./pages/LoginPage";
 import NoPage from "./pages/NoPage";
 import Emptylayout from "./layouts/Emptylayout";
 import UserPage from "./pages/UserPage/UserPage";
+import DeletedUsersPage from "./pages/UserPage/DeletedUsersPage";
 import BookingPage from "./pages/BookingPage/BookingPage";
 import BookingStatusPage from "./pages/BookingStatusPage/BookingStatusPage";
 import GuestsPage from "./pages/GuestsPage/GuestsPage";
@@ -76,6 +77,7 @@ function App() {
           }
         >
           <Route index element={<RoleProtectedRoute path="/"><Dashboard /></RoleProtectedRoute>} />
+          <Route path="users/deleted" element={<RoleProtectedRoute path="/users/deleted"><DeletedUsersPage /></RoleProtectedRoute>} />
           <Route path="users" element={<RoleProtectedRoute path="/users"><UserPage /></RoleProtectedRoute>} />
           <Route path="bookings" element={<RoleProtectedRoute path="/bookings"><BookingPage /></RoleProtectedRoute>} />
           <Route path="bookingStatus" element={<RoleProtectedRoute path="/bookingStatus"><BookingStatusPage /></RoleProtectedRoute>} />

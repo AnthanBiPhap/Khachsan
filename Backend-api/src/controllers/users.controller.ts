@@ -54,18 +54,26 @@ const Update = async(req: Request, res: Response, next: NextFunction) => {
         next (error);
     }
 }
-// Delete user
+// Delete user (soft delete)
 const Delete = async(req: Request, res: Response, next: NextFunction) => {
     try{
         const { id } = req.params;
-        const user = usersService.deleteById(id);
-        res.status(204).json({
-            user,
-            message: 'users deleted successfully'
-        });
+        const user = await usersService.deleteById(id);
+        sendJsonSuccess(res, user, httpStatus.OK.statusCode, 'User đã được xóa thành công (soft delete)');
     }
     catch(error) {
         next (error);
+    }
+}
+
+// Get deleted users
+const getDeletedUsers = async(req: Request, res: Response, next: NextFunction) => {
+    try{
+        const users = await usersService.getDeletedUsers(req.query);
+        sendJsonSuccess(res, users, httpStatus.OK.statusCode, httpStatus.OK.message);
+    }
+    catch(error) {
+        next(error);
     }
 }
 
@@ -74,5 +82,6 @@ export default {
     getById,
     Create,
     Update,
-    Delete
+    Delete,
+    getDeletedUsers
 }

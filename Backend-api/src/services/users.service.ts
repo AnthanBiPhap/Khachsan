@@ -19,7 +19,7 @@ const getAll = async(query: any) => {
     console.log(query);
 
     //Tìm kiếm theo điều kiện
-    let where = {};
+    let where = { deletedAt: null }; // Chỉ lấy users chưa bị xóa
     // nếu có tìm kiếm theo tên nhân viên
     if (query.fullName && query.fullName.length > 0) {
         where = { ...where, fullName: { $regex: query.fullName, $options: 'i'}};
@@ -30,7 +30,7 @@ const getAll = async(query: any) => {
     .limit(limit)
     .sort({...sortObject});
 
-    //Đếm tổng số record hiện có của collection user
+    //Đếm tổng số record hiện có của collection user (chưa bị xóa)
     const count = await User.countDocuments(where);
     console.log('user: ', users);
 
@@ -45,7 +45,7 @@ const getAll = async(query: any) => {
 }
 
 const getById = async(id: string) => {
-    const user = await User.findById(id).select('-password');
+    const user = await User.findOne({ _id: id, deletedAt: null }).select('-password');
         if (!user) {
             //throw new Error("user not found");
             throw createError(404, "user not found");
@@ -54,14 +54,14 @@ const getById = async(id: string) => {
 }
 
 const create = async (payload: any) => {
-    //kiểm tra xem email có tồn tại không
-    const emailExist = await User.findOne({email: payload.email});
+    //kiểm tra xem email có tồn tại không (chỉ kiểm tra users chưa bị xóa)
+    const emailExist = await User.findOne({email: payload.email, deletedAt: null});
     if(emailExist) {
         throw createError(400, 'Email đã được sử dụng. Vui lòng chọn email khác.');
     }
     
-    //kiểm tra xem số điện thoại có tồn tại không
-    const phoneExist = await User.findOne({phoneNumber: payload.phoneNumber});
+    //kiểm tra xem số điện thoại có tồn tại không (chỉ kiểm tra users chưa bị xóa)
+    const phoneExist = await User.findOne({phoneNumber: payload.phoneNumber, deletedAt: null});
     if(phoneExist) {
         throw createError(400, 'Số điện thoại đã được sử dụng. Vui lòng chọn số điện thoại khác.');
     }
@@ -86,20 +86,22 @@ const create = async (payload: any) => {
 const updateById = async (id: string, payload: any) => {
     const user = await getById(id);
   
-    // check trùng email
+    // check trùng email (chỉ kiểm tra users chưa bị xóa)
     if (payload.email) {
       const emailExist = await User.findOne({
         email: payload.email,
         _id: { $ne: id },
+        deletedAt: null,
       });
       if (emailExist) throw createError(400, "Email đã được sử dụng. Vui lòng chọn email khác.");
     }
     
-    // check trùng số điện thoại
+    // check trùng số điện thoại (chỉ kiểm tra users chưa bị xóa)
     if (payload.phoneNumber) {
       const phoneExist = await User.findOne({
         phoneNumber: payload.phoneNumber,
         _id: { $ne: id },
+        deletedAt: null,
       });
       if (phoneExist) throw createError(400, "Số điện thoại đã được sử dụng. Vui lòng chọn số điện thoại khác.");
     }
@@ -125,9 +127,43 @@ const updateById = async (id: string, payload: any) => {
 const deleteById = async(id: string) => {
     // kiểm tra xem id có tồn tại không
     const user = await getById(id);
-    // thực hiện lệnh delete
-    await user.deleteOne({_id: user.id});
+    // thực hiện soft delete - chỉ set deletedAt
+    user.deletedAt = new Date();
+    await user.save();
     return user;
+}
+
+// Lấy danh sách users đã bị xóa (soft delete)
+const getDeletedUsers = async(query: any) => {
+    const { page = 1, limit = 10} = query;
+    let sortObject = {};
+    const sortType = query.sort_type || 'desc';
+    const sortBy = query.sort_by || 'deletedAt';
+    sortObject = {...sortObject, [sortBy]: sortType === 'desc' ? -1 : 1};
+
+    //Tìm kiếm theo điều kiện - chỉ lấy users đã bị xóa
+    let where = { deletedAt: { $ne: null } };
+    // nếu có tìm kiếm theo tên nhân viên
+    if (query.fullName && query.fullName.length > 0) {
+        where = { ...where, fullName: { $regex: query.fullName, $options: 'i'}};
+    }
+    const users = await User
+    .find(where)
+    .skip((page-1)*limit)
+    .limit(limit)
+    .sort({...sortObject});
+
+    //Đếm tổng số record đã bị xóa
+    const count = await User.countDocuments(where);
+
+    return {
+        users,
+        pagination: {
+            totalRecord: count,
+            limit,
+            page
+        }
+    };
 }
 
 export default {
@@ -135,5 +171,6 @@ export default {
     getById,
     create,
     updateById,
-    deleteById
+    deleteById,
+    getDeletedUsers
 }

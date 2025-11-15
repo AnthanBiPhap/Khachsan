@@ -34,3 +34,13 @@ export async function updateUser(
   if (!res.ok) throw new Error("Failed to update user");
   return res.json();
 }
+
+/** Lấy danh sách users đã xóa kèm phân trang */
+export async function fetchDeletedUsers(
+  page = 1,
+  limit = 10
+): Promise<ApiResponse<{ users: User[]; pagination: Pagination }>> {
+  const res = await fetch(`${BASE_URL}/users/deleted?page=${page}&limit=${limit}`);
+  if (!res.ok) throw new Error("Failed to fetch deleted users");
+  return res.json();
+}

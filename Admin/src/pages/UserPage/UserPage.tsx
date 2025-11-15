@@ -11,6 +11,8 @@ import {
   Spin,
   Empty,
   Divider,
+  Button,
+  Modal,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import {
@@ -20,6 +22,7 @@ import {
   HistoryOutlined,
   CalendarOutlined,
   DollarOutlined,
+  DeleteOutlined,
 } from "@ant-design/icons";
 import UserForm from "../../components/User/UserForm";
 import type { User } from "../../types/user";
@@ -28,6 +31,7 @@ import axios from "axios";
 import { env } from "../../constanst/getEnvs";
 import { useAuthStore } from "../../stores/authStore";
 import dayjs from "dayjs";
+import { useNavigate } from "react-router-dom";
 
 // ----------------- Types -----------------
 type Booking = {
@@ -109,6 +113,7 @@ export default function UserPage() {
   const [loadingBookings, setLoadingBookings] = useState(false);
 
   const storedUser = useAuthStore.getState().user;
+  const navigate = useNavigate();
 
   // ----------------- Load users -----------------
   const loadUsers = async (page = 1, limit = 10) => {
@@ -133,14 +138,24 @@ export default function UserPage() {
   }, []);
 
   // ----------------- CRUD -----------------
-  const handleDelete = async (id: string) => {
-    try {
-      await deleteUser(id);
-      message.success(`Đã xóa user ${id}`);
-      loadUsers(pagination.current, pagination.pageSize);
-    } catch {
-      message.error("Lỗi khi xóa user");
-    }
+  const handleDelete = (id: string, fullName?: string) => {
+    Modal.confirm({
+      title: "Xác nhận xóa người dùng",
+      content: `Bạn có chắc chắn muốn xóa người dùng "${fullName || id}"? Người dùng sẽ được chuyển vào danh sách đã xóa.`,
+      okText: "Xóa",
+      cancelText: "Hủy",
+      okButtonProps: { danger: true },
+      onOk: async () => {
+        try {
+          await deleteUser(id);
+          message.success("Đã xóa user thành công");
+          // Navigate đến trang deleted users sau khi xóa
+          navigate("/users/deleted");
+        } catch {
+          message.error("Lỗi khi xóa user");
+        }
+      },
+    });
   };
 
   const handleSave = async (values: Partial<User>) => {
@@ -307,7 +322,7 @@ export default function UserPage() {
           >
             Chỉnh sửa
           </a>
-          <a onClick={() => handleDelete(record._id)}>Xóa</a>
+          <a onClick={() => handleDelete(record._id, record.fullName)}>Xóa</a>
           <a
             onClick={() => {
               setDetailUser(record);
@@ -329,9 +344,18 @@ export default function UserPage() {
   // ----------------- Render -----------------
   return (
     <div style={{ padding: 24 }}>
-      <Typography.Title level={4}>
-        <UserOutlined /> Quản lý người dùng
-      </Typography.Title>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <Typography.Title level={4} style={{ margin: 0 }}>
+          <UserOutlined /> Quản lý người dùng
+        </Typography.Title>
+        <Button
+          type="default"
+          icon={<DeleteOutlined />}
+          onClick={() => navigate("/users/deleted")}
+        >
+          Xem người dùng đã xóa
+        </Button>
+      </div>
 
       <Table
         columns={columns}

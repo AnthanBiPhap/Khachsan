@@ -6,6 +6,7 @@ export interface User {
     role: string;
     status: "active" | "inactive";
     preferences: string[];
+    deletedAt?: string | null;
     createdAt: string;
     updatedAt: string;
   }
