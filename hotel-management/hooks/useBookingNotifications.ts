@@ -240,8 +240,22 @@ export function useBookingNotifications() {
 
     // Cleanup khi component unmount hoặc user thay đổi
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
+      // Sử dụng biến local để tránh race condition
+      const socketToDisconnect = socketRef.current;
+      if (socketToDisconnect) {
+        try {
+          // Chỉ disconnect nếu socket đã được tạo và chưa bị đóng
+          if (socketToDisconnect.connected) {
+            socketToDisconnect.disconnect();
+          } else {
+            // Nếu chưa connected, chỉ cần remove listeners và close
+            socketToDisconnect.removeAllListeners();
+            socketToDisconnect.close();
+          }
+        } catch (error) {
+          // Ignore errors khi disconnect (có thể socket đã bị đóng)
+          console.warn('⚠️ Lỗi khi cleanup socket (có thể đã bị đóng):', error);
+        }
         socketRef.current = null;
       }
     };

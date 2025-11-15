@@ -31,11 +31,13 @@ interface BookingNotification {
     quoteAmount?: number;
     paidAmount?: number;
     remainingAmount?: number;
+    refundAmount?: number;
   };
   message: string;
   timestamp: string;
   isDeposit?: boolean;
   isFullPayment?: boolean;
+  reason?: string;
 }
 
 interface UseWebSocketReturn {
@@ -74,6 +76,8 @@ export const useWebSocket = (): UseWebSocketReturn => {
     // Xử lý kết nối thành công
     newSocket.on('connect', () => {
       console.log('✅ WebSocket connected:', newSocket.id);
+      console.log('✅ User role:', user?.role);
+      console.log('✅ User ID:', user?._id);
       setIsConnected(true);
       
       // Khởi tạo audio context khi WebSocket kết nối để sẵn sàng phát âm thanh
@@ -128,17 +132,131 @@ export const useWebSocket = (): UseWebSocketReturn => {
       setNotifications((prev) => [data, ...prev]);
     });
 
+    // Lắng nghe thông báo hoàn tiền đặt phòng online
+    newSocket.on('booking_refunded', (data: BookingNotification) => {
+      console.log('💰 ========== NHẬN ĐƯỢC THÔNG BÁO HOÀN TIỀN ĐẶT PHÒNG ONLINE ==========');
+      console.log('💰 Full data:', JSON.stringify(data, null, 2));
+      console.log('💰 Type:', data.type);
+      console.log('💰 Message:', data.message);
+      console.log('💰 Booking ID:', data.booking?._id);
+      console.log('💰 Room Number:', data.booking?.roomNumber);
+      console.log('💰 Refund Amount:', data.booking?.refundAmount);
+      console.log('💰 ============================================================');
+      
+      // Phát âm thanh ngay khi nhận được notification
+      console.log('🔊 Đang phát âm thanh thông báo...');
+      playNotificationSound()
+        .then(() => {
+          console.log('✅ Đã phát âm thanh thành công');
+        })
+        .catch((error) => {
+          console.error('❌ Lỗi phát âm thanh:', error);
+          // Thử lại sau 100ms
+          setTimeout(() => {
+            console.log('🔊 Thử lại phát âm thanh...');
+            playNotificationSound().catch(err => {
+              console.error('❌ Lỗi phát âm thanh lần 2:', err);
+            });
+          }, 100);
+        });
+      
+      setNotifications((prev) => [data, ...prev]);
+      console.log('✅ Đã thêm notification vào state');
+    });
+
+    // Lắng nghe thông báo yêu cầu hoàn tiền đặt phòng online
+    newSocket.on('booking_refund_requested', (data: BookingNotification) => {
+      console.log('💰 ========== NHẬN ĐƯỢC THÔNG BÁO YÊU CẦU HOÀN TIỀN ĐẶT PHÒNG ONLINE ==========');
+      console.log('💰 Full data:', JSON.stringify(data, null, 2));
+      console.log('💰 Type:', data.type);
+      console.log('💰 Message:', data.message);
+      console.log('💰 Booking ID:', data.booking?._id);
+      console.log('💰 Room Number:', data.booking?.roomNumber);
+      console.log('💰 Refund Amount:', data.booking?.refundAmount);
+      console.log('💰 Reason:', data.reason);
+      console.log('💰 ============================================================');
+      
+      // Phát âm thanh ngay khi nhận được notification
+      console.log('🔊 Đang phát âm thanh thông báo...');
+      playNotificationSound()
+        .then(() => {
+          console.log('✅ Đã phát âm thanh thành công');
+        })
+        .catch((error) => {
+          console.error('❌ Lỗi phát âm thanh:', error);
+          // Thử lại sau 100ms
+          setTimeout(() => {
+            console.log('🔊 Thử lại phát âm thanh...');
+            playNotificationSound().catch(err => {
+              console.error('❌ Lỗi phát âm thanh lần 2:', err);
+            });
+          }, 100);
+        });
+      
+      setNotifications((prev) => [data, ...prev]);
+      console.log('✅ Đã thêm notification vào state');
+    });
+
+    // Lắng nghe thông báo yêu cầu hoàn tiền đặt phòng nhóm
+    newSocket.on('group_booking_refund_requested', (data: BookingNotification) => {
+      console.log('💰 ========== NHẬN ĐƯỢC THÔNG BÁO YÊU CẦU HOÀN TIỀN ==========');
+      console.log('💰 Full data:', JSON.stringify(data, null, 2));
+      console.log('💰 Type:', data.type);
+      console.log('💰 Message:', data.message);
+      console.log('💰 Group Booking ID:', data.groupBooking?._id);
+      console.log('💰 Refund Amount:', data.groupBooking?.refundAmount);
+      console.log('💰 Reason:', data.reason);
+      console.log('💰 ============================================================');
+      
+      // Phát âm thanh ngay khi nhận được notification
+      console.log('🔊 Đang phát âm thanh thông báo...');
+      playNotificationSound()
+        .then(() => {
+          console.log('✅ Đã phát âm thanh thành công');
+        })
+        .catch((error) => {
+          console.error('❌ Lỗi phát âm thanh:', error);
+          // Thử lại sau 100ms
+          setTimeout(() => {
+            console.log('🔊 Thử lại phát âm thanh...');
+            playNotificationSound().catch(err => {
+              console.error('❌ Lỗi phát âm thanh lần 2:', err);
+            });
+          }, 100);
+        });
+      
+      setNotifications((prev) => [data, ...prev]);
+      console.log('✅ Đã thêm notification vào state');
+    });
+
     // Xử lý kết nối thành công từ server
     newSocket.on('connected', (data) => {
       console.log('✅ Server confirmed connection:', data);
+      console.log('✅ Server userId:', data.userId);
+      console.log('✅ Server socketId:', data.socketId);
+      console.log('✅ Expected role room:', `role:${user?.role}`);
     });
 
     setSocket(newSocket);
 
     // Cleanup khi component unmount
     return () => {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
+      // Sử dụng biến local để tránh race condition
+      const socketToDisconnect = socketRef.current;
+      if (socketToDisconnect) {
+        try {
+          // Chỉ disconnect nếu socket đã được tạo và chưa bị đóng
+          if (socketToDisconnect.connected) {
+            socketToDisconnect.disconnect();
+          } else {
+            // Nếu chưa connected, chỉ cần remove listeners và close
+            socketToDisconnect.removeAllListeners();
+            socketToDisconnect.close();
+          }
+        } catch (error) {
+          // Ignore errors khi disconnect (có thể socket đã bị đóng)
+          console.warn('⚠️ Lỗi khi cleanup socket (có thể đã bị đóng):', error);
+        }
         socketRef.current = null;
       }
       setSocket(null);

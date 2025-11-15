@@ -942,6 +942,109 @@ const updateById = async (id: string, payload: any) => {
     } catch (socketError) {
       console.error("❌ Lỗi gửi socket notification hoàn tiền:", socketError);
     }
+
+    // Gửi notification cho admin và staff khi admin hoàn tiền đặt phòng online
+    try {
+      await updatedBooking.populate("roomId", "roomNumber");
+      await updatedBooking.populate("customerId", "fullName email phoneNumber");
+      
+      const refundAmount = updatedBooking.paidAmount || updatedBooking.totalPrice || 0;
+      const formattedRefund = new Intl.NumberFormat("vi-VN").format(refundAmount);
+      const roomNumber = updatedBooking.roomId?.roomNumber || "N/A";
+      const customerName = (updatedBooking.customerId as any)?.fullName || 
+                          updatedBooking.guests?.find((g: any) => g.isMainGuest)?.fullName || 
+                          "Khách hàng";
+      
+      const notificationMessage = `Đã hoàn tiền ${formattedRefund} VND cho đặt phòng ${roomNumber} của khách hàng ${customerName} (Booking ${updatedBooking._id})`;
+      
+      console.log(`📢 [Refund Processed] Bắt đầu gửi notification cho admin/staff - booking ${updatedBooking._id}`);
+      
+      // Lưu notification vào database
+      await notificationsService.create({
+        type: "booking_refunded",
+        title: "Đã hoàn tiền đặt phòng",
+        message: notificationMessage,
+        bookingId: updatedBooking._id,
+        userId: updatedBooking.customerId || undefined,
+        bookingData: {
+          bookingId: updatedBooking._id,
+          customerId: updatedBooking.customerId,
+          roomId: updatedBooking.roomId?._id,
+          checkIn: updatedBooking.checkIn,
+          checkOut: updatedBooking.checkOut,
+          totalPrice: updatedBooking.totalPrice,
+          paymentStatus: "refunded",
+          source: updatedBooking.source || "online",
+          guestCount: updatedBooking.guests?.length || 0,
+          guests: updatedBooking.guests || [],
+        },
+        metadata: {
+          bookingId: updatedBooking._id.toString(),
+          customerName: customerName,
+          customerPhone: (updatedBooking.customerId as any)?.phoneNumber || updatedBooking.guests?.find((g: any) => g.isMainGuest)?.phoneNumber || "N/A",
+          customerEmail: (updatedBooking.customerId as any)?.email || "N/A",
+          roomNumber: roomNumber,
+          refundAmount: refundAmount,
+          reason: payload.note || "Admin đã duyệt hoàn tiền",
+        },
+      });
+      
+      // Gửi WebSocket notification
+      const refundProcessedNotification = {
+        type: "booking_refunded",
+        booking: {
+          _id: updatedBooking._id.toString(),
+          customerId: updatedBooking.customerId?.toString(),
+          roomId: updatedBooking.roomId?._id?.toString(),
+          roomNumber: roomNumber,
+          checkIn: updatedBooking.checkIn,
+          checkOut: updatedBooking.checkOut,
+          totalPrice: updatedBooking.totalPrice,
+          paidAmount: updatedBooking.paidAmount || updatedBooking.totalPrice,
+          refundAmount: refundAmount,
+          paymentStatus: "refunded",
+          source: updatedBooking.source || "online",
+          guestCount: updatedBooking.guests?.length || 0,
+          guests: updatedBooking.guests || [],
+        },
+        message: notificationMessage,
+        reason: payload.note || "Admin đã duyệt hoàn tiền",
+        timestamp: new Date().toISOString(),
+      };
+      
+      // Gửi đến tất cả admin và staff
+      console.log(`📤 [Refund Processed] Bắt đầu gửi socket notification...`);
+      console.log(`   Event: booking_refunded`);
+      console.log(`   Room admin: role:admin`);
+      console.log(`   Room staff: role:staff`);
+      
+      try {
+        socketService.sendToRoom("role:admin", "booking_refunded", refundProcessedNotification);
+        console.log(`✅ Đã gửi WebSocket notification hoàn tiền đến room "role:admin" cho booking: ${updatedBooking._id}`);
+      } catch (adminError) {
+        console.error("❌ Lỗi gửi notification hoàn tiền đến admin:", adminError);
+        if (adminError instanceof Error) {
+          console.error("Error stack:", adminError.stack);
+        }
+      }
+      
+      try {
+        socketService.sendToRoom("role:staff", "booking_refunded", refundProcessedNotification);
+        console.log(`✅ Đã gửi WebSocket notification hoàn tiền đến room "role:staff" cho booking: ${updatedBooking._id}`);
+      } catch (staffError) {
+        console.error("❌ Lỗi gửi notification hoàn tiền đến staff:", staffError);
+        if (staffError instanceof Error) {
+          console.error("Error stack:", staffError.stack);
+        }
+      }
+      
+      console.log(`✅ Đã lưu và gửi WebSocket notification hoàn tiền cho booking: ${updatedBooking._id}`);
+    } catch (notificationError) {
+      console.error("❌ Lỗi lưu/gửi notification hoàn tiền:", notificationError);
+      if (notificationError instanceof Error) {
+        console.error("Error stack:", notificationError.stack);
+      }
+    }
   }
 
   // Log cancelled transition (hủy phòng không hoàn tiền hoặc hủy trước khi thanh toán)
@@ -1067,9 +1170,10 @@ const updateById = async (id: string, payload: any) => {
     try {
       // Xác định actorName dựa trên loại khách hàng
       let actorName = "Admin";
+      let customer = null;
       if (updatedBooking.customerId) {
         // Khách hàng online - lấy tên từ database
-        const customer = await User.findById(updatedBooking.customerId);
+        customer = await User.findById(updatedBooking.customerId);
         actorName = customer?.fullName || "Khách hàng online";
       } else {
         // Khách hàng walk_in - sử dụng tên từ guests array
@@ -1085,6 +1189,107 @@ const updateById = async (id: string, payload: any) => {
         note: payload.note || "Khách hàng yêu cầu hoàn tiền",
       });
       console.log(`✅ Đã tạo booking status log cho refund_requested: ${updatedBooking._id}`);
+
+      // Gửi notification cho admin và staff khi khách hàng yêu cầu hoàn tiền
+      try {
+        await updatedBooking.populate("roomId", "roomNumber");
+        await updatedBooking.populate("customerId", "fullName email phoneNumber");
+        
+        const refundAmount = updatedBooking.paidAmount || updatedBooking.totalPrice || 0;
+        const formattedRefund = new Intl.NumberFormat("vi-VN").format(refundAmount);
+        const roomNumber = updatedBooking.roomId?.roomNumber || "N/A";
+        const customerName = customer?.fullName || actorName;
+        
+        const notificationMessage = `Khách hàng ${customerName} yêu cầu hủy phòng ${roomNumber} và hoàn tiền ${formattedRefund} VND cho đặt phòng ${updatedBooking._id}`;
+        
+        console.log(`📢 [Refund Request] Bắt đầu gửi notification cho admin/staff - booking ${updatedBooking._id}`);
+        
+        // Lưu notification vào database
+        await notificationsService.create({
+          type: "booking_refund_requested",
+          title: "Yêu cầu hủy phòng hoàn tiền",
+          message: notificationMessage,
+          bookingId: updatedBooking._id,
+          userId: updatedBooking.customerId || undefined,
+          bookingData: {
+            bookingId: updatedBooking._id,
+            customerId: updatedBooking.customerId,
+            roomId: updatedBooking.roomId?._id,
+            checkIn: updatedBooking.checkIn,
+            checkOut: updatedBooking.checkOut,
+            totalPrice: updatedBooking.totalPrice,
+            paymentStatus: "refund_requested",
+            source: updatedBooking.source || "online",
+            guestCount: updatedBooking.guests?.length || 0,
+            guests: updatedBooking.guests || [],
+          },
+          metadata: {
+            bookingId: updatedBooking._id.toString(),
+            customerName: customerName,
+            customerPhone: customer?.phoneNumber || updatedBooking.guests?.find((g: any) => g.isMainGuest)?.phoneNumber || "N/A",
+            customerEmail: customer?.email || "N/A",
+            roomNumber: roomNumber,
+            refundAmount: refundAmount,
+            reason: payload.note || "Khách hàng yêu cầu hoàn tiền",
+          },
+        });
+        
+        // Gửi WebSocket notification
+        const refundRequestNotification = {
+          type: "booking_refund_requested",
+          booking: {
+            _id: updatedBooking._id.toString(),
+            customerId: updatedBooking.customerId?.toString(),
+            roomId: updatedBooking.roomId?._id?.toString(),
+            roomNumber: roomNumber,
+            checkIn: updatedBooking.checkIn,
+            checkOut: updatedBooking.checkOut,
+            totalPrice: updatedBooking.totalPrice,
+            paidAmount: updatedBooking.paidAmount || updatedBooking.totalPrice,
+            refundAmount: refundAmount,
+            paymentStatus: "refund_requested",
+            source: updatedBooking.source || "online",
+            guestCount: updatedBooking.guests?.length || 0,
+            guests: updatedBooking.guests || [],
+          },
+          message: notificationMessage,
+          reason: payload.note || "Khách hàng yêu cầu hoàn tiền",
+          timestamp: new Date().toISOString(),
+        };
+        
+        // Gửi đến tất cả admin và staff
+        console.log(`📤 [Refund Request] Bắt đầu gửi socket notification...`);
+        console.log(`   Event: booking_refund_requested`);
+        console.log(`   Room admin: role:admin`);
+        console.log(`   Room staff: role:staff`);
+        
+        try {
+          socketService.sendToRoom("role:admin", "booking_refund_requested", refundRequestNotification);
+          console.log(`✅ Đã gửi WebSocket notification yêu cầu hoàn tiền đến room "role:admin" cho booking: ${updatedBooking._id}`);
+        } catch (adminError) {
+          console.error("❌ Lỗi gửi notification yêu cầu hoàn tiền đến admin:", adminError);
+          if (adminError instanceof Error) {
+            console.error("Error stack:", adminError.stack);
+          }
+        }
+        
+        try {
+          socketService.sendToRoom("role:staff", "booking_refund_requested", refundRequestNotification);
+          console.log(`✅ Đã gửi WebSocket notification yêu cầu hoàn tiền đến room "role:staff" cho booking: ${updatedBooking._id}`);
+        } catch (staffError) {
+          console.error("❌ Lỗi gửi notification yêu cầu hoàn tiền đến staff:", staffError);
+          if (staffError instanceof Error) {
+            console.error("Error stack:", staffError.stack);
+          }
+        }
+        
+        console.log(`✅ Đã lưu và gửi WebSocket notification yêu cầu hoàn tiền cho booking: ${updatedBooking._id}`);
+      } catch (notificationError) {
+        console.error("❌ Lỗi lưu/gửi notification yêu cầu hoàn tiền:", notificationError);
+        if (notificationError instanceof Error) {
+          console.error("Error stack:", notificationError.stack);
+        }
+      }
     } catch (statusError) {
       console.error('❌ Lỗi tạo booking status log:', statusError);
       // Không throw error ở đây để không làm crash API

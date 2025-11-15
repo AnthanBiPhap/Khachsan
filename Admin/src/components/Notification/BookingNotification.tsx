@@ -165,10 +165,17 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
       // Xác định notification ID và loại
       const isGroupBooking = !!notif.groupBooking;
       const isPaymentNotification = notif.type === 'group_booking_payment';
+      const isGroupBookingRefundRequest = notif.type === 'group_booking_refund_requested';
+      const isBookingRefundRequest = notif.type === 'booking_refund_requested';
+      const isRefundRequestNotification = isGroupBookingRefundRequest || isBookingRefundRequest;
       
       // Tạo notification ID duy nhất dựa trên loại notification
       let notificationId: string;
-      if (isPaymentNotification && notif.groupBooking) {
+      if (isGroupBookingRefundRequest && notif.groupBooking) {
+        notificationId = `refund-request-group-${notif.groupBooking._id}-${notif.timestamp}`;
+      } else if (isBookingRefundRequest && notif.booking) {
+        notificationId = `refund-request-booking-${notif.booking._id}-${notif.timestamp}`;
+      } else if (isPaymentNotification && notif.groupBooking) {
         // Notification thanh toán có ID riêng để phân biệt với notification đặt phòng mới
         notificationId = `payment-group-${notif.groupBooking._id}-${notif.timestamp}`;
       } else if (isGroupBooking) {
@@ -185,27 +192,105 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
       shownNotificationsRef.current.add(notificationId);
 
       // Kiểm tra loại notification để hiển thị
-      const notificationType = isPaymentNotification 
-        ? 'Payment' 
-        : isGroupBooking 
-          ? 'Group Booking' 
-          : 'Booking';
+      const notificationType = isRefundRequestNotification
+        ? 'Refund Request'
+        : isPaymentNotification 
+          ? 'Payment' 
+          : isGroupBooking 
+            ? 'Group Booking' 
+            : 'Booking';
       
-      // Phát âm thanh cho thông báo mới
+      // Phát âm thanh cho thông báo mới (chỉ phát một lần, vì đã phát trong useWebSocket)
+      // Âm thanh đã được phát trong useWebSocket.ts khi nhận được socket event
+      // Nên không cần phát lại ở đây để tránh phát 2 lần
       console.log(`🔔 Hiển thị notification: ${notificationType} - ${notificationId}`);
-      try {
-        playNotificationSound();
-        console.log('✅ Đã phát âm thanh thông báo');
-      } catch (soundError) {
-        console.error('❌ Lỗi phát âm thanh:', soundError);
-        // Vẫn hiển thị notification dù không phát được âm thanh
-      }
 
       let descriptionContent: React.ReactNode;
       let navigateUrl = '/bookings';
       let notificationTitle = '🔔 Đặt phòng mới';
 
-      if (isPaymentNotification && notif.groupBooking) {
+      if (isBookingRefundRequest && notif.booking) {
+        // Booking refund request notification
+        notificationTitle = '💰 Yêu cầu hủy phòng hoàn tiền';
+        
+        const checkInDate = new Date(notif.booking.checkIn).toLocaleDateString('vi-VN');
+        const checkOutDate = new Date(notif.booking.checkOut).toLocaleDateString('vi-VN');
+        const formattedRefundAmount = notif.booking.refundAmount 
+          ? new Intl.NumberFormat('vi-VN', {
+              style: 'currency',
+              currency: 'VND',
+            }).format(notif.booking.refundAmount)
+          : '0 VND';
+        const formattedPaidAmount = notif.booking.paidAmount 
+          ? new Intl.NumberFormat('vi-VN', {
+              style: 'currency',
+              currency: 'VND',
+            }).format(notif.booking.paidAmount)
+          : '0 VND';
+
+        descriptionContent = (
+          <div>
+            <p><strong>{notif.message}</strong></p>
+            <p>Phòng: {notif.booking.roomNumber || 'N/A'}</p>
+            <p style={{ color: '#52c41a', fontWeight: 'bold' }}>
+              Đã thanh toán: {formattedPaidAmount}
+            </p>
+            <p style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
+              Số tiền hoàn: {formattedRefundAmount}
+            </p>
+            {notif.reason && (
+              <p style={{ fontStyle: 'italic', color: '#666' }}>
+                Lý do: {notif.reason}
+              </p>
+            )}
+            <p>Check-in: {checkInDate} - Check-out: {checkOutDate}</p>
+            <p>Trạng thái: Yêu cầu hoàn tiền</p>
+          </div>
+        );
+        navigateUrl = '/bookings';
+      } else if (isGroupBookingRefundRequest && notif.groupBooking) {
+        // Group booking refund request notification
+        notificationTitle = '💰 Yêu cầu hủy phòng hoàn tiền';
+        
+        const checkInDate = new Date(notif.groupBooking.checkIn).toLocaleDateString('vi-VN');
+        const checkOutDate = new Date(notif.groupBooking.checkOut).toLocaleDateString('vi-VN');
+        const formattedRefundAmount = notif.groupBooking.refundAmount 
+          ? new Intl.NumberFormat('vi-VN', {
+              style: 'currency',
+              currency: 'VND',
+            }).format(notif.groupBooking.refundAmount)
+          : '0 VND';
+        const formattedPaidAmount = notif.groupBooking.paidAmount 
+          ? new Intl.NumberFormat('vi-VN', {
+              style: 'currency',
+              currency: 'VND',
+            }).format(notif.groupBooking.paidAmount)
+          : '0 VND';
+
+        descriptionContent = (
+          <div>
+            <p><strong>{notif.message}</strong></p>
+            <p>Người yêu cầu: {notif.groupBooking.requesterName}</p>
+            <p>Số điện thoại: {notif.groupBooking.requesterPhone}</p>
+            <p>Số phòng: {notif.groupBooking.roomCount}</p>
+            <p>Số người: {notif.groupBooking.peopleCount}</p>
+            <p style={{ color: '#52c41a', fontWeight: 'bold' }}>
+              Đã thanh toán: {formattedPaidAmount}
+            </p>
+            <p style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
+              Số tiền hoàn: {formattedRefundAmount}
+            </p>
+            {notif.reason && (
+              <p style={{ fontStyle: 'italic', color: '#666' }}>
+                Lý do: {notif.reason}
+              </p>
+            )}
+            <p>Check-in: {checkInDate} - Check-out: {checkOutDate}</p>
+            <p>Trạng thái: Yêu cầu hoàn tiền</p>
+          </div>
+        );
+        navigateUrl = '/group-bookings';
+      } else if (isPaymentNotification && notif.groupBooking) {
         // Group booking payment notification
         const isDeposit = notif.isDeposit || false;
         const isFullPayment = notif.isFullPayment || false;
@@ -288,6 +373,44 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
           </div>
         );
         navigateUrl = '/group-bookings';
+      } else if (notif.type === 'booking_refunded' && notif.booking) {
+        // Booking refunded notification
+        notificationTitle = '💰 Đã hoàn tiền đặt phòng';
+        const checkInDate = new Date(notif.booking.checkIn).toLocaleDateString('vi-VN');
+        const checkOutDate = new Date(notif.booking.checkOut).toLocaleDateString('vi-VN');
+        const formattedRefundAmount = notif.booking.refundAmount 
+          ? new Intl.NumberFormat('vi-VN', {
+              style: 'currency',
+              currency: 'VND',
+            }).format(notif.booking.refundAmount)
+          : '0 VND';
+        const formattedPaidAmount = notif.booking.paidAmount 
+          ? new Intl.NumberFormat('vi-VN', {
+              style: 'currency',
+              currency: 'VND',
+            }).format(notif.booking.paidAmount)
+          : '0 VND';
+
+        descriptionContent = (
+          <div>
+            <p><strong>{notif.message}</strong></p>
+            <p>Phòng: {notif.booking.roomNumber || 'N/A'}</p>
+            <p style={{ color: '#52c41a', fontWeight: 'bold' }}>
+              Đã thanh toán: {formattedPaidAmount}
+            </p>
+            <p style={{ color: '#ff4d4f', fontWeight: 'bold' }}>
+              Số tiền hoàn: {formattedRefundAmount}
+            </p>
+            {notif.reason && (
+              <p style={{ fontStyle: 'italic', color: '#666' }}>
+                Lý do: {notif.reason}
+              </p>
+            )}
+            <p>Check-in: {checkInDate} - Check-out: {checkOutDate}</p>
+            <p>Trạng thái: Đã hoàn tiền</p>
+          </div>
+        );
+        navigateUrl = '/bookings';
       } else if (notif.booking) {
         // Regular booking notification
         const customerName = notif.booking.customerId?.fullName || 

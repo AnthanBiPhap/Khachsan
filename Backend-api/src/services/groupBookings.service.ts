@@ -1325,20 +1325,126 @@ const cancel = async (id: string, reason?: string) => {
   const now = new Date();
   const trimmedReason = reason?.trim();
 
+  // Kiểm tra xem đã có thanh toán chưa (dựa vào status hoặc paidAmount)
   const wasDepositPaid = gb.status === "deposit_paid";
   const wasFullyPaid = gb.status === "paid" || gb.status === "confirmed";
+  const hasPayment = (gb.paidAmount && gb.paidAmount > 0) || wasDepositPaid || wasFullyPaid;
 
-  if (wasDepositPaid || wasFullyPaid) {
+  console.log(`🔍 [Cancel Group Booking] Group booking ${gb._id}:`);
+  console.log(`   Status: ${gb.status}`);
+  console.log(`   Paid Amount: ${gb.paidAmount || 0}`);
+  console.log(`   Was Deposit Paid: ${wasDepositPaid}`);
+  console.log(`   Was Fully Paid: ${wasFullyPaid}`);
+  console.log(`   Has Payment: ${hasPayment}`);
+
+  if (hasPayment) {
     gb.status = "refund_requested";
     gb.refundRequestedAt = now;
+    // Tính số tiền hoàn: nếu đã đặt cọc thì hoàn số tiền đặt cọc, nếu đã thanh toán đủ thì hoàn toàn bộ
     const defaultRefund = wasDepositPaid
       ? calculateDepositAmount(gb.quoteAmount || 0)
-      : gb.quoteAmount || 0;
+      : (gb.paidAmount || gb.quoteAmount || 0);
     if (!gb.refundAmount) {
       gb.refundAmount = defaultRefund;
     }
     gb.remainingAmount = Math.max(0, (gb.quoteAmount || 0) - (gb.paidAmount || 0));
     appendNote(gb, "Refund requested", trimmedReason || "Khách hàng yêu cầu hoàn tiền");
+    
+    // Gửi notification cho admin và staff khi khách hàng yêu cầu hoàn tiền
+    console.log(`📢 [Refund Request] Bắt đầu gửi notification cho admin/staff - group booking ${gb._id}`);
+    try {
+      await gb.populate("requesterId", "fullName email phoneNumber");
+      const formattedRefund = new Intl.NumberFormat("vi-VN").format(gb.refundAmount || defaultRefund);
+      const notificationMessage = `Khách hàng ${gb.requesterName} yêu cầu hủy phòng và hoàn tiền ${formattedRefund} VND cho đặt phòng nhóm ${gb._id}`;
+      
+      console.log(`📢 [Refund Request] Notification message: ${notificationMessage}`);
+      console.log(`📢 [Refund Request] Refund amount: ${gb.refundAmount || defaultRefund}`);
+      
+      // Lưu notification vào database
+      await notificationsService.create({
+        type: "group_booking_refund_requested",
+        title: "Yêu cầu hủy phòng hoàn tiền",
+        message: notificationMessage,
+        userId: gb.requesterId?._id || undefined,
+        bookingData: {
+          bookingId: null,
+          customerId: gb.requesterId?._id,
+          roomId: null,
+          checkIn: gb.checkIn,
+          checkOut: gb.checkOut,
+          totalPrice: gb.quoteAmount || 0,
+          paymentStatus: "refund_requested",
+          source: "online",
+          guestCount: gb.peopleCount,
+          guests: [],
+        },
+        metadata: {
+          groupBookingId: gb._id.toString(),
+          requesterName: gb.requesterName,
+          requesterPhone: gb.requesterPhone,
+          requesterEmail: gb.requesterEmail,
+          refundAmount: gb.refundAmount || defaultRefund,
+          roomCount: gb.roomCount,
+          peopleCount: gb.peopleCount,
+          reason: trimmedReason || "Khách hàng yêu cầu hoàn tiền",
+        },
+      });
+      
+      // Gửi WebSocket notification
+      const refundRequestNotification = {
+        type: "group_booking_refund_requested",
+        groupBooking: {
+          _id: gb._id.toString(),
+          requesterId: gb.requesterId?._id?.toString(),
+          requesterName: gb.requesterName,
+          requesterPhone: gb.requesterPhone,
+          checkIn: gb.checkIn,
+          checkOut: gb.checkOut,
+          peopleCount: gb.peopleCount,
+          roomCount: gb.roomCount,
+          status: gb.status,
+          quoteAmount: gb.quoteAmount,
+          paidAmount: gb.paidAmount,
+          refundAmount: gb.refundAmount || defaultRefund,
+        },
+        message: notificationMessage,
+        reason: trimmedReason || "Khách hàng yêu cầu hoàn tiền",
+        timestamp: new Date().toISOString(),
+      };
+      
+      // Gửi đến tất cả admin và staff
+      console.log(`📤 [Refund Request] Bắt đầu gửi socket notification...`);
+      console.log(`   Event: group_booking_refund_requested`);
+      console.log(`   Room admin: role:admin`);
+      console.log(`   Room staff: role:staff`);
+      
+      try {
+        socketService.sendToRoom("role:admin", "group_booking_refund_requested", refundRequestNotification);
+        console.log(`✅ Đã gửi WebSocket notification yêu cầu hoàn tiền đến room "role:admin" cho group booking: ${gb._id}`);
+      } catch (adminError) {
+        console.error("❌ Lỗi gửi notification yêu cầu hoàn tiền đến admin:", adminError);
+        if (adminError instanceof Error) {
+          console.error("Error stack:", adminError.stack);
+        }
+      }
+      
+      try {
+        socketService.sendToRoom("role:staff", "group_booking_refund_requested", refundRequestNotification);
+        console.log(`✅ Đã gửi WebSocket notification yêu cầu hoàn tiền đến room "role:staff" cho group booking: ${gb._id}`);
+      } catch (staffError) {
+        console.error("❌ Lỗi gửi notification yêu cầu hoàn tiền đến staff:", staffError);
+        if (staffError instanceof Error) {
+          console.error("Error stack:", staffError.stack);
+        }
+      }
+      
+      console.log(`✅ Đã lưu và gửi WebSocket notification yêu cầu hoàn tiền cho group booking: ${gb._id}`);
+    } catch (notificationError) {
+      console.error("❌ Lỗi lưu/gửi notification yêu cầu hoàn tiền:", notificationError);
+      if (notificationError instanceof Error) {
+        console.error("Error stack:", notificationError.stack);
+      }
+    }
   } else {
     gb.status = "cancelled";
     appendNote(gb, "Cancelled", trimmedReason || "Khách hàng hủy yêu cầu");

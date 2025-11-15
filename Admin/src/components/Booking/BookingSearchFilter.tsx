@@ -67,7 +67,7 @@ export default function BookingSearchFilter({
               height: '40px',
               minWidth: '200px' // Đảm bảo chiều rộng tối thiểu
             }}
-            dropdownStyle={{ minWidth: '200px' }} // Cố định chiều rộng dropdown
+            styles={{ popup: { root: { minWidth: '200px' } } }} // Cố định chiều rộng dropdown
           >
             <Select.Option value="all">Tất cả trạng thái</Select.Option>
             <Select.Option value="pending">Chờ thanh toán</Select.Option>
@@ -85,7 +85,7 @@ export default function BookingSearchFilter({
               width: '100%',
               height: '40px'
             }}
-            dropdownStyle={{ width: '200px' }}
+            styles={{ popup: { root: { width: '200px' } } }}
           >
             <Select.Option value="all">Tất cả nguồn</Select.Option>
             <Select.Option value="online">Online</Select.Option>

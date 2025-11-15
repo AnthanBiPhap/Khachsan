@@ -5,7 +5,7 @@ const notificationSchema = new Schema(
     type: {
       type: String,
       required: [true, "Loại thông báo là bắt buộc"],
-      enum: ["new_booking", "booking_updated", "payment_received", "booking_cancelled", "booking_paid", "booking_refunded", "group_booking_approved", "group_booking_quoted", "group_booking_paid", "group_booking_confirmed", "other"],
+      enum: ["new_booking", "booking_updated", "payment_received", "booking_cancelled", "booking_paid", "booking_refunded", "booking_refund_requested", "group_booking_approved", "group_booking_quoted", "group_booking_paid", "group_booking_confirmed", "group_booking_refund_requested", "other"],
       default: "new_booking",
     },
     title: {

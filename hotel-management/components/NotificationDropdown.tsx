@@ -73,8 +73,10 @@ export default function NotificationDropdown({ unreadCount, onCountChange }: Not
     }
   };
 
-  const handleMarkAsRead = async (notificationId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleMarkAsRead = async (notificationId: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation();
+    }
     try {
       await notificationService.markAsRead(notificationId);
       await fetchNotifications();
@@ -171,9 +173,9 @@ export default function NotificationDropdown({ unreadCount, onCountChange }: Not
                       className={`p-4 hover:bg-gray-50 transition-colors cursor-pointer border-l-4 ${
                         !isRead ? getNotificationColor(notification.type) : 'border-l-transparent'
                       }`}
-                      onClick={() => {
+                      onClick={(e) => {
                         if (!isRead) {
-                          handleMarkAsRead(notification._id, {} as React.MouseEvent);
+                          handleMarkAsRead(notification._id, e);
                         }
                         setIsOpen(false);
                         router.push('/notifications');
