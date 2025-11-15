@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Tag, Button, Space, Modal, message, Tooltip, Card, Statistic, Row, Col, Typography, Form, Select, Input } from 'antd';
+import { Table, Tag, Button, Space, Modal, message, Tooltip, Drawer, Typography, Form, Select, Input } from 'antd';
 import { 
   EyeOutlined, 
   EditOutlined, 
@@ -16,6 +16,7 @@ import {
 import { paymentService } from '../../services/payment.service';
 import PaymentDetails from './PaymentDetails';
 import PaymentSearchFilter from './PaymentSearchFilter';
+import PaymentStatistics from './PaymentStatistics';
 
 interface Payment {
   _id: string;
@@ -314,17 +315,17 @@ const PaymentsList: React.FC = () => {
     {
       title: "Khách hàng",
       key: 'customer',
+      align: 'center',
       render: (record: Payment) => {
         // Kiểm tra group booking trước
         if (record.groupBookingId) {
           const gb = record.groupBookingId;
           return (
-            <div>
-              <Tag color="purple" style={{ marginBottom: 4 }}>Đặt đoàn</Tag>
+            <div style={{ textAlign: 'center' }}>
               <Typography.Text strong>{gb.requesterName || 'Guest'}</Typography.Text>
               <br />
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {gb.requesterPhone ? `📱 ${gb.requesterPhone}` : ''}
+                {gb.requesterPhone || ''}
                 {gb.requesterPhone && gb.requesterEmail ? ' | ' : ''}
                 {gb.requesterEmail || ''}
               </Typography.Text>
@@ -344,10 +345,10 @@ const PaymentsList: React.FC = () => {
         if (record.bookingId?.guests && record.bookingId.guests.length > 0) {
           const mainGuest = record.bookingId.guests.find((guest: any) => guest.isMainGuest) || record.bookingId.guests[0];
           const customerType = record.bookingId?.source === 'walk_in' ? 'Walk-in Customer' : 'Online Customer';
-          const contactInfo = mainGuest.phoneNumber ? `📱 ${mainGuest.phoneNumber}` : customerType;
+          const contactInfo = mainGuest.phoneNumber || customerType;
           
           return (
-            <div>
+            <div style={{ textAlign: 'center' }}>
               <Typography.Text strong>{mainGuest.fullName || 'Guest'}</Typography.Text>
               <br />
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
@@ -361,7 +362,7 @@ const PaymentsList: React.FC = () => {
         const name = record.customerId?.fullName || record.customer?.fullName || 'Guest';
         const email = record.customerId?.email || record.customer?.email || 'guest@example.com';
         return (
-          <div>
+          <div style={{ textAlign: 'center' }}>
             <Typography.Text strong>{name}</Typography.Text>
             <br />
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
@@ -494,16 +495,10 @@ const PaymentsList: React.FC = () => {
           const date = new Date(paymentDate);
           return (
             <Space>
-              <CalendarOutlined style={{ color: '#13c2c2', fontSize: 12 }} />
-              <div>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  {date.toLocaleDateString('vi-VN')}
-                </Typography.Text>
-                <br />
-                <Typography.Text type="secondary" style={{ fontSize: 10 }}>
-                  {date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                </Typography.Text>
-              </div>
+              <CalendarOutlined style={{ color: '#13c2c2', fontSize: 14 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 14 }}>
+                {date.toLocaleDateString('vi-VN')} {date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+              </Typography.Text>
             </Space>
           );
         }
@@ -521,7 +516,7 @@ const PaymentsList: React.FC = () => {
     {
       title: (
         <Space>
-          <EditOutlined style={{ color: '#722ed1' }} />
+          <EyeOutlined style={{ color: '#722ed1' }} />
           <span>Thao tác</span>
         </Space>
       ),
@@ -529,20 +524,15 @@ const PaymentsList: React.FC = () => {
       width: 120,
       render: (record: Payment) => (
         <Space>
-          <Tooltip title="Xem chi tiết">
-            <Button
-              type="text"
-              icon={<EyeOutlined />}
-              onClick={() => handleViewDetails(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Chỉnh sửa">
-            <Button
-              type="text"
-              icon={<EditOutlined />}
-              onClick={() => handleEditPayment(record)}
-            />
-          </Tooltip>
+          <Button
+            type="link"
+            size="small"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDetails(record)}
+          >
+            Chi tiết
+          </Button>
+          {/* Nút chỉnh sửa đã bị ẩn */}
           {record.status === 'pending' && (
             <Tooltip title="Hoàn thành">
               <Button
@@ -557,46 +547,38 @@ const PaymentsList: React.FC = () => {
     },
   ];
 
+  // Calculate statistics
+  const calculateStatistics = (data: Payment[]) => {
+    const totalPayments = data.length;
+    const completedPayments = data.filter(p => p.status === 'completed').length;
+    const pendingPayments = data.filter(p => p.status === 'pending').length;
+    const failedPayments = data.filter(p => p.status === 'failed').length;
+    const refundedPayments = data.filter(p => p.status === 'refunded').length;
+    const totalAmount = data.reduce((sum, payment) => sum + payment.amount, 0);
+
+    return {
+      totalPayments,
+      completedPayments,
+      pendingPayments,
+      failedPayments,
+      refundedPayments,
+      totalAmount,
+    };
+  };
+
+  const statistics = calculateStatistics(payments);
+
   return (
     <div>
-      <Row gutter={16} style={{ marginBottom: 16 }}>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Tổng thanh toán"
-              value={statsData.totalPayments}
-              suffix="giao dịch"
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Tổng tiền"
-              value={statsData.totalAmount}
-              formatter={(value) => `${value?.toLocaleString()} VND`}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Trung bình"
-              value={statsData.averageAmount}
-              formatter={(value) => `${value?.toLocaleString()} VND`}
-            />
-          </Card>
-        </Col>
-        <Col span={6}>
-          <Card>
-            <Statistic
-              title="Hoàn thành"
-              value={statsData.completedPayments}
-              suffix="giao dịch"
-            />
-          </Card>
-        </Col>
-      </Row>
+      {/* Statistics */}
+      <PaymentStatistics
+        totalPayments={statistics.totalPayments}
+        completedPayments={statistics.completedPayments}
+        pendingPayments={statistics.pendingPayments}
+        failedPayments={statistics.failedPayments}
+        refundedPayments={statistics.refundedPayments}
+        totalAmount={statistics.totalAmount}
+      />
 
       {/* Search và Filter */}
       <PaymentSearchFilter
@@ -618,47 +600,33 @@ const PaymentsList: React.FC = () => {
         filteredCount={filteredPayments.length}
       />
 
-      <Card
-        title={
-          <Space>
-            <CreditCardOutlined style={{ color: '#1890ff' }} />
-            <span>Danh sách thanh toán</span>
-          </Space>
-        }
-        extra={
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={() => fetchPayments(pagination.current, pagination.pageSize)}
-          >
-            Làm mới
-          </Button>
-        }
-      >
-        <Table
-          columns={columns}
-          dataSource={filteredPayments}
-          rowKey="_id"
-          loading={loading}
-          key={`payments-table-${payments.length}`}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            showSizeChanger: true,
-            showQuickJumper: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} của ${total} thanh toán`,
-          }}
-          onChange={handleTableChange}
-        />
-      </Card>
+      <Table
+        columns={columns}
+        dataSource={filteredPayments}
+        rowKey="_id"
+        loading={loading}
+        key={`payments-table-${payments.length}`}
+        pagination={{
+          current: pagination.current,
+          pageSize: pagination.pageSize,
+          total: pagination.total,
+          showSizeChanger: true,
+          showTotal: (total) => `Tổng ${total} thanh toán`,
+        }}
+        onChange={handleTableChange}
+        bordered
+        scroll={{ x: "max-content" }}
+        locale={{ emptyText: "Không có dữ liệu thanh toán" }}
+      />
 
-      <Modal
+      <Drawer
         title="Chi tiết thanh toán"
         open={detailsVisible}
-        onCancel={() => setDetailsVisible(false)}
-        footer={null}
-        width={800}
+        onClose={() => {
+          setDetailsVisible(false);
+          setSelectedPayment(null);
+        }}
+        width={680}
       >
         {selectedPayment && (
           <PaymentDetails
@@ -666,7 +634,7 @@ const PaymentsList: React.FC = () => {
             onClose={() => setDetailsVisible(false)}
           />
         )}
-      </Modal>
+      </Drawer>
 
       {/* Edit Payment Modal */}
       <Modal
