@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Table, Tag, Space, Button, message, Tooltip, Modal, Descriptions, InputNumber, Input, Form, Card, Row, Col, Select, DatePicker, Alert, Divider } from 'antd';
-import { CheckCircleOutlined, UploadOutlined, DollarOutlined, FileExcelOutlined, ReloadOutlined, DownloadOutlined } from '@ant-design/icons';
+import { Table, Tag, Space, Button, message, Tooltip, Modal, Descriptions, InputNumber, Input, Form, Card, Row, Col, Select, DatePicker, Alert, Divider, Typography, Drawer } from 'antd';
+import { CheckCircleOutlined, UploadOutlined, DollarOutlined, FileExcelOutlined, ReloadOutlined, DownloadOutlined, CalendarOutlined, UserOutlined, HomeOutlined, EyeOutlined, TeamOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import GroupBookingStatistics from '../../components/GroupBookings/GroupBookingStatistics';
 
 const GROUP_DEPOSIT_RATE = 0.5;
 const GROUP_DEPOSIT_PERCENT_LABEL = `${Math.round(GROUP_DEPOSIT_RATE * 100)}%`;
@@ -132,6 +133,14 @@ const GroupBookingsPage: React.FC = () => {
     nights: number; 
     subtotal: number;
   }>>([]);
+  const [statistics, setStatistics] = useState({
+    totalBookings: 0,
+    pendingBookings: 0,
+    approvedBookings: 0,
+    paidBookings: 0,
+    cancelledBookings: 0,
+    totalRevenue: 0,
+  });
 
   // Filters
   const [search, setSearch] = useState<string>("");
@@ -179,12 +188,37 @@ const GroupBookingsPage: React.FC = () => {
     }
   };
 
+  const calculateStatistics = (data: GroupBookingItem[]) => {
+    const totalBookings = data.length;
+    const pendingBookings = data.filter(item => item.status === 'pending_approval').length;
+    const approvedBookings = data.filter(item => ['approved', 'info_uploaded', 'quoted', 'awaiting_payment', 'deposit_paid'].includes(item.status)).length;
+    const paidBookings = data.filter(item => ['paid', 'confirmed'].includes(item.status)).length;
+    const cancelledBookings = data.filter(item => ['cancelled', 'rejected'].includes(item.status)).length;
+    
+    const totalRevenue = data
+      .filter(item => ['paid', 'confirmed', 'deposit_paid'].includes(item.status))
+      .reduce((sum, item) => {
+        const { paid } = computeFinancials(item);
+        return sum + paid;
+      }, 0);
+    
+    setStatistics({
+      totalBookings,
+      pendingBookings,
+      approvedBookings,
+      paidBookings,
+      cancelledBookings,
+      totalRevenue,
+    });
+  };
+
   const load = async () => {
     setLoading(true);
     try {
       const { data } = await axios.get(`${API_URL}/group-bookings`);
       const list: GroupBookingItem[] = Array.isArray(data?.data) ? data.data : data;
       setItems(list || []);
+      calculateStatistics(list || []);
     } catch (e: any) {
       message.error(e?.response?.data?.message || e?.message || 'Không thể tải danh sách');
     } finally {
@@ -295,63 +329,208 @@ const GroupBookingsPage: React.FC = () => {
 
   const columns = [
     {
-      title: 'Mã',
-      dataIndex: '_id',
-      width: 220,
-      render: (v: string, r: GroupBookingItem) => (
-        <Button type="link" onClick={() => setViewItem(r)}>{v}</Button>
-      )
-    },
-    { title: 'Người liên hệ', dataIndex: 'requesterName' },
-    { title: 'Điện thoại', dataIndex: 'requesterPhone' },
-    {
-      title: 'Ngày',
-      render: (_: any, r: GroupBookingItem) => (
-        <span>{new Date(r.checkIn).toLocaleDateString()} → {new Date(r.checkOut).toLocaleDateString()}</span>
-      )
-    },
-    { title: 'Khách', dataIndex: 'peopleCount', width: 80 },
-    { title: 'Phòng', dataIndex: 'roomCount', width: 80 },
-    {
-      title: 'Báo giá / Thanh toán',
+      title: 'Người liên hệ',
+      dataIndex: 'requesterName',
+      key: 'requesterName',
       width: 200,
+      align: 'center',
+      render: (name: string, r: GroupBookingItem) => (
+        <div style={{ textAlign: 'center', padding: '8px 0' }}>
+          <Typography.Text strong>{name}</Typography.Text>
+          <br />
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {r.requesterPhone || ''}
+            {r.requesterPhone && r.requesterEmail ? ' | ' : ''}
+            {r.requesterEmail || ''}
+          </Typography.Text>
+        </div>
+      )
+    },
+    {
+      title: (
+        <Space>
+          <CalendarOutlined style={{ color: '#52c41a' }} />
+          <span>Ngày</span>
+        </Space>
+      ),
+      key: 'dates',
+      width: 180,
+      align: 'center',
+      render: (_: any, r: GroupBookingItem) => (
+        <div style={{ textAlign: 'center', padding: '8px 0' }}>
+          <Space direction="vertical" size={4}>
+            <Space size={4}>
+              <CalendarOutlined style={{ color: '#52c41a', fontSize: 12 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Nhận: {new Date(r.checkIn).toLocaleDateString('vi-VN')}
+              </Typography.Text>
+            </Space>
+            <Space size={4}>
+              <CalendarOutlined style={{ color: '#ff4d4f', fontSize: 12 }} />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Trả: {new Date(r.checkOut).toLocaleDateString('vi-VN')}
+              </Typography.Text>
+            </Space>
+          </Space>
+        </div>
+      )
+    },
+    { 
+      title: (
+        <Space>
+          <UserOutlined style={{ color: '#1890ff' }} />
+          <span>Khách</span>
+        </Space>
+      ), 
+      dataIndex: 'peopleCount', 
+      key: 'peopleCount',
+      width: 120,
+      align: 'center',
+      render: (count: number) => (
+        <div style={{ padding: '8px 0' }}>
+          <Tag color="cyan" icon={<UserOutlined />}>
+            {count} người
+          </Tag>
+        </div>
+      )
+    },
+    { 
+      title: (
+        <Space>
+          <HomeOutlined style={{ color: '#fa8c16' }} />
+          <span>Phòng</span>
+        </Space>
+      ), 
+      dataIndex: 'roomCount', 
+      key: 'roomCount',
+      width: 120,
+      align: 'center',
+      render: (count: number) => (
+        <div style={{ padding: '8px 0' }}>
+          <Tag color="orange" icon={<HomeOutlined />}>
+            {count} phòng
+          </Tag>
+        </div>
+      )
+    },
+    {
+      title: (
+        <Space>
+          <DollarOutlined style={{ color: '#fa8c16' }} />
+          <span>Thanh toán</span>
+        </Space>
+      ),
+      key: 'payment',
+      width: 220,
+      align: 'center',
       render: (_: any, r: GroupBookingItem) => {
         const { total, paid, remain } = computeFinancials(r);
-        if (!total) return '-';
+        if (!total) return (
+          <div style={{ padding: '8px 0' }}>
+            <Typography.Text type="secondary">-</Typography.Text>
+          </div>
+        );
         return (
-          <div>
-            <div><strong>Tổng:</strong> {total.toLocaleString()} VND</div>
-            <div style={{ color: '#15803d' }}><strong>Đã thanh toán:</strong> {paid.toLocaleString()} VND</div>
-            <div style={{ color: remain > 0 ? '#b91c1c' : '#0f766e' }}>
-              <strong>Còn lại:</strong> {remain.toLocaleString()} VND
-            </div>
+          <div style={{ padding: '8px 0', textAlign: 'left' }}>
+            <Space direction="vertical" size={4} style={{ alignItems: 'flex-start' }}>
+              <Space>
+                <DollarOutlined style={{ color: '#fa8c16' }} />
+                <Typography.Text strong style={{ color: '#fa8c16' }}>
+                  {total.toLocaleString()} VND
+                </Typography.Text>
+              </Space>
+              {paid > 0 && (
+                <Typography.Text type="secondary" style={{ fontSize: 12, color: '#52c41a' }}>
+                  Đã thanh toán: {paid.toLocaleString()} VND
+                </Typography.Text>
+              )}
+              {remain > 0 && (
+                <Typography.Text type="secondary" style={{ fontSize: 12, color: '#ff4d4f' }}>
+                  Còn lại: {remain.toLocaleString()} VND
+                </Typography.Text>
+              )}
+            </Space>
           </div>
         );
       }
     },
     {
-      title: 'Trạng thái',
+      title: (
+        <Space>
+          <CheckCircleOutlined style={{ color: '#722ed1' }} />
+          <span>Trạng thái</span>
+        </Space>
+      ),
       dataIndex: 'status',
-      render: (s: GroupBookingStatus) => <Tag color={statusColor[s]}>{statusLabel[s]}</Tag>
+      key: 'status',
+      width: 160,
+      align: 'center',
+      render: (s: GroupBookingStatus) => (
+        <div style={{ textAlign: 'center', padding: '8px 0' }}>
+          <Tag color={statusColor[s]}>{statusLabel[s]}</Tag>
+        </div>
+      )
     },
     {
-      title: 'Thao tác',
-      width: 220,
-      render: (_: any, r: GroupBookingItem) => (
+      title: (
         <Space>
-          <Button icon={<ReloadOutlined />} onClick={load}>Tải lại</Button>
-          <Button type="primary" onClick={() => setViewItem(r)}>Chi tiết</Button>
+          <EyeOutlined style={{ color: '#722ed1' }} />
+          <span>Thao tác</span>
         </Space>
+      ),
+      key: 'actions',
+      width: 140,
+      align: 'center',
+      fixed: 'right' as const,
+      render: (_: any, r: GroupBookingItem) => (
+        <div style={{ padding: '8px 0' }}>
+          <Button 
+            type="link" 
+            size="small" 
+            icon={<EyeOutlined />}
+            onClick={() => setViewItem(r)}
+          >
+            Chi tiết
+          </Button>
+        </div>
       )
     }
   ];
 
   return (
-    <>
+    <div style={{ padding: 24 }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          marginBottom: 16,
+        }}
+      >
+        <Typography.Title level={4}>
+          <TeamOutlined /> Quản lý đặt đoàn
+        </Typography.Title>
+      </div>
+
+      {/* Statistics */}
+      <GroupBookingStatistics
+        totalBookings={statistics.totalBookings}
+        pendingBookings={statistics.pendingBookings}
+        approvedBookings={statistics.approvedBookings}
+        paidBookings={statistics.paidBookings}
+        cancelledBookings={statistics.cancelledBookings}
+        totalRevenue={statistics.totalRevenue}
+      />
+
+      {/* Search và Filter */}
       <Card style={{ marginBottom: 16 }}>
         <Row gutter={[12, 12]} align="middle">
           <Col xs={24} md={8}>
-            <Input placeholder="Tìm theo mã, tên, điện thoại, email" value={search} onChange={(e) => setSearch(e.target.value)} allowClear />
+            <Input 
+              placeholder="Tìm theo mã, tên, điện thoại, email" 
+              value={search} 
+              onChange={(e) => setSearch(e.target.value)} 
+              allowClear 
+            />
           </Col>
           <Col xs={12} md={6}>
             <Select
@@ -379,45 +558,107 @@ const GroupBookingsPage: React.FC = () => {
         columns={columns as any}
         pagination={{ pageSize: 10, showSizeChanger: true }}
         sticky
+        scroll={{ x: 'max-content' }}
+        bordered
         expandable={{
-          expandedRowRender: (r: GroupBookingItem) => (
-            <div>
-              <Divider style={{ margin: '12px 0' }} />
-              <Descriptions title="Chi tiết nhanh" size="small" column={2}>
-                <Descriptions.Item label="Người liên hệ">{r.requesterName}</Descriptions.Item>
-                <Descriptions.Item label="Điện thoại">{r.requesterPhone}</Descriptions.Item>
-                <Descriptions.Item label="Ngày">{new Date(r.checkIn).toLocaleDateString()} → {new Date(r.checkOut).toLocaleDateString()}</Descriptions.Item>
-                <Descriptions.Item label="Báo giá">{r.quoteAmount != null ? `${r.quoteAmount.toLocaleString()} VND` : '-'}</Descriptions.Item>
-              </Descriptions>
-              <Divider style={{ margin: '12px 0' }} />
-              <b>Danh sách đoàn:</b>
-              {Array.isArray(r.members) && r.members.length > 0 ? (
-                <ul style={{ paddingLeft: 18, marginTop: 8 }}>
-                  {r.members.map((m, idx) => (
-                    <li key={idx}>
-                      {m.fullName} {m.isLeader ? '(Trưởng đoàn)' : ''} 
-                      {m.roomNumber ? <Tag color="blue" style={{ marginLeft: 8 }}>Phòng {m.roomNumber}</Tag> : ''}
-                      {m.phoneNumber ? ` - ${m.phoneNumber}` : ''}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <div style={{ marginTop: 8 }}><Tag>Chưa có</Tag></div>
-              )}
-            </div>
-          )
+          expandedRowRender: (r: GroupBookingItem) => {
+            const { total, paid, remain } = computeFinancials(r);
+            return (
+              <div style={{ padding: '16px', backgroundColor: '#fafafa', borderRadius: '4px' }}>
+                <Descriptions title="Chi tiết nhanh" size="small" column={2} bordered>
+                  <Descriptions.Item label="Mã">
+                    <Typography.Text copyable={{ text: r._id }}>
+                      {r._id}
+                    </Typography.Text>
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Người liên hệ">{r.requesterName}</Descriptions.Item>
+                  <Descriptions.Item label="Điện thoại">{r.requesterPhone}</Descriptions.Item>
+                  <Descriptions.Item label="Email">{r.requesterEmail || '-'}</Descriptions.Item>
+                  <Descriptions.Item label="Ngày nhận">{new Date(r.checkIn).toLocaleDateString('vi-VN')}</Descriptions.Item>
+                  <Descriptions.Item label="Ngày trả">{new Date(r.checkOut).toLocaleDateString('vi-VN')}</Descriptions.Item>
+                  <Descriptions.Item label="Báo giá">{r.quoteAmount != null ? `${r.quoteAmount.toLocaleString()} VND` : '-'}</Descriptions.Item>
+                  {total > 0 && (
+                    <>
+                      <Descriptions.Item label="Tổng tiền">{total.toLocaleString()} VND</Descriptions.Item>
+                      <Descriptions.Item label="Đã thanh toán" span={2}>
+                        <Typography.Text style={{ color: '#52c41a' }}>
+                          {paid.toLocaleString()} VND
+                        </Typography.Text>
+                      </Descriptions.Item>
+                      {remain > 0 && (
+                        <Descriptions.Item label="Còn lại" span={2}>
+                          <Typography.Text style={{ color: '#ff4d4f' }}>
+                            {remain.toLocaleString()} VND
+                          </Typography.Text>
+                        </Descriptions.Item>
+                      )}
+                    </>
+                  )}
+                </Descriptions>
+                <Divider style={{ margin: '12px 0' }} />
+                <Typography.Text strong>Danh sách đoàn ({r.members?.length || 0} thành viên):</Typography.Text>
+                {Array.isArray(r.members) && r.members.length > 0 ? (
+                  <ul style={{ paddingLeft: 18, marginTop: 8 }}>
+                    {r.members.map((m, idx) => (
+                      <li key={idx}>
+                        <Typography.Text strong>{m.fullName}</Typography.Text>
+                        {m.isLeader && <Tag color="orange" style={{ marginLeft: 8 }}>Trưởng đoàn</Tag>}
+                        {m.roomNumber && <Tag color="blue" style={{ marginLeft: 8 }}>Phòng {m.roomNumber}</Tag>}
+                        {m.phoneNumber && <Typography.Text type="secondary" style={{ marginLeft: 8 }}> - {m.phoneNumber}</Typography.Text>}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div style={{ marginTop: 8 }}><Tag>Chưa có</Tag></div>
+                )}
+              </div>
+            );
+          }
         }}
       />
 
-      <Modal open={!!viewItem} onCancel={() => setViewItem(null)} footer={null} title={`Chi tiết ${viewItem?._id || ''}`} width={760}>
+      <Drawer
+        title={`Chi tiết đặt đoàn`}
+        open={!!viewItem}
+        onClose={() => setViewItem(null)}
+        width={680}
+      >
         {viewItem && (
-          <Descriptions bordered column={1} size="small">
-            <Descriptions.Item label="Người liên hệ">{viewItem.requesterName} - {viewItem.requesterPhone}</Descriptions.Item>
-            <Descriptions.Item label="Email">{viewItem.requesterEmail || '-'}</Descriptions.Item>
-            <Descriptions.Item label="Ngày">{new Date(viewItem.checkIn).toLocaleString()} → {new Date(viewItem.checkOut).toLocaleString()}</Descriptions.Item>
-            <Descriptions.Item label="Số khách/phòng">{viewItem.peopleCount} / {viewItem.roomCount}</Descriptions.Item>
-            <Descriptions.Item label="Trạng thái"><Tag color={statusColor[viewItem.status]}>{statusLabel[viewItem.status]}</Tag></Descriptions.Item>
-            <Descriptions.Item label="Báo giá">{viewItem.quoteAmount ? viewItem.quoteAmount.toLocaleString() : '-'}</Descriptions.Item>
+          <Descriptions bordered column={1} size="middle">
+            <Descriptions.Item label="Mã">
+              <Typography.Text copyable={{ text: viewItem._id }}>
+                {viewItem._id}
+              </Typography.Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Người liên hệ">
+              <Typography.Text strong>{viewItem.requesterName}</Typography.Text>
+              <br />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {viewItem.requesterPhone}
+                {viewItem.requesterPhone && viewItem.requesterEmail ? ' | ' : ''}
+                {viewItem.requesterEmail || ''}
+              </Typography.Text>
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày nhận phòng">
+              {new Date(viewItem.checkIn).toLocaleString('vi-VN')}
+            </Descriptions.Item>
+            <Descriptions.Item label="Ngày trả phòng">
+              {new Date(viewItem.checkOut).toLocaleString('vi-VN')}
+            </Descriptions.Item>
+            <Descriptions.Item label="Số khách/phòng">
+              <Tag color="cyan" icon={<UserOutlined />}>{viewItem.peopleCount} người</Tag>
+              <Tag color="orange" icon={<HomeOutlined />} style={{ marginLeft: 8 }}>{viewItem.roomCount} phòng</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              <Tag color={statusColor[viewItem.status]}>{statusLabel[viewItem.status]}</Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Báo giá">
+              {viewItem.quoteAmount ? (
+                <Typography.Text strong style={{ color: '#fa8c16' }}>
+                  {viewItem.quoteAmount.toLocaleString()} VND
+                </Typography.Text>
+              ) : '-'}
+            </Descriptions.Item>
             <Descriptions.Item label="Đã thanh toán">
               {typeof viewItem.paidAmount === 'number'
                 ? `${viewItem.paidAmount.toLocaleString()} VND`
@@ -531,7 +772,7 @@ const GroupBookingsPage: React.FC = () => {
             </Space>
           </>
         )}
-      </Modal>
+      </Drawer>
 
       <Modal open={quoteOpen} onCancel={() => setQuoteOpen(false)} onOk={submitQuote} title={quoteTarget ? `Báo giá cho ${quoteTarget._id}` : 'Báo giá'} okText="Lưu">
         <Form layout="vertical">
@@ -682,7 +923,7 @@ const GroupBookingsPage: React.FC = () => {
           </div>
         )}
       </Modal>
-    </>
+    </div>
   );
 };
 
