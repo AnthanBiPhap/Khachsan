@@ -64,8 +64,9 @@ export default function GuestSearchFilter({
                 placeholder="Chọn nguồn"
               >
                 <Select.Option value="all">Tất cả nguồn</Select.Option>
-                <Select.Option value="online">Online</Select.Option>
-                <Select.Option value="walk_in">Walk-in</Select.Option>
+                <Select.Option value="online">Trực tuyến</Select.Option>
+                <Select.Option value="walk_in">Trực tiếp</Select.Option>
+                <Select.Option value="group">Đoàn</Select.Option>
               </Select>
             </div>
           </Col>

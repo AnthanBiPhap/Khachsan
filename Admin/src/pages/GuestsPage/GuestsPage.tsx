@@ -14,10 +14,12 @@ import {
 } from "antd";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { UserOutlined, PhoneOutlined, IdcardOutlined, EyeOutlined } from "@ant-design/icons";
+import { UserOutlined, PhoneOutlined, IdcardOutlined, EyeOutlined, CalendarOutlined } from "@ant-design/icons";
 import { fetchBookings } from "../../services/booking.service";
 import GuestSearchFilter from "../../components/Guests/GuestSearchFilter";
 import type { Booking } from "../../types/booking";
+import { env } from "../../constanst/getEnvs";
+import axios from "axios";
 
 const { Title } = Typography;
 
@@ -30,13 +32,14 @@ interface Guest {
   email?: string;
   isMainGuest: boolean;
   bookingId: string;
+  bookingType: 'regular' | 'group';
   bookingInfo?: {
     checkIn: string;
     checkOut: string;
     roomNumber?: string;
     source?: string;
   };
-  bookingData?: Booking;
+  bookingData?: Booking | any;
 }
 
 export default function GuestsPage() {
@@ -60,33 +63,103 @@ export default function GuestsPage() {
   const loadGuests = async (page = 1, limit = 10) => {
     try {
       setLoading(true);
-      const res = await fetchBookings(page, limit);
-      const bookings = res.data || [];
+      
+      // Fetch cả bookings thường và group bookings
+      const [bookingsRes, groupBookingsRes] = await Promise.all([
+        fetchBookings(page, limit),
+        axios.get(`${env.API_URL}/api/v1/group-bookings`).catch(() => ({ data: { data: [] } }))
+      ]);
+      
+      const bookings = bookingsRes.data || [];
+      const groupBookings = groupBookingsRes.data?.data || [];
       
       // Chỉ hiển thị khách chính trong bảng chính
       const mainGuests: Guest[] = [];
+      
+      // Lấy guests từ bookings thường
       bookings.forEach((booking: Booking) => {
         if (booking.guests && booking.guests.length > 0) {
           // Chỉ lấy khách chính để hiển thị trong bảng
           const mainGuest = booking.guests.find(guest => guest.isMainGuest) || booking.guests[0];
           
+          // Tính tuổi từ dateOfBirth nếu có
+          let age: number | undefined;
+          if (mainGuest.dateOfBirth) {
+            const birthDate = new Date(mainGuest.dateOfBirth);
+            const today = new Date();
+            age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+              age--;
+            }
+          } else if (mainGuest.age) {
+            // Nếu không có dateOfBirth nhưng có age, dùng age
+            age = mainGuest.age;
+          }
+          
           mainGuests.push({
-            _id: booking._id,
+            _id: `${booking._id}-main`,
             fullName: mainGuest.fullName,
-            age: mainGuest.age,
+            age: age,
             phoneNumber: mainGuest.phoneNumber,
             idNumber: mainGuest.idNumber,
             email: mainGuest.email,
             isMainGuest: true,
             bookingId: booking._id,
+            bookingType: 'regular',
             bookingInfo: {
               checkIn: booking.checkIn,
               checkOut: booking.checkOut,
               roomNumber: (booking.roomId as { roomNumber?: string })?.roomNumber,
               source: booking.source,
             },
-            // Lưu thông tin booking đầy đủ để hiển thị chi tiết
             bookingData: booking,
+          });
+        }
+      });
+      
+      // Lấy guests từ group bookings (chỉ lấy group bookings đã có members)
+      groupBookings.forEach((groupBooking: any) => {
+        // Chỉ lấy group bookings đã có members (status >= info_uploaded)
+        if (groupBooking.members && groupBooking.members.length > 0) {
+          // Lấy leader hoặc member đầu tiên làm khách chính
+          const mainMember = groupBooking.members.find((m: any) => m.isLeader) || groupBooking.members[0];
+          
+          // Tính tuổi từ dateOfBirth nếu có
+          let age: number | undefined;
+          if (mainMember.dateOfBirth) {
+            const birthDate = new Date(mainMember.dateOfBirth);
+            const today = new Date();
+            age = today.getFullYear() - birthDate.getFullYear();
+            const monthDiff = today.getMonth() - birthDate.getMonth();
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+              age--;
+            }
+          }
+          
+          // Lấy danh sách số phòng từ allocatedRoomIds
+          const roomNumbers = groupBooking.allocatedRoomIds
+            ?.map((room: any) => room.roomNumber || room)
+            .filter(Boolean)
+            .join(', ') || '-';
+          
+          mainGuests.push({
+            _id: `${groupBooking._id}-main`,
+            fullName: mainMember.fullName,
+            age: age,
+            phoneNumber: mainMember.phoneNumber || groupBooking.requesterPhone,
+            idNumber: mainMember.idNumber,
+            email: mainMember.email || groupBooking.requesterEmail,
+            isMainGuest: true,
+            bookingId: groupBooking._id,
+            bookingType: 'group',
+            bookingInfo: {
+              checkIn: groupBooking.checkIn,
+              checkOut: groupBooking.checkOut,
+              roomNumber: roomNumbers,
+              source: 'group',
+            },
+            bookingData: groupBooking,
           });
         }
       });
@@ -94,8 +167,8 @@ export default function GuestsPage() {
       setGuests(mainGuests);
       setFilteredGuests(mainGuests);
       setPagination({
-        current: res.pagination?.page || 1,
-        pageSize: res.pagination?.limit || 10,
+        current: bookingsRes.pagination?.page || 1,
+        pageSize: bookingsRes.pagination?.limit || 10,
         total: mainGuests.length,
       });
     } catch (e) {
@@ -128,7 +201,11 @@ export default function GuestsPage() {
 
     // Source filter
     if (filterSource !== 'all') {
-      filtered = filtered.filter(guest => guest.bookingInfo?.source === filterSource);
+      if (filterSource === 'group') {
+        filtered = filtered.filter(guest => guest.bookingType === 'group');
+      } else {
+        filtered = filtered.filter(guest => guest.bookingInfo?.source === filterSource);
+      }
     }
 
     // Age filter
@@ -180,11 +257,15 @@ export default function GuestsPage() {
     {
       title: "Tên khách hàng",
       key: "fullName",
+      width: 250,
       render: (_: unknown, record: Guest) => (
         <div>
           <Typography.Text strong>{record.fullName}</Typography.Text>
-          <Tag color="blue" style={{ marginLeft: 8, fontSize: 12 }}>
-            Khách chính
+          <Tag 
+            color={record.bookingType === 'group' ? "orange" : "blue"} 
+            style={{ marginLeft: 8, fontSize: 12 }}
+          >
+            {record.bookingType === 'group' ? "Trưởng đoàn" : "Khách chính"}
           </Tag>
         </div>
       ),
@@ -216,29 +297,12 @@ export default function GuestsPage() {
       ),
     },
     {
-      title: "Booking",
-      key: "booking",
-      render: (_: unknown, record: Guest) => (
-        <div>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Mã: {record.bookingId.slice(0, 8)}...
-          </Typography.Text>
-          <br />
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Phòng: {record.bookingInfo?.roomNumber || "-"}
-          </Typography.Text>
-          <br />
-          <Tag color={record.bookingInfo?.source === "online" ? "blue" : "purple"} style={{ fontSize: 12 }}>
-            {record.bookingInfo?.source === "online" ? "Online" : "Walk-in"}
-          </Tag>
-        </div>
-      ),
-    },
-    {
       title: "Số khách",
       key: "guestCount",
       render: (_: unknown, record: Guest) => {
-        const guestCount = record.bookingData?.guestCount || record.bookingData?.guests?.length || 0;
+        const guestCount = record.bookingType === 'group' 
+          ? (record.bookingData?.peopleCount || record.bookingData?.members?.length || 0)
+          : (record.bookingData?.guestCount || record.bookingData?.guests?.length || 0);
         const hasAdditionalGuests = guestCount > 1;
         return (
           <div>
@@ -255,27 +319,38 @@ export default function GuestsPage() {
       },
     },
     {
-      title: "Thời gian",
+      title: (
+        <Space>
+          <CalendarOutlined style={{ color: '#722ed1' }} />
+          <span>Thời gian</span>
+        </Space>
+      ),
       key: "time",
       render: (_: unknown, record: Guest) => (
-        <div>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Nhận: {record.bookingInfo?.checkIn 
-              ? new Date(record.bookingInfo.checkIn).toLocaleDateString("vi-VN")
-              : "-"}
-          </Typography.Text>
-          <br />
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Trả: {record.bookingInfo?.checkOut 
-              ? new Date(record.bookingInfo.checkOut).toLocaleDateString("vi-VN")
-              : "-"}
-          </Typography.Text>
-        </div>
+        <Space direction="vertical" size={0}>
+          <Space size={4}>
+            <CalendarOutlined style={{ color: '#52c41a', fontSize: 12 }} />
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Nhận: {record.bookingInfo?.checkIn 
+                ? new Date(record.bookingInfo.checkIn).toLocaleString("vi-VN")
+                : "-"}
+            </Typography.Text>
+          </Space>
+          <Space size={4}>
+            <CalendarOutlined style={{ color: '#ff4d4f', fontSize: 12 }} />
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Trả: {record.bookingInfo?.checkOut 
+                ? new Date(record.bookingInfo.checkOut).toLocaleString("vi-VN")
+                : "-"}
+            </Typography.Text>
+          </Space>
+        </Space>
       ),
     },
     {
       title: "Thao tác",
       key: "actions",
+      width: 120,
       render: (_: unknown, record: Guest) => (
         <Button 
           type="link" 
@@ -292,11 +367,17 @@ export default function GuestsPage() {
   const totalBookings = guests.length;
   const onlineBookings = guests.filter(g => g.bookingInfo?.source === 'online').length;
   const walkInBookings = guests.filter(g => g.bookingInfo?.source === 'walk_in').length;
+  const groupBookings = guests.filter(g => g.bookingType === 'group').length;
   
   // Tính tổng số khách từ tất cả bookings
   const totalGuests = guests.reduce((sum, guest) => {
-    const guestCount = guest.bookingData?.guestCount || guest.bookingData?.guests?.length || 0;
-    return sum + guestCount;
+    if (guest.bookingType === 'group') {
+      // Group booking: sử dụng peopleCount hoặc members.length
+      return sum + (guest.bookingData?.peopleCount || guest.bookingData?.members?.length || 0);
+    } else {
+      // Regular booking: sử dụng guestCount hoặc guests.length
+      return sum + (guest.bookingData?.guestCount || guest.bookingData?.guests?.length || 0);
+    }
   }, 0);
 
   return (
@@ -328,7 +409,7 @@ export default function GuestsPage() {
         <Col span={6}>
           <Card>
             <Statistic
-              title="Booking Online"
+              title="Booking Trực tuyến"
               value={onlineBookings}
               valueStyle={{ color: '#1890ff' }}
             />
@@ -337,9 +418,18 @@ export default function GuestsPage() {
         <Col span={6}>
           <Card>
             <Statistic
-              title="Booking Walk-in"
+              title="Booking Trực tiếp"
               value={walkInBookings}
               valueStyle={{ color: '#722ed1' }}
+            />
+          </Card>
+        </Col>
+        <Col span={6}>
+          <Card>
+            <Statistic
+              title="Booking Đoàn"
+              value={groupBookings}
+              valueStyle={{ color: '#fa8c16' }}
             />
           </Card>
         </Col>
@@ -399,7 +489,13 @@ export default function GuestsPage() {
                   {selectedBooking._id}
                 </Descriptions.Item>
                 <Descriptions.Item label="Phòng">
-                  {(selectedBooking.roomId as { roomNumber?: string })?.roomNumber || "-"}
+                  {selectedBooking.roomId 
+                    ? ((selectedBooking.roomId as { roomNumber?: string })?.roomNumber || "-")
+                    : (selectedBooking.allocatedRoomIds 
+                        ?.map((room: any) => room.roomNumber || room)
+                        .filter(Boolean)
+                        .join(', ') || "-")
+                  }
                 </Descriptions.Item>
                 <Descriptions.Item label="Ngày nhận">
                   {selectedBooking.checkIn
@@ -412,62 +508,155 @@ export default function GuestsPage() {
                     : "-"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Nguồn">
-                  <Tag color={selectedBooking.source === "online" ? "blue" : "purple"}>
-                    {selectedBooking.source === "online" ? "Online" : "Walk-in"}
+                  <Tag color={
+                    selectedBooking.source === "group" ? "orange" :
+                    selectedBooking.source === "online" ? "blue" : "purple"
+                  }>
+                    {selectedBooking.source === "group" ? "Đoàn" :
+                     selectedBooking.source === "online" ? "Trực tuyến" : "Trực tiếp"}
                   </Tag>
                 </Descriptions.Item>
                 <Descriptions.Item label="Tổng tiền">
                   {new Intl.NumberFormat("vi-VN", {
                     style: "currency",
                     currency: "VND",
-                  }).format(selectedBooking.totalPrice)}
+                  }).format(selectedBooking.totalPrice || selectedBooking.quoteAmount || 0)}
                 </Descriptions.Item>
               </Descriptions>
             </Card>
 
             {/* Danh sách khách hàng */}
-            <Card title={`Danh sách khách hàng (${selectedBooking.guests?.length || 0} người)`}>
-              {selectedBooking.guests && selectedBooking.guests.length > 0 ? (
+            <Card title={`Danh sách khách hàng (${
+              selectedBooking.guests?.length || 
+              selectedBooking.members?.length || 
+              selectedBooking.peopleCount || 
+              0
+            } người)`}>
+              {(selectedBooking.guests && selectedBooking.guests.length > 0) ? (
                 <div>
-                  {selectedBooking.guests.map((guest, index) => (
-                    <Card 
-                      key={index} 
-                      size="small" 
-                      style={{ marginBottom: 12 }}
-                      title={
-                        <Space>
-                          <UserOutlined />
-                          <span>{guest.fullName}</span>
-                          {guest.isMainGuest && (
-                            <Tag color="blue" style={{ fontSize: 12 }}>Khách chính</Tag>
-                          )}
-                        </Space>
+                  {selectedBooking.guests.map((guest: any, index: number) => {
+                    // Tính tuổi từ dateOfBirth
+                    let age: number | undefined;
+                    if (guest.dateOfBirth) {
+                      const birthDate = new Date(guest.dateOfBirth);
+                      const today = new Date();
+                      age = today.getFullYear() - birthDate.getFullYear();
+                      const monthDiff = today.getMonth() - birthDate.getMonth();
+                      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                        age--;
                       }
-                    >
-                      <Row gutter={[16, 8]}>
-                        <Col span={12}>
+                    } else if (guest.age) {
+                      // Nếu không có dateOfBirth nhưng có age, dùng age
+                      age = guest.age;
+                    }
+                    
+                    return (
+                      <Card 
+                        key={index} 
+                        size="small" 
+                        style={{ marginBottom: 12 }}
+                        title={
                           <Space>
-                            <IdcardOutlined style={{ color: '#1890ff' }} />
-                            <Typography.Text strong>CMND/CCCD:</Typography.Text>
-                            <Typography.Text>{guest.idNumber || "-"}</Typography.Text>
+                            <UserOutlined />
+                            <span>{guest.fullName}</span>
+                            {guest.isMainGuest && (
+                              <Tag color="blue" style={{ fontSize: 12 }}>Khách chính</Tag>
+                            )}
                           </Space>
-                        </Col>
-                        <Col span={12}>
+                        }
+                      >
+                        <Row gutter={[16, 8]}>
+                          <Col span={12}>
+                            <Space>
+                              <IdcardOutlined style={{ color: '#1890ff' }} />
+                              <Typography.Text strong>CMND/CCCD:</Typography.Text>
+                              <Typography.Text>{guest.idNumber || "-"}</Typography.Text>
+                            </Space>
+                          </Col>
+                          <Col span={12}>
+                            <Space>
+                              <Typography.Text strong>Tuổi:</Typography.Text>
+                              <Typography.Text>{age ? `${age} tuổi` : "-"}</Typography.Text>
+                            </Space>
+                          </Col>
+                          <Col span={12}>
+                            <Space>
+                              <PhoneOutlined style={{ color: '#52c41a' }} />
+                              <Typography.Text strong>Điện thoại:</Typography.Text>
+                              <Typography.Text>{guest.phoneNumber || "-"}</Typography.Text>
+                            </Space>
+                          </Col>
+                        </Row>
+                      </Card>
+                    );
+                  })}
+                </div>
+              ) : (selectedBooking.members && selectedBooking.members.length > 0) ? (
+                <div>
+                  {selectedBooking.members.map((member: any, index: number) => {
+                    // Tính tuổi từ dateOfBirth
+                    let age: number | undefined;
+                    if (member.dateOfBirth) {
+                      const birthDate = new Date(member.dateOfBirth);
+                      const today = new Date();
+                      age = today.getFullYear() - birthDate.getFullYear();
+                      const monthDiff = today.getMonth() - birthDate.getMonth();
+                      if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                        age--;
+                      }
+                    }
+                    
+                    return (
+                      <Card 
+                        key={index} 
+                        size="small" 
+                        style={{ marginBottom: 12 }}
+                        title={
                           <Space>
-                            <Typography.Text strong>Tuổi:</Typography.Text>
-                            <Typography.Text>{guest.age ? `${guest.age} tuổi` : "-"}</Typography.Text>
+                            <UserOutlined />
+                            <span>{member.fullName}</span>
+                            {member.isLeader && (
+                              <Tag color="orange" style={{ fontSize: 12 }}>Trưởng đoàn</Tag>
+                            )}
+                            {member.roomNumber && (
+                              <Tag color="blue" style={{ fontSize: 12 }}>Phòng {member.roomNumber}</Tag>
+                            )}
                           </Space>
-                        </Col>
-                        <Col span={12}>
-                          <Space>
-                            <PhoneOutlined style={{ color: '#52c41a' }} />
-                            <Typography.Text strong>Điện thoại:</Typography.Text>
-                            <Typography.Text>{guest.phoneNumber || "-"}</Typography.Text>
-                          </Space>
-                        </Col>
-                      </Row>
-                    </Card>
-                  ))}
+                        }
+                      >
+                        <Row gutter={[16, 8]}>
+                          <Col span={12}>
+                            <Space>
+                              <IdcardOutlined style={{ color: '#1890ff' }} />
+                              <Typography.Text strong>CMND/CCCD:</Typography.Text>
+                              <Typography.Text>{member.idNumber || "-"}</Typography.Text>
+                            </Space>
+                          </Col>
+                          <Col span={12}>
+                            <Space>
+                              <Typography.Text strong>Tuổi:</Typography.Text>
+                              <Typography.Text>{age ? `${age} tuổi` : "-"}</Typography.Text>
+                            </Space>
+                          </Col>
+                          <Col span={12}>
+                            <Space>
+                              <PhoneOutlined style={{ color: '#52c41a' }} />
+                              <Typography.Text strong>Điện thoại:</Typography.Text>
+                              <Typography.Text>{member.phoneNumber || "-"}</Typography.Text>
+                            </Space>
+                          </Col>
+                          {member.email && (
+                            <Col span={12}>
+                              <Space>
+                                <Typography.Text strong>Email:</Typography.Text>
+                                <Typography.Text>{member.email}</Typography.Text>
+                              </Space>
+                            </Col>
+                          )}
+                        </Row>
+                      </Card>
+                    );
+                  })}
                 </div>
               ) : (
                 <Typography.Text type="secondary">
