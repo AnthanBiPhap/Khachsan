@@ -5,7 +5,8 @@ const serviceBookingSchema = new Schema(
     bookingId: {
       type: Schema.Types.ObjectId,
       ref: "Booking",
-      required: [true, "Thiếu booking"],
+      required: false,
+      default: null
     },
     serviceId: {
       type: Schema.Types.ObjectId,
@@ -17,6 +18,16 @@ const serviceBookingSchema = new Schema(
       ref: "User",
       required: false,
       default: null
+    },
+    guestName: {
+      type: String,
+      required: false,
+      trim: true
+    },
+    phoneNumber: {
+      type: String,
+      required: false,
+      trim: true
     },
     scheduledAt: {
       type: Date,
