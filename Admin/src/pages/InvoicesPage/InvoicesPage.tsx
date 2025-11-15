@@ -6,9 +6,10 @@ import {
   Drawer,
   Descriptions,
   Tag,
+  Space,
 } from "antd";
 import { useEffect, useState, useCallback, useRef } from "react";
-import { FileTextOutlined } from "@ant-design/icons";
+import { FileTextOutlined, CalendarOutlined } from "@ant-design/icons";
 import type { InvoiceItem } from "../../types/invoice";
 import { fetchInvoices, deleteInvoice } from "../../services/invoices.service";
 import { env } from "../../constanst/getEnvs";
@@ -309,36 +310,54 @@ export default function InvoicesPage() {
         {detailItem && (
           <Descriptions column={1} bordered size="middle">
             {/* <Descriptions.Item label="ID">{detailItem._id}</Descriptions.Item> */}
-            <Descriptions.Item label="Booking">
+            <Descriptions.Item label="Thông tin đặt phòng" span={2}>
               {(() => {
                 // Kiểm tra group booking trước
                 if (detailItem.groupBookingId) {
                   const gb = detailItem.groupBookingId;
                   return (
-                    <div>
-                      <Tag color="purple" style={{ marginBottom: 8 }}>Đặt theo đoàn</Tag>
-                      <div><strong>Mã:</strong> {gb._id}</div>
-                      <div><strong>Người yêu cầu:</strong> {gb.requesterName || "-"}</div>
-                      <div><strong>Nhận phòng:</strong> {gb.checkIn ? new Date(gb.checkIn).toLocaleString("vi-VN") : "-"}</div>
-                      <div><strong>Trả phòng:</strong> {gb.checkOut ? new Date(gb.checkOut).toLocaleString("vi-VN") : "-"}</div>
-                      {gb.roomCount && (
-                        <div><strong>Số phòng:</strong> {gb.roomCount} phòng</div>
-                      )}
-                      {gb.peopleCount && (
-                        <div><strong>Số người:</strong> {gb.peopleCount} người</div>
-                      )}
-                      {gb.allocatedRoomIds && gb.allocatedRoomIds.length > 0 && (
-                        <div style={{ marginTop: 8 }}>
-                          <strong>Phòng đã phân bổ:</strong>
-                          <div style={{ marginLeft: 16, marginTop: 4 }}>
-                            {gb.allocatedRoomIds.map((room: any, idx: number) => (
-                              <div key={idx} style={{ fontSize: 12 }}>
-                                - Phòng {room.roomNumber || room._id} ({room.typeId?.name || "-"})
-                              </div>
-                            ))}
+                    <div style={{ marginTop: 8 }}>
+                      <Space size={8} style={{ marginBottom: 12 }}>
+                        <Tag color="purple" style={{ fontSize: 13, padding: '4px 12px' }}>
+                          Đặt theo đoàn
+                        </Tag>
+                        <Typography.Text strong copyable={{ text: gb._id }}>
+                          Mã: {gb._id?.slice(0, 12)}...
+                        </Typography.Text>
+                      </Space>
+                      <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                        <Space size={8}>
+                          <CalendarOutlined style={{ color: '#52c41a' }} />
+                          <Typography.Text>
+                            <strong>Nhận phòng:</strong> {gb.checkIn ? new Date(gb.checkIn).toLocaleString("vi-VN") : "-"}
+                          </Typography.Text>
+                        </Space>
+                        <Space size={8}>
+                          <CalendarOutlined style={{ color: '#ff4d4f' }} />
+                          <Typography.Text>
+                            <strong>Trả phòng:</strong> {gb.checkOut ? new Date(gb.checkOut).toLocaleString("vi-VN") : "-"}
+                          </Typography.Text>
+                        </Space>
+                        {(gb.roomCount || gb.peopleCount) && (
+                          <Space size={8}>
+                            <Typography.Text>
+                              <strong>Số phòng:</strong> {gb.roomCount || 0} phòng | <strong>Số người:</strong> {gb.peopleCount || 0} người
+                            </Typography.Text>
+                          </Space>
+                        )}
+                        {gb.allocatedRoomIds && gb.allocatedRoomIds.length > 0 && (
+                          <div style={{ marginTop: 8, padding: '8px 12px', backgroundColor: '#f5f5f5', borderRadius: '4px' }}>
+                            <Typography.Text strong style={{ fontSize: 13 }}>Phòng đã phân bổ:</Typography.Text>
+                            <div style={{ marginTop: 4 }}>
+                              {gb.allocatedRoomIds.map((room: any, idx: number) => (
+                                <Tag key={idx} color="cyan" style={{ margin: '4px 4px 4px 0' }}>
+                                  Phòng {room.roomNumber || room._id} {room.typeId?.name ? `(${room.typeId.name})` : ''}
+                                </Tag>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        )}
+                      </Space>
                     </div>
                   );
                 }
@@ -347,19 +366,49 @@ export default function InvoicesPage() {
                 if (detailItem.bookingId) {
                   const booking = detailItem.bookingId;
                   return (
-                    <div>
-                      <Tag color="blue" style={{ marginBottom: 8 }}>Đặt phòng</Tag>
-                      <div><strong>Mã:</strong> {booking._id}</div>
-                      <div><strong>Nhận phòng:</strong> {booking.checkIn ? new Date(booking.checkIn).toLocaleString("vi-VN") : "-"}</div>
-                      <div><strong>Trả phòng:</strong> {booking.checkOut ? new Date(booking.checkOut).toLocaleString("vi-VN") : "-"}</div>
-                      {booking.source && (
-                        <div><strong>Nguồn:</strong> {booking.source === "online" ? "Online" : "Walk-in"}</div>
-                      )}
+                    <div style={{ marginTop: 8 }}>
+                      <Space size={8} style={{ marginBottom: 12 }}>
+                        <Tag color="blue" style={{ fontSize: 13, padding: '4px 12px' }}>
+                          Đặt phòng
+                        </Tag>
+                        <Typography.Text strong copyable={{ text: booking._id }}>
+                          Mã: {booking._id?.slice(0, 12)}...
+                        </Typography.Text>
+                        {booking.source && (
+                          <Tag color={booking.source === "online" ? "green" : "orange"}>
+                            {booking.source === "online" ? "Trực tuyến" : "Trực tiếp"}
+                          </Tag>
+                        )}
+                      </Space>
+                      <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                        <Space size={8}>
+                          <CalendarOutlined style={{ color: '#52c41a' }} />
+                          <Typography.Text>
+                            <strong>Nhận phòng:</strong> {booking.checkIn ? new Date(booking.checkIn).toLocaleString("vi-VN") : "-"}
+                          </Typography.Text>
+                        </Space>
+                        <Space size={8}>
+                          <CalendarOutlined style={{ color: '#ff4d4f' }} />
+                          <Typography.Text>
+                            <strong>Trả phòng:</strong> {booking.checkOut ? new Date(booking.checkOut).toLocaleString("vi-VN") : "-"}
+                          </Typography.Text>
+                        </Space>
+                        {booking.roomId && (
+                          <Space size={8}>
+                            <Typography.Text>
+                              <strong>Phòng:</strong> {booking.roomId?.roomNumber || "-"} 
+                              {booking.roomId?.typeId?.name ? ` (${booking.roomId.typeId.name})` : ''}
+                            </Typography.Text>
+                          </Space>
+                        )}
+                      </Space>
                     </div>
                   );
                 }
                 
-                return <div>-</div>;
+                return (
+                  <Typography.Text type="secondary">Không có thông tin đặt phòng</Typography.Text>
+                );
               })()}
             </Descriptions.Item>
             <Descriptions.Item label="Khách hàng">

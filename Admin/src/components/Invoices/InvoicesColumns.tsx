@@ -20,113 +20,15 @@ export const invoicesColumns = (
   handleDetail?: (record: InvoiceItem) => void
 ): ColumnsType<InvoiceItem> => [
   {
-    title: "Booking",
-    key: "booking",
-    render: (_, r) => {
-      // Kiểm tra nếu có groupBookingId (đặt theo đoàn)
-      if (r.groupBookingId) {
-        const gb = r.groupBookingId;
-        const content = (
-          <div>
-            <Space size={4} style={{ marginBottom: 4 }}>
-              <Tag color="purple" style={{ margin: 0 }}>
-                Đặt đoàn
-              </Tag>
-              <Typography.Text strong copyable={{ text: gb._id }}>
-                {gb._id}
-              </Typography.Text>
-            </Space>
-            <br />
-            <Space direction="vertical" size={0} style={{ alignItems: 'flex-start' }}>
-              <Space size={4} style={{ alignItems: 'center' }}>
-                <CalendarOutlined style={{ color: '#52c41a', fontSize: 12, width: 12 }} />
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  Nhận: {gb.checkIn ? new Date(gb.checkIn).toLocaleString('vi-VN') : '-'}
-                </Typography.Text>
-              </Space>
-              <Space size={4} style={{ alignItems: 'center' }}>
-                <CalendarOutlined style={{ color: '#ff4d4f', fontSize: 12, width: 12 }} />
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  Trả: {gb.checkOut ? new Date(gb.checkOut).toLocaleString('vi-VN') : '-'}
-                </Typography.Text>
-              </Space>
-              {gb.roomCount && (
-                <Space size={4} style={{ alignItems: 'center' }}>
-                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    {gb.roomCount} phòng, {gb.peopleCount || 0} người
-                  </Typography.Text>
-                </Space>
-              )}
-            </Space>
-          </div>
-        );
-        return handleDetail ? (
-          <Button 
-            type="link" 
-            onClick={() => handleDetail(r)}
-            style={{ padding: 0, height: 'auto' }}
-          >
-            {content}
-          </Button>
-        ) : content;
-      }
-      
-      // Booking thông thường
-      if (r.bookingId) {
-        const booking = r.bookingId;
-        const content = (
-          <div>
-            <Space size={4} style={{ marginBottom: 4 }}>
-              <Tag color="blue" style={{ margin: 0 }}>
-                Đặt phòng
-              </Tag>
-              <Typography.Text strong copyable={{ text: booking._id }}>
-                {booking._id}
-              </Typography.Text>
-            </Space>
-            <br />
-            <Space direction="vertical" size={0} style={{ alignItems: 'flex-start' }}>
-              <Space size={4} style={{ alignItems: 'center' }}>
-                <CalendarOutlined style={{ color: '#52c41a', fontSize: 12, width: 12 }} />
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  Nhận: {booking.checkIn ? new Date(booking.checkIn).toLocaleString('vi-VN') : '-'}
-                </Typography.Text>
-              </Space>
-              <Space size={4} style={{ alignItems: 'center' }}>
-                <CalendarOutlined style={{ color: '#ff4d4f', fontSize: 12, width: 12 }} />
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  Trả: {booking.checkOut ? new Date(booking.checkOut).toLocaleString('vi-VN') : '-'}
-                </Typography.Text>
-              </Space>
-            </Space>
-          </div>
-        );
-        return handleDetail ? (
-          <Button 
-            type="link" 
-            onClick={() => handleDetail(r)}
-            style={{ padding: 0, height: 'auto' }}
-          >
-            {content}
-          </Button>
-        ) : content;
-      }
-      
-      // Không có booking hoặc group booking
-      return (
-        <Typography.Text type="secondary">-</Typography.Text>
-      );
-    }
-  },
-  {
     title: "Khách hàng",
     key: "customer",
+    align: 'center',
     render: (_, r) => {
       // Kiểm tra group booking trước
       if (r.groupBookingId) {
         const gb = r.groupBookingId;
         return (
-          <div>
+          <div style={{ textAlign: 'center' }}>
             <Typography.Text strong>{gb.requesterName || "-"}</Typography.Text>
             {(gb.requesterPhone || gb.requesterEmail) && (
               <>
@@ -162,7 +64,7 @@ export const invoicesColumns = (
       }
       
       return (
-        <div>
+        <div style={{ textAlign: 'center' }}>
           <Typography.Text strong>{customerName}</Typography.Text>
           {customerContact && (
             <>
@@ -281,41 +183,22 @@ export const invoicesColumns = (
   {
     title: (
       <Space>
-        <EditOutlined style={{ color: '#722ed1' }} />
+        <EyeOutlined style={{ color: '#722ed1' }} />
         <span>Thao tác</span>
       </Space>
     ),
     key: "actions",
     render: (_, r) => (
-      <Space>
+      handleDetail ? (
         <Button 
           type="link" 
           size="small" 
-          icon={<EditOutlined />}
-          onClick={() => handleEdit(r)}
+          icon={<EyeOutlined />}
+          onClick={() => handleDetail(r)}
         >
-          Sửa
+          Chi tiết
         </Button>
-        <Button 
-          type="link" 
-          size="small" 
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleDelete(r._id)}
-        >
-          Xóa
-        </Button>
-        {handleDetail && (
-          <Button 
-            type="link" 
-            size="small" 
-            icon={<EyeOutlined />}
-            onClick={() => handleDetail(r)}
-          >
-            Chi tiết
-          </Button>
-        )}
-      </Space>
+      ) : null
     )
   }
 ];

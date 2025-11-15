@@ -318,9 +318,22 @@ const printInvoice = async (invoiceId: string) => {
     } else if (booking?.guests && booking.guests.length > 0) {
       // Khách hàng walk_in - lấy thông tin khách chính
       const mainGuest = booking.guests.find((guest: any) => guest.isMainGuest) || booking.guests[0];
+      
+      // Tính tuổi từ dateOfBirth nếu không có age
+      let age: number | string = mainGuest?.age;
+      if (!age && mainGuest?.dateOfBirth) {
+        const birthDate = new Date(mainGuest.dateOfBirth);
+        const today = new Date();
+        age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+      }
+      
       doc.fontSize(12).text(`Tên: ${mainGuest?.fullName || "-"}`);
       doc.text(`Số CMND/CCCD: ${mainGuest?.idNumber || "-"}`);
-      doc.text(`Tuổi: ${mainGuest?.age || "-"}`);
+      doc.text(`Tuổi: ${age || "-"}`);
       doc.text(`Điện thoại: ${mainGuest?.phoneNumber || "-"}`);
       // Không hiển thị email cho khách walk_in
       
@@ -334,9 +347,21 @@ const printInvoice = async (invoiceId: string) => {
       }
     } else if (booking?.guestInfo) {
       // Fallback cho dữ liệu cũ
+      // Tính tuổi từ dateOfBirth nếu không có age
+      let age: number | string = booking.guestInfo.age;
+      if (!age && booking.guestInfo.dateOfBirth) {
+        const birthDate = new Date(booking.guestInfo.dateOfBirth);
+        const today = new Date();
+        age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+      }
+      
       doc.fontSize(12).text(`Tên: ${booking.guestInfo.fullName || "-"}`);
       doc.text(`Số CMND/CCCD: ${booking.guestInfo.idNumber || "-"}`);
-      doc.text(`Tuổi: ${booking.guestInfo.age || "-"}`);
+      doc.text(`Tuổi: ${age || "-"}`);
       doc.text(`Điện thoại: ${booking.guestInfo.phoneNumber || "-"}`);
       // Không hiển thị email cho khách walk_in
     } else {
