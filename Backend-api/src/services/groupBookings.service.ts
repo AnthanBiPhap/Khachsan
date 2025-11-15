@@ -410,6 +410,24 @@ const rejectGroupBooking = async (gb: any, reason: string) => {
   gb.rejectedAt = new Date();
   appendNote(gb, "Rejected", reason);
   await gb.save();
+
+  // Gửi email thông báo từ chối
+  try {
+    if (gb.requesterEmail) {
+      await emailService.sendGroupBookingRejected({
+        to: gb.requesterEmail,
+        groupBookingId: gb._id.toString(),
+        requesterName: gb.requesterName,
+        checkIn: gb.checkIn,
+        checkOut: gb.checkOut,
+        reason: reason,
+      });
+      console.log(`✅ Đã gửi email từ chối group booking đến ${gb.requesterEmail}`);
+    }
+  } catch (emailError) {
+    console.error("❌ Lỗi gửi email từ chối group booking:", emailError);
+    // Không throw error để không ảnh hưởng đến flow chính
+  }
 };
 
 const approve = async (id: string) => {
@@ -448,6 +466,38 @@ const approve = async (id: string) => {
   gb.allocatedRoomIds = optimal.map((r: any) => r._id);
   gb.status = "approved";
   await gb.save();
+
+  // Populate allocatedRoomIds để lấy thông tin phòng
+  await gb.populate({
+    path: "allocatedRoomIds",
+    select: "roomNumber typeId",
+    populate: { path: "typeId", select: "name" }
+  });
+
+  // Gửi email thông báo duyệt group booking
+  try {
+    if (gb.requesterEmail) {
+      const allocatedRooms = (gb.allocatedRoomIds as any[]).map((room: any) => ({
+        roomNumber: room.roomNumber,
+        typeName: room.typeId?.name || undefined,
+      }));
+
+      await emailService.sendGroupBookingApproval({
+        to: gb.requesterEmail,
+        groupBookingId: gb._id.toString(),
+        requesterName: gb.requesterName,
+        checkIn: gb.checkIn,
+        checkOut: gb.checkOut,
+        peopleCount: gb.peopleCount,
+        roomCount: gb.roomCount,
+        allocatedRooms: allocatedRooms,
+      });
+      console.log(`✅ Đã gửi email duyệt group booking đến ${gb.requesterEmail}`);
+    }
+  } catch (emailError) {
+    console.error("❌ Lỗi gửi email duyệt group booking:", emailError);
+    // Không throw error để không ảnh hưởng đến flow chính
+  }
 
   // Gửi socket notification và lưu vào database cho khách hàng
   try {
@@ -695,6 +745,27 @@ const quote = async (
   gb.paymentLink = paymentLink;
   gb.status = paymentLink ? "awaiting_payment" : "quoted";
   await gb.save();
+
+  // Gửi email thông báo báo giá
+  try {
+    if (gb.requesterEmail) {
+      await emailService.sendGroupBookingQuoted({
+        to: gb.requesterEmail,
+        groupBookingId: gb._id.toString(),
+        requesterName: gb.requesterName,
+        checkIn: gb.checkIn,
+        checkOut: gb.checkOut,
+        peopleCount: gb.peopleCount,
+        roomCount: gb.roomCount,
+        quoteAmount: quoteAmount,
+        paymentLink: paymentLink,
+      });
+      console.log(`✅ Đã gửi email báo giá group booking đến ${gb.requesterEmail}`);
+    }
+  } catch (emailError) {
+    console.error("❌ Lỗi gửi email báo giá group booking:", emailError);
+    // Không throw error để không ảnh hưởng đến flow chính
+  }
 
   // Gửi socket notification và lưu vào database cho khách hàng
   try {
@@ -1216,6 +1287,25 @@ const confirm = async (id: string) => {
     throw createError(400, "Chỉ có thể xác nhận đặt đoàn sau khi đã nhận đặt cọc");
   gb.status = "confirmed";
   await gb.save();
+
+  // Gửi email thông báo xác nhận
+  try {
+    if (gb.requesterEmail) {
+      await emailService.sendGroupBookingConfirmed({
+        to: gb.requesterEmail,
+        groupBookingId: gb._id.toString(),
+        requesterName: gb.requesterName,
+        checkIn: gb.checkIn,
+        checkOut: gb.checkOut,
+        peopleCount: gb.peopleCount,
+        roomCount: gb.roomCount,
+      });
+      console.log(`✅ Đã gửi email xác nhận group booking đến ${gb.requesterEmail}`);
+    }
+  } catch (emailError) {
+    console.error("❌ Lỗi gửi email xác nhận group booking:", emailError);
+    // Không throw error để không ảnh hưởng đến flow chính
+  }
 
   // Gửi socket notification và lưu vào database cho khách hàng
   try {

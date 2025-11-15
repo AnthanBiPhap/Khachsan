@@ -208,10 +208,10 @@ const sendBookingConfirmation = async (data: BookingConfirmationEmailData) => {
                   <span class="value">
                     ${
                       data.paymentStatus === "paid"
-                        ? "✅ Đã thanh toán đầy đủ"
+                        ? "Đã thanh toán đầy đủ"
                         : data.paymentStatus === "partial_paid"
-                        ? "⏳ Đã thanh toán một phần"
-                        : "⏸️ Chưa thanh toán"
+                        ? "Đã thanh toán một phần"
+                        : "Chưa thanh toán"
                     }
                   </span>
                 </div>
@@ -263,6 +263,51 @@ interface GroupBookingConfirmationEmailData {
     roomNumber: string;
     typeName?: string;
   }>;
+}
+
+interface GroupBookingApprovalEmailData {
+  to: string;
+  groupBookingId: string;
+  requesterName: string;
+  checkIn: Date;
+  checkOut: Date;
+  peopleCount: number;
+  roomCount: number;
+  allocatedRooms: Array<{
+    roomNumber: string;
+    typeName?: string;
+  }>;
+}
+
+interface GroupBookingQuotedEmailData {
+  to: string;
+  groupBookingId: string;
+  requesterName: string;
+  checkIn: Date;
+  checkOut: Date;
+  peopleCount: number;
+  roomCount: number;
+  quoteAmount: number;
+  paymentLink?: string;
+}
+
+interface GroupBookingRejectedEmailData {
+  to: string;
+  groupBookingId: string;
+  requesterName: string;
+  checkIn: Date;
+  checkOut: Date;
+  reason: string;
+}
+
+interface GroupBookingConfirmedEmailData {
+  to: string;
+  groupBookingId: string;
+  requesterName: string;
+  checkIn: Date;
+  checkOut: Date;
+  peopleCount: number;
+  roomCount: number;
 }
 
 // Hàm gửi email xác nhận đặt phòng nhóm
@@ -324,31 +369,31 @@ const sendGroupBookingConfirmation = async (data: GroupBookingConfirmationEmailD
     let statusColor = "#666";
     switch (data.status) {
       case "pending_approval":
-        statusMessage = "⏳ Đang chờ duyệt";
+        statusMessage = "Đang chờ duyệt";
         statusColor = "#FF9800";
         break;
       case "approved":
-        statusMessage = "✅ Đã được duyệt";
+        statusMessage = "Đã được duyệt";
         statusColor = "#4CAF50";
         break;
       case "quoted":
-        statusMessage = "💰 Đã có báo giá";
+        statusMessage = "Đã có báo giá";
         statusColor = "#2196F3";
         break;
       case "awaiting_payment":
-        statusMessage = "💳 Đang chờ thanh toán";
+        statusMessage = "Đang chờ thanh toán";
         statusColor = "#FF9800";
         break;
       case "deposit_paid":
-        statusMessage = "✅ Đã đặt cọc";
+        statusMessage = "Đã đặt cọc";
         statusColor = "#4CAF50";
         break;
       case "paid":
-        statusMessage = "✅ Đã thanh toán đầy đủ";
+        statusMessage = "Đã thanh toán đầy đủ";
         statusColor = "#4CAF50";
         break;
       case "confirmed":
-        statusMessage = "✅ Đã xác nhận";
+        statusMessage = "Đã xác nhận";
         statusColor = "#4CAF50";
         break;
       default:
@@ -528,6 +573,439 @@ interface EmailVerificationData {
   verificationToken: string;
 }
 
+// Hàm gửi email thông báo admin đã duyệt đặt phòng nhóm
+const sendGroupBookingApproval = async (data: GroupBookingApprovalEmailData) => {
+  try {
+    console.log(`📧 Email service: Bắt đầu gửi email duyệt group booking đến ${data.to}`);
+    
+    const transporter = createTransporter();
+    
+    // Verify transporter connection
+    await transporter.verify();
+    console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
+    
+    // Format ngày tháng
+    const formatDate = (date: Date) => {
+      return new Date(date).toLocaleString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
+    // Tạo HTML cho danh sách phòng đã phân bổ
+    let roomsHtml = "";
+    if (data.allocatedRooms && data.allocatedRooms.length > 0) {
+      roomsHtml = `
+        <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <h3 style="color: #1890ff; margin-top: 0;">Phòng đã được phân bổ:</h3>
+          <ul style="list-style: none; padding: 0; margin: 0;">
+            ${data.allocatedRooms
+              .map(
+                (room) => `
+              <li style="padding: 10px 0; border-bottom: 1px solid #e0e0e0;">
+                <strong style="color: #1890ff; font-size: 16px;">Phòng ${room.roomNumber}</strong>${room.typeName ? ` <span style="color: #666;">- ${room.typeName}</span>` : ""}
+              </li>
+            `
+              )
+              .join("")}
+          </ul>
+        </div>
+      `;
+    }
+
+    const checkInDate = formatDate(data.checkIn);
+    const checkOutDate = formatDate(data.checkOut);
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Đặt phòng nhóm đã được duyệt</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Yêu cầu đã được duyệt</h1>
+        </div>
+        
+        <div style="background-color: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+          <p style="font-size: 16px; color: #333;">Xin chào <strong>${data.requesterName}</strong>,</p>
+          
+          <p style="font-size: 16px; color: #333;">
+            Chúng tôi rất vui mừng thông báo rằng <strong>yêu cầu đặt phòng nhóm của bạn đã được duyệt</strong>.
+          </p>
+          
+          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #1890ff; margin-top: 0;">Thông tin đặt phòng:</h3>
+            <p style="margin: 8px 0;"><strong>Mã đặt phòng:</strong> ${data.groupBookingId}</p>
+            <p style="margin: 8px 0;"><strong>Ngày nhận phòng:</strong> ${checkInDate}</p>
+            <p style="margin: 8px 0;"><strong>Ngày trả phòng:</strong> ${checkOutDate}</p>
+            <p style="margin: 8px 0;"><strong>Số phòng:</strong> ${data.roomCount} phòng</p>
+            <p style="margin: 8px 0;"><strong>Số người:</strong> ${data.peopleCount} người</p>
+          </div>
+
+          ${roomsHtml}
+
+          <div style="background-color: #fff7e6; padding: 20px; border-left: 4px solid #faad14; margin: 20px 0; border-radius: 4px;">
+            <h3 style="color: #faad14; margin-top: 0;">Bước tiếp theo:</h3>
+            <ol style="padding-left: 20px; margin: 10px 0;">
+              <li style="margin: 8px 0;">Vui lòng chờ khách sạn gửi báo giá chi tiết</li>
+              <li style="margin: 8px 0;">Sau khi nhận báo giá, bạn có thể thanh toán qua link được cung cấp</li>
+              <li style="margin: 8px 0;">Nếu có thắc mắc, vui lòng liên hệ với chúng tôi</li>
+            </ol>
+          </div>
+
+          <p style="font-size: 16px; color: #333; margin-top: 30px;">
+            Cảm ơn bạn đã tin tưởng và lựa chọn dịch vụ của chúng tôi!
+          </p>
+          
+          <p style="font-size: 14px; color: #666; margin-top: 30px;">
+            Trân trọng,<br>
+            <strong>Đội ngũ Miko Hotel</strong>
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const mailOptions = {
+      from: `"Miko Hotel" <${env.GMAIL_USER}>`,
+      to: data.to,
+      subject: `Yêu cầu đặt phòng nhóm đã được duyệt - Mã: ${data.groupBookingId}`,
+      html: htmlContent,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email duyệt group booking đã được gửi đến ${data.to}:`, info.messageId);
+    return info;
+  } catch (error) {
+    console.error("❌ Lỗi gửi email duyệt group booking:", error);
+    throw error;
+  }
+};
+
+// Hàm gửi email thông báo admin đã báo giá đặt phòng nhóm
+const sendGroupBookingQuoted = async (data: GroupBookingQuotedEmailData) => {
+  try {
+    console.log(`📧 Email service: Bắt đầu gửi email báo giá group booking đến ${data.to}`);
+    
+    const transporter = createTransporter();
+    
+    // Verify transporter connection
+    await transporter.verify();
+    console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
+    
+    // Format ngày tháng
+    const formatDate = (date: Date) => {
+      return new Date(date).toLocaleString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
+    // Format tiền VND
+    const formatCurrency = (amount: number) => {
+      return new Intl.NumberFormat("vi-VN", {
+        style: "currency",
+        currency: "VND",
+      }).format(amount);
+    };
+
+    const checkInDate = formatDate(data.checkIn);
+    const checkOutDate = formatDate(data.checkOut);
+    const formattedAmount = formatCurrency(data.quoteAmount);
+
+    // Tạo HTML cho payment link nếu có
+    let paymentLinkHtml = "";
+    if (data.paymentLink) {
+      paymentLinkHtml = `
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${data.paymentLink}" style="display: inline-block; background-color: #1890ff; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; font-size: 16px;">
+            Thanh toán ngay
+          </a>
+        </div>
+        <p style="text-align: center; color: #666; font-size: 14px; margin-top: 10px;">
+          Hoặc sao chép link sau: <a href="${data.paymentLink}" style="color: #1890ff; word-break: break-all;">${data.paymentLink}</a>
+        </p>
+      `;
+    }
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Báo giá đặt phòng nhóm</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Báo giá đặt phòng nhóm</h1>
+        </div>
+        
+        <div style="background-color: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+          <p style="font-size: 16px; color: #333;">Xin chào <strong>${data.requesterName}</strong>,</p>
+          
+          <p style="font-size: 16px; color: #333;">
+            Chúng tôi đã chuẩn bị báo giá cho yêu cầu đặt phòng nhóm của bạn.
+          </p>
+          
+          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #1890ff; margin-top: 0;">Thông tin đặt phòng:</h3>
+            <p style="margin: 8px 0;"><strong>Mã đặt phòng:</strong> ${data.groupBookingId}</p>
+            <p style="margin: 8px 0;"><strong>Ngày nhận phòng:</strong> ${checkInDate}</p>
+            <p style="margin: 8px 0;"><strong>Ngày trả phòng:</strong> ${checkOutDate}</p>
+            <p style="margin: 8px 0;"><strong>Số phòng:</strong> ${data.roomCount} phòng</p>
+            <p style="margin: 8px 0;"><strong>Số người:</strong> ${data.peopleCount} người</p>
+          </div>
+
+          <div style="background-color: #f0f9ff; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #1890ff;">
+            <h3 style="color: #1890ff; margin-top: 0; text-align: center;">Tổng tiền</h3>
+            <p style="text-align: center; font-size: 32px; font-weight: bold; color: #1890ff; margin: 10px 0;">
+              ${formattedAmount}
+            </p>
+          </div>
+
+          ${paymentLinkHtml}
+
+          <div style="background-color: #fff7e6; padding: 20px; border-left: 4px solid #faad14; margin: 20px 0; border-radius: 4px;">
+            <h3 style="color: #faad14; margin-top: 0;">Lưu ý:</h3>
+            <ul style="padding-left: 20px; margin: 10px 0;">
+              <li style="margin: 8px 0;">Vui lòng thanh toán theo hướng dẫn được cung cấp</li>
+              <li style="margin: 8px 0;">Đặt phòng sẽ được xác nhận sau khi thanh toán thành công</li>
+              <li style="margin: 8px 0;">Nếu có thắc mắc, vui lòng liên hệ với chúng tôi</li>
+            </ul>
+          </div>
+
+          <p style="font-size: 16px; color: #333; margin-top: 30px;">
+            Cảm ơn bạn đã tin tưởng và lựa chọn dịch vụ của chúng tôi!
+          </p>
+          
+          <p style="font-size: 14px; color: #666; margin-top: 30px;">
+            Trân trọng,<br>
+            <strong>Đội ngũ Miko Hotel</strong>
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const mailOptions = {
+      from: `"Miko Hotel" <${env.GMAIL_USER}>`,
+      to: data.to,
+      subject: `Báo giá đặt phòng nhóm - Mã: ${data.groupBookingId}`,
+      html: htmlContent,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email báo giá group booking đã được gửi đến ${data.to}:`, info.messageId);
+    return info;
+  } catch (error) {
+    console.error("❌ Lỗi gửi email báo giá group booking:", error);
+    throw error;
+  }
+};
+
+// Hàm gửi email thông báo admin đã từ chối đặt phòng nhóm
+const sendGroupBookingRejected = async (data: GroupBookingRejectedEmailData) => {
+  try {
+    console.log(`📧 Email service: Bắt đầu gửi email từ chối group booking đến ${data.to}`);
+    
+    const transporter = createTransporter();
+    
+    // Verify transporter connection
+    await transporter.verify();
+    console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
+    
+    // Format ngày tháng
+    const formatDate = (date: Date) => {
+      return new Date(date).toLocaleString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
+    const checkInDate = formatDate(data.checkIn);
+    const checkOutDate = formatDate(data.checkOut);
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Yêu cầu đặt phòng nhóm đã bị từ chối</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #ff4d4f 0%, #cf1322 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Yêu cầu đã bị từ chối</h1>
+        </div>
+        
+        <div style="background-color: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+          <p style="font-size: 16px; color: #333;">Xin chào <strong>${data.requesterName}</strong>,</p>
+          
+          <p style="font-size: 16px; color: #333;">
+            Chúng tôi rất tiếc phải thông báo rằng <strong>yêu cầu đặt phòng nhóm của bạn đã bị từ chối</strong>.
+          </p>
+          
+          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #1890ff; margin-top: 0;">Thông tin yêu cầu:</h3>
+            <p style="margin: 8px 0;"><strong>Mã đặt phòng:</strong> ${data.groupBookingId}</p>
+            <p style="margin: 8px 0;"><strong>Ngày nhận phòng:</strong> ${checkInDate}</p>
+            <p style="margin: 8px 0;"><strong>Ngày trả phòng:</strong> ${checkOutDate}</p>
+          </div>
+
+          <div style="background-color: #fff1f0; padding: 20px; border-left: 4px solid #ff4d4f; margin: 20px 0; border-radius: 4px;">
+            <h3 style="color: #ff4d4f; margin-top: 0;">Lý do từ chối:</h3>
+            <p style="color: #333; margin: 10px 0; white-space: pre-wrap;">${data.reason}</p>
+          </div>
+
+          <div style="background-color: #f0f9ff; padding: 20px; border-left: 4px solid #1890ff; margin: 20px 0; border-radius: 4px;">
+            <h3 style="color: #1890ff; margin-top: 0;">Chúng tôi có thể giúp gì?</h3>
+            <ul style="padding-left: 20px; margin: 10px 0;">
+              <li style="margin: 8px 0;">Vui lòng liên hệ với chúng tôi để được tư vấn về các lựa chọn khác</li>
+              <li style="margin: 8px 0;">Chúng tôi có thể đề xuất các ngày khác hoặc loại phòng phù hợp hơn</li>
+              <li style="margin: 8px 0;">Nếu có thắc mắc, đừng ngần ngại liên hệ với chúng tôi</li>
+            </ul>
+          </div>
+
+          <p style="font-size: 16px; color: #333; margin-top: 30px;">
+            Chúng tôi rất mong được phục vụ bạn trong tương lai!
+          </p>
+          
+          <p style="font-size: 14px; color: #666; margin-top: 30px;">
+            Trân trọng,<br>
+            <strong>Đội ngũ Miko Hotel</strong>
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const mailOptions = {
+      from: `"Miko Hotel" <${env.GMAIL_USER}>`,
+      to: data.to,
+      subject: `Yêu cầu đặt phòng nhóm đã bị từ chối - Mã: ${data.groupBookingId}`,
+      html: htmlContent,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email từ chối group booking đã được gửi đến ${data.to}:`, info.messageId);
+    return info;
+  } catch (error) {
+    console.error("❌ Lỗi gửi email từ chối group booking:", error);
+    throw error;
+  }
+};
+
+// Hàm gửi email thông báo admin đã xác nhận đặt phòng nhóm
+const sendGroupBookingConfirmed = async (data: GroupBookingConfirmedEmailData) => {
+  try {
+    console.log(`📧 Email service: Bắt đầu gửi email xác nhận group booking đến ${data.to}`);
+    
+    const transporter = createTransporter();
+    
+    // Verify transporter connection
+    await transporter.verify();
+    console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
+    
+    // Format ngày tháng
+    const formatDate = (date: Date) => {
+      return new Date(date).toLocaleString("vi-VN", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    };
+
+    const checkInDate = formatDate(data.checkIn);
+    const checkOutDate = formatDate(data.checkOut);
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Đặt phòng nhóm đã được xác nhận</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #52c41a 0%, #389e0d 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Đặt phòng đã được xác nhận</h1>
+        </div>
+        
+        <div style="background-color: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 10px 10px;">
+          <p style="font-size: 16px; color: #333;">Xin chào <strong>${data.requesterName}</strong>,</p>
+          
+          <p style="font-size: 16px; color: #333;">
+            Chúng tôi rất vui mừng thông báo rằng <strong>đặt phòng nhóm của bạn đã được xác nhận hoàn tất</strong>.
+          </p>
+          
+          <div style="background-color: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="color: #1890ff; margin-top: 0;">Thông tin đặt phòng:</h3>
+            <p style="margin: 8px 0;"><strong>Mã đặt phòng:</strong> ${data.groupBookingId}</p>
+            <p style="margin: 8px 0;"><strong>Ngày nhận phòng:</strong> ${checkInDate}</p>
+            <p style="margin: 8px 0;"><strong>Ngày trả phòng:</strong> ${checkOutDate}</p>
+            <p style="margin: 8px 0;"><strong>Số phòng:</strong> ${data.roomCount} phòng</p>
+            <p style="margin: 8px 0;"><strong>Số người:</strong> ${data.peopleCount} người</p>
+          </div>
+
+          <div style="background-color: #f6ffed; padding: 20px; border-left: 4px solid #52c41a; margin: 20px 0; border-radius: 4px;">
+            <h3 style="color: #52c41a; margin-top: 0;">Thông tin quan trọng:</h3>
+            <ul style="padding-left: 20px; margin: 10px 0;">
+              <li style="margin: 8px 0;">Đặt phòng của bạn đã sẵn sàng</li>
+              <li style="margin: 8px 0;">Vui lòng đến đúng giờ check-in đã đặt</li>
+              <li style="margin: 8px 0;">Mang theo giấy tờ tùy thân khi check-in</li>
+              <li style="margin: 8px 0;">Nếu có thay đổi, vui lòng liên hệ với chúng tôi sớm nhất có thể</li>
+            </ul>
+          </div>
+
+          <div style="background-color: #fff7e6; padding: 20px; border-left: 4px solid #faad14; margin: 20px 0; border-radius: 4px;">
+            <h3 style="color: #faad14; margin-top: 0;">Lưu ý:</h3>
+            <p style="margin: 10px 0;">Nếu bạn có bất kỳ câu hỏi nào hoặc cần hỗ trợ, vui lòng liên hệ với chúng tôi. Chúng tôi luôn sẵn sàng hỗ trợ bạn!</p>
+          </div>
+
+          <p style="font-size: 16px; color: #333; margin-top: 30px;">
+            Chúng tôi rất mong được đón tiếp bạn tại khách sạn!
+          </p>
+          
+          <p style="font-size: 14px; color: #666; margin-top: 30px;">
+            Trân trọng,<br>
+            <strong>Đội ngũ Miko Hotel</strong>
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const mailOptions = {
+      from: `"Miko Hotel" <${env.GMAIL_USER}>`,
+      to: data.to,
+      subject: `Đặt phòng nhóm đã được xác nhận - Mã: ${data.groupBookingId}`,
+      html: htmlContent,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email xác nhận group booking đã được gửi đến ${data.to}:`, info.messageId);
+    return info;
+  } catch (error) {
+    console.error("❌ Lỗi gửi email xác nhận group booking:", error);
+    throw error;
+  }
+};
+
 // Hàm gửi email xác nhận đăng ký
 const sendEmailVerification = async (data: EmailVerificationData) => {
   try {
@@ -625,7 +1103,7 @@ const sendEmailVerification = async (data: EmailVerificationData) => {
               </div>
               
               <div class="warning">
-                <p><strong>⚠️ Lưu ý quan trọng:</strong></p>
+                <p><strong>Lưu ý quan trọng:</strong></p>
                 <ul>
                   <li>Link xác nhận sẽ hết hạn sau 24 giờ</li>
                   <li>Nếu bạn không thực hiện xác nhận, bạn sẽ không thể đăng nhập vào tài khoản</li>
@@ -757,7 +1235,7 @@ const sendPasswordResetOTP = async (data: PasswordResetOTPData) => {
               </div>
               
               <div class="warning">
-                <p><strong>⚠️ Lưu ý quan trọng:</strong></p>
+                <p><strong>Lưu ý quan trọng:</strong></p>
                 <ul>
                   <li>Mã xác nhận này chỉ có hiệu lực trong 10 phút</li>
                   <li>Không chia sẻ mã này với bất kỳ ai</li>
@@ -858,7 +1336,7 @@ const sendPasswordResetConfirmation = async (data: PasswordResetConfirmationData
         <body>
           <div class="container">
             <div class="header">
-              <h1>✅ Mật khẩu đã được đặt lại</h1>
+              <h1>Mật khẩu đã được đặt lại</h1>
             </div>
             <div class="content">
               <p>Xin chào <strong>${data.fullName}</strong>,</p>
@@ -866,7 +1344,7 @@ const sendPasswordResetConfirmation = async (data: PasswordResetConfirmationData
               <p>Mật khẩu của bạn đã được đặt lại thành công vào lúc ${new Date().toLocaleString('vi-VN')}.</p>
               
               <div class="warning">
-                <p><strong>⚠️ Lưu ý bảo mật:</strong></p>
+                <p><strong>Lưu ý bảo mật:</strong></p>
                 <ul>
                   <li>Nếu bạn không thực hiện thay đổi này, vui lòng liên hệ với chúng tôi ngay lập tức</li>
                   <li>Đảm bảo mật khẩu mới của bạn là mạnh và không chia sẻ với ai</li>
@@ -1015,7 +1493,7 @@ const sendBookingCancellation = async (data: BookingCancellationEmailData) => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>📋 Đặt phòng đã được hủy</h1>
+              <h1>Đặt phòng đã được hủy</h1>
             </div>
             <div class="content">
               <p>Xin chào <strong>${data.guestName}</strong>,</p>
@@ -1230,7 +1708,7 @@ const sendPaymentConfirmation = async (data: PaymentConfirmationEmailData) => {
         <body>
           <div class="container">
             <div class="header">
-              <h1>✅ Thanh toán thành công</h1>
+              <h1>Thanh toán thành công</h1>
             </div>
             <div class="content">
               <p>Xin chào <strong>${data.guestName}</strong>,</p>
@@ -1311,6 +1789,10 @@ const sendPaymentConfirmation = async (data: PaymentConfirmationEmailData) => {
 export default {
   sendBookingConfirmation,
   sendGroupBookingConfirmation,
+  sendGroupBookingApproval,
+  sendGroupBookingQuoted,
+  sendGroupBookingRejected,
+  sendGroupBookingConfirmed,
   sendEmailVerification,
   sendPasswordResetOTP,
   sendPasswordResetConfirmation,
