@@ -38,7 +38,7 @@ function hasAccessToRoute(userRole: string, path: string): boolean {
     return true; // Admin có quyền truy cập tất cả
   } else if (userRole === 'staff') {
     // Staff chỉ được truy cập các route cụ thể
-    const allowedPaths = ['/', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/users', '/invoices', '/group-bookings'];
+    const allowedPaths = ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat'];
     return allowedPaths.includes(path);
   } else {
     // User thường chỉ được truy cập dashboard
@@ -76,7 +76,14 @@ function App() {
             </PrivateRoute>
           }
         >
-          <Route index element={<RoleProtectedRoute path="/"><Dashboard /></RoleProtectedRoute>} />
+          <Route 
+            index 
+            element={
+              user?.role === 'staff' 
+                ? <Navigate to="/bookings" replace /> 
+                : <RoleProtectedRoute path="/"><Dashboard /></RoleProtectedRoute>
+            } 
+          />
           <Route path="users/deleted" element={<RoleProtectedRoute path="/users/deleted"><DeletedUsersPage /></RoleProtectedRoute>} />
           <Route path="users" element={<RoleProtectedRoute path="/users"><UserPage /></RoleProtectedRoute>} />
           <Route path="bookings" element={<RoleProtectedRoute path="/bookings"><BookingPage /></RoleProtectedRoute>} />

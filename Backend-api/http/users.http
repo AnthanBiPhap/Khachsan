@@ -20,11 +20,12 @@ POST http://localhost:8080/api/v1/users/
 Content-Type: application/json
 
 {
-    "fullName": "Admin User",
-    "email": "na@example.com",
-    "phoneNumber": "0987654321",
-    "password": "admin123",
-    "status": "blocked",
+    "fullName": "Staff User",
+    "email": "staff@gmail.com",
+    "phoneNumber": "0704627403",
+    "password": "123456",
+    "status": "active",
+    "role": "staff",
     "preferences": ["tham quan","ăn uống","thể thao","phim ảnh","sách","game","du lịch","thư giãn","thăm bảo tàng","thăm vườn quốc gia"]
 }
 ### Update user (thay thế :id bằng ID thực tế)

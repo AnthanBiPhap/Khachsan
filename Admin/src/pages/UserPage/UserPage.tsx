@@ -114,6 +114,7 @@ export default function UserPage() {
 
   const storedUser = useAuthStore.getState().user;
   const navigate = useNavigate();
+  const isStaff = storedUser?.role === 'staff';
 
   // ----------------- Load users -----------------
   const loadUsers = async (page = 1, limit = 10) => {
@@ -314,15 +315,19 @@ export default function UserPage() {
       key: "action",
       render: (_, record) => (
         <Space>
-          <a
-            onClick={() => {
-              setEditingUser(record);
-              setOpenForm(true);
-            }}
-          >
-            Chỉnh sửa
-          </a>
-          <a onClick={() => handleDelete(record._id, record.fullName)}>Xóa</a>
+          {!isStaff && (
+            <>
+              <a
+                onClick={() => {
+                  setEditingUser(record);
+                  setOpenForm(true);
+                }}
+              >
+                Chỉnh sửa
+              </a>
+              <a onClick={() => handleDelete(record._id, record.fullName)}>Xóa</a>
+            </>
+          )}
           <a
             onClick={() => {
               setDetailUser(record);
@@ -331,9 +336,7 @@ export default function UserPage() {
           >
             Chi tiết
           </a>
-          <a
-            onClick={() => handleViewBookingHistory(record)}
-          >
+          <a onClick={() => handleViewBookingHistory(record)}>
             <HistoryOutlined /> Lịch sử đặt phòng
           </a>
         </Space>
@@ -348,13 +351,15 @@ export default function UserPage() {
         <Typography.Title level={4} style={{ margin: 0 }}>
           <UserOutlined /> Quản lý người dùng
         </Typography.Title>
-        <Button
-          type="default"
-          icon={<DeleteOutlined />}
-          onClick={() => navigate("/users/deleted")}
-        >
-          Xem người dùng đã xóa
-        </Button>
+        {!isStaff && (
+          <Button
+            type="default"
+            icon={<DeleteOutlined />}
+            onClick={() => navigate("/users/deleted")}
+          >
+            Xem người dùng đã xóa
+          </Button>
+        )}
       </div>
 
       <Table
@@ -368,12 +373,14 @@ export default function UserPage() {
       />
 
       {/* Form User */}
-      <UserForm
-        open={openForm}
-        user={editingUser}
-        onCancel={() => setOpenForm(false)}
-        onSave={handleSave}
-      />
+      {!isStaff && (
+        <UserForm
+          open={openForm}
+          user={editingUser}
+          onCancel={() => setOpenForm(false)}
+          onSave={handleSave}
+        />
+      )}
 
       {/* Drawer chi tiết user */}
       <Drawer

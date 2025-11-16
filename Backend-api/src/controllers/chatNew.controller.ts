@@ -110,25 +110,25 @@ export const startConversation = async (
       });
     }
 
-    // Nếu user là customer, tự động tìm admin hoặc staff
+    // Nếu user là customer, chỉ tự động tìm staff đang hoạt động
     let targetUserId = otherUserId;
 
     if (user.role === "customer") {
-      // Tìm admin hoặc staff đầu tiên
+      // Tìm staff đang active
       const User = require("../models/users.model").default;
-      const adminOrStaff = await User.findOne({
-        role: { $in: ["admin", "staff"] },
+      const staff = await User.findOne({
+        role: "staff",
         status: "active",
       }).sort({ createdAt: 1 });
 
-      if (!adminOrStaff) {
+      if (!staff) {
         return res.status(404).json({
           success: false,
-          message: "No admin or staff available",
+          message: "No staff available",
         });
       }
 
-      targetUserId = adminOrStaff._id.toString();
+      targetUserId = staff._id.toString();
     } else if (!targetUserId) {
       return res.status(400).json({
         success: false,
