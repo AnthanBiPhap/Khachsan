@@ -79,7 +79,7 @@ const getMenuItemsByRole = (userRole: string): MenuItem[] => {
   } else if (userRole === 'staff') {
     // Staff chỉ được xem: Users, Bookings, Booking Status, Guests, Service Bookings, Invoices, Group Bookings, Chat
     return allMenuItems.filter(item => 
-      ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat'].includes(item.key)
+      ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms'].includes(item.key)
     );
   } else {
     // User thường chỉ xem Dashboard

@@ -17,7 +17,8 @@ import type { Room } from "../../types/room";
 export const roomsColumns = (
   handleEdit: (record: Room) => void,
   handleDelete: (id: string) => void,
-  handleDetail?: (record: Room) => void
+  handleDetail?: (record: Room) => void,
+  canEdit: boolean = true
 ): ColumnsType<Room> => [
   {
     title: (
@@ -149,14 +150,16 @@ export const roomsColumns = (
     key: "actions",
     render: (_, r) => (
       <Space>
-        <Button 
-          type="link" 
-          size="small" 
-          icon={<EditOutlined />}
-          onClick={() => handleEdit(r)}
-        >
-          Sửa
-        </Button>
+        {canEdit && (
+          <Button 
+            type="link" 
+            size="small" 
+            icon={<EditOutlined />}
+            onClick={() => handleEdit(r)}
+          >
+            Sửa
+          </Button>
+        )}
         {handleDetail && (
           <Button 
             type="link" 

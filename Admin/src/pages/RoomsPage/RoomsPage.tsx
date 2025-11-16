@@ -19,6 +19,7 @@ import { env } from "../../constanst/getEnvs";
 import { roomsColumns } from "../../components/Rooms/RoomsColumns";
 import RoomsForm from "../../components/Rooms/RoomsForm";
 import RoomSearchFilter from "../../components/Rooms/RoomSearchFilter";
+import { useAuthStore } from "../../stores/authStore";
 
 export default function RoomsPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -38,6 +39,8 @@ export default function RoomsPage() {
   const [searchText, setSearchText] = useState("");
   const [filterType, setFilterType] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const user = useAuthStore.getState().user;
+  const isStaff = user?.role === 'staff';
 
   const loadRooms = async (page = 1, limit = 10) => {
     try {
@@ -149,16 +152,18 @@ export default function RoomsPage() {
         <Typography.Title level={4}>
           <HomeOutlined /> Quản lý phòng
         </Typography.Title>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setEditingRoom(null);
-            setOpenForm(true);
-          }}
-        >
-          Thêm phòng
-        </Button>
+        {!isStaff && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setEditingRoom(null);
+              setOpenForm(true);
+            }}
+          >
+            Thêm phòng
+          </Button>
+        )}
       </div>
 
       {/* Search và Filter */}
@@ -188,7 +193,8 @@ export default function RoomsPage() {
           (record) => {
             setDetailItem(record);
             setOpenDetail(true);
-          }
+          },
+          !isStaff
         )}
         dataSource={filteredRooms}
         rowKey="_id"
@@ -204,16 +210,18 @@ export default function RoomsPage() {
         locale={{ emptyText: "Không có dữ liệu phòng" }}
       />
 
-      <RoomsForm
-        open={openForm}
-        room={editingRoom}
-        onCancel={() => {
-          setOpenForm(false);
-          setEditingRoom(null);
-        }}
-        onSave={handleSave}
-        loading={loading}
-      />
+      {!isStaff && (
+        <RoomsForm
+          open={openForm}
+          room={editingRoom}
+          onCancel={() => {
+            setOpenForm(false);
+            setEditingRoom(null);
+          }}
+          onSave={handleSave}
+          loading={loading}
+        />
+      )}
 
       <Drawer
         title={
