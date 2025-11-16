@@ -270,16 +270,16 @@ graph TB
 
 | ID | Use Case | Actor | Mô tả |
 |---|---|---|---|
-| UC1 | Đăng ký tài khoản | Customer | Khách hàng tạo tài khoản mới |
-| UC2 | Đăng nhập | Customer, Staff, Admin | Đăng nhập vào hệ thống |
-| UC3 | Đăng xuất | Customer, Staff, Admin | Đăng xuất khỏi hệ thống |
-| UC4 | Quản lý thông tin cá nhân | Customer, Staff, Admin | Cập nhật thông tin cá nhân |
-| UC5 | Đổi mật khẩu | Customer, Staff, Admin | Thay đổi mật khẩu tài khoản |
-| UC6 | Quản lý người dùng | Admin | CRUD operations cho users |
-| UC7 | Khóa/Mở khóa tài khoản | Admin | Block/unblock user accounts |
-| UC8 | Phân quyền người dùng | Admin | Phân quyền roles cho users |
-| UC9A | Xác thực email | System, Customer | Gửi link xác thực; xác nhận qua email |
-| UC9B | Quên mật khẩu qua OTP | System, Customer | Gửi OTP qua email; xác minh và đặt lại |
+| UC1 | Đăng ký tài khoản | Customer | Điền form đăng ký và tạo tài khoản mới; hệ thống gửi email xác thực. |
+| UC2 | Đăng nhập | Customer, Staff, Admin | Nhập email/mật khẩu để nhận JWT; dùng token cho các API/Socket. |
+| UC3 | Đăng xuất | Customer, Staff, Admin | Xóa token khỏi phiên (local/session storage), ngắt kết nối realtime. |
+| UC4 | Quản lý thông tin cá nhân | Customer, Staff, Admin | Cập nhật hồ sơ (tên, SĐT, avatar...); kiểm tra hợp lệ dữ liệu. |
+| UC5 | Đổi mật khẩu | Customer, Staff, Admin | Đổi mật khẩu khi biết mật khẩu hiện tại; kiểm tra độ mạnh mật khẩu. |
+| UC6 | Quản lý người dùng | Admin | Tạo/Sửa/Xóa/Khóa người dùng; đặt role; xem danh sách đã xóa. |
+| UC7 | Khóa/Mở khóa tài khoản | Admin | Chuyển `status` user giữa `active/blocked`; chặn truy cập khi blocked. |
+| UC8 | Phân quyền người dùng | Admin | Gán vai trò `customer/staff/admin`; áp dụng RBAC cho menu/route/API. |
+| UC9A | Xác thực email | System, Customer | System gửi link; Customer mở link để bật `emailVerified`. (Chủ yếu cho Customer) |
+| UC9B | Quên mật khẩu qua OTP | System, Customer | Gửi OTP 6 số qua email; xác minh OTP; đặt lại mật khẩu an toàn. |
 
 ### 🏠 Room Management
 
@@ -298,19 +298,20 @@ graph TB
 
 | ID | Use Case | Actor | Mô tả |
 |---|---|---|---|
-| UC16 | Đặt phòng cá nhân | Customer | Create individual booking |
-| UC17 | Đặt phòng nhóm | Customer | Create group booking request |
-| UC18 | Xem đặt phòng của mình | Customer | View own bookings |
-| UC19 | Hủy đặt phòng | Customer | Cancel booking |
-| UC20 | Xem danh sách đặt phòng | Staff, Admin | View all bookings |
-| UC21 | Xem chi tiết đặt phòng | Staff, Admin | View booking details |
-| UC22 | Cập nhật trạng thái đặt phòng | Staff, Admin | Update booking status |
-| UC23 | Check-in khách | Staff, Admin | Process check-in |
-| UC24 | Check-out khách | Staff, Admin | Process check-out |
-| UC25 | Gia hạn thời gian check-out | Staff, Admin | Extend checkout time |
-| UC26 | Duyệt đặt phòng nhóm | Staff, Admin | Approve group booking |
-| UC27 | Tạo báo giá đặt phòng nhóm | Staff, Admin | Create quote for group booking |
-| UC28 | Quản lý thông tin khách | Staff, Admin | Manage guest information |
+| UC16 | Đặt phòng cá nhân | Customer | Khách tự đặt phòng qua frontend; kiểm tra tồn phòng theo khoảng ngày; tạo booking và giữ phòng tạm thời. |
+| UC17 | Đặt phòng nhóm | Customer | Gửi yêu cầu đặt đoàn (số người/phòng/ngày); chờ staff/admin xử lý duyệt/báo giá. |
+| UC18 | Xem đặt phòng của mình | Customer | Xem danh sách/chi tiết các booking của chính mình, trạng thái và thanh toán. |
+| UC19 | Hủy đặt phòng | Customer | Hủy trước hạn theo chính sách; ghi lý do hủy; cập nhật tồn phòng. |
+| UC19A | Duyệt hủy đặt phòng | Staff, Admin | Xem yêu cầu hủy của khách; phê duyệt/từ chối theo chính sách; hoàn tiền (nếu có) và cập nhật trạng thái/ tồn phòng; ghi audit cho staff. |
+| UC20 | Xem danh sách đặt phòng | Staff, Admin | Tra cứu toàn bộ bookings theo bộ lọc (ngày, trạng thái, khách, phòng...). |
+| UC21 | Xem chi tiết đặt phòng | Staff, Admin | Xem thông tin đầy đủ: phòng, khoảng ngày, khách đi kèm, hóa đơn, payments, lịch sử trạng thái. |
+| UC22 | Cập nhật trạng thái đặt phòng | Staff, Admin | Cập nhật theo workflow (pending → confirmed → checked_in → checked_out → cancelled); ghi audit cho staff. |
+| UC23 | Check-in khách | Staff, Admin | Thực hiện nhận phòng: xác thực khách, cập nhật trạng thái booking/phòng, ghi nhận thời điểm. |
+| UC24 | Check-out khách | Staff, Admin | Trả phòng: chốt công nợ/dịch vụ, cập nhật trạng thái booking/phòng, phát sinh hóa đơn (nếu chưa). |
+| UC25 | Gia hạn thời gian check-out | Staff, Admin | Gia hạn theo yêu cầu; cập nhật phụ thu (nếu có) và tồn phòng/đụng lịch. |
+| UC26 | Duyệt đặt phòng nhóm | Staff, Admin | Xem yêu cầu đặt đoàn; duyệt/từ chối; cập nhật tồn phòng theo phân bổ dự kiến. |
+| UC27 | Tạo báo giá đặt phòng nhóm | Staff, Admin | Lập báo giá (giá/phòng/phụ phí), gửi link thanh toán (nếu cần), theo dõi tiến độ thanh toán. |
+| UC28 | Quản lý thông tin khách | Staff, Admin | Quản lý hồ sơ khách đi kèm booking (CMND/CCCD, liên hệ); cập nhật khi check-in/out. |
 
 ### 💳 Payment & Invoice
 
