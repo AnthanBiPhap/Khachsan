@@ -336,12 +336,15 @@ graph TB
 
 | ID | Use Case | Actor | Mô tả |
 |---|---|---|---|
-| UC38 | Xem danh sách dịch vụ | Customer | Browse hotel services |
-| UC39 | Xem chi tiết dịch vụ | Customer | View service details |
-| UC40 | Đặt dịch vụ | Customer | Book service |
-| UC41 | Xem đặt dịch vụ của mình | Customer | View own service bookings |
-| UC42 | Quản lý dịch vụ | Staff, Admin | CRUD services |
-| UC43 | Quản lý đặt dịch vụ | Staff, Admin | Manage service bookings |
+| UC38 | Xem danh sách dịch vụ | Customer | Duyệt các dịch vụ (ăn uống, spa, đưa đón...); lọc theo loại/giá. |
+| UC39 | Xem chi tiết dịch vụ | Customer | Xem mô tả, giá, điều kiện áp dụng, thời gian phục vụ. |
+| UC40 | Đặt dịch vụ | Customer | Đặt dịch vụ kèm/thuộc một booking; chọn thời gian/số lượng; kiểm tra tính khả dụng. |
+| UC41 | Xem đặt dịch vụ của mình | Customer | Xem danh sách/chi tiết các service bookings gắn với booking của mình. |
+| UC42 | Quản lý dịch vụ (catalog) | Admin | Tạo/Sửa/Xóa dịch vụ, giá, đơn vị, lịch phục vụ; bật/tắt hiển thị. (Staff: chỉ xem) |
+| UC43 | Quản lý đặt dịch vụ | Staff, Admin | Tra cứu/duyệt/cập nhật service bookings; đồng bộ chi phí vào invoice. |
+| UC43A | Cập nhật trạng thái đặt dịch vụ | Staff, Admin | Cập nhật requested/confirmed/completed/cancelled; ghi lý do và audit với staff. |
+| UC43B | Hủy đặt dịch vụ | Staff, Admin | Hủy theo chính sách; hoàn/thu phí nếu có; phát notify cho khách. |
+| UC43C | Hạch toán dịch vụ vào hóa đơn | Staff, Admin | Gộp chi phí dịch vụ vào invoice của booking; không cho sửa sau khi chốt invoice. |
 
 ### ⭐ Review Management
 
