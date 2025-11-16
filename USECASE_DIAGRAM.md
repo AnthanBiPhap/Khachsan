@@ -317,16 +317,20 @@ graph TB
 
 | ID | Use Case | Actor | Mô tả |
 |---|---|---|---|
-| UC29 | Thanh toán online (Stripe) | Customer | Pay via Stripe checkout |
-| UC30 | Thanh toán tiền mặt | Staff, Admin | Record cash payment |
-| UC31 | Thanh toán chuyển khoản | Staff, Admin | Record bank transfer |
-| UC32 | Xem lịch sử thanh toán | Customer | View payment history |
-| UC33 | Quản lý thanh toán | Staff, Admin | Manage all payments |
-| UC33B | Cập nhật trạng thái payment | Staff, Admin | Mark paid/failed/refunded... |
-| UC34 | Xử lý hoàn tiền | Admin | Process refunds |
-| UC35 | Xuất hóa đơn PDF | Customer | Export invoice as PDF |
-| UC36 | Tạo hóa đơn | Staff, Admin | Generate invoice |
-| UC37 | Xem hóa đơn | Customer, Staff, Admin | View invoices |
+| UC29 | Thanh toán online (Stripe) | Customer | Tạo phiên Stripe Checkout, thanh toán thẻ; nhận kết quả và cập nhật booking/payment. |
+| UC30 | Thanh toán tiền mặt | Staff, Admin | Ghi nhận giao dịch tiền mặt, cập nhật trạng thái payment/invoice tương ứng. |
+| UC31 | Thanh toán chuyển khoản | Staff, Admin | Ghi nhận giao dịch chuyển khoản (mã tham chiếu…), cập nhật trạng thái payment/invoice. |
+| UC32 | Xem lịch sử thanh toán | Customer | Xem lịch sử payments của chính mình (đặt phòng/đặt đoàn). |
+| UC33 | Quản lý thanh toán | Staff, Admin | Tra cứu, xem chi tiết payment; lọc theo booking, khách, trạng thái, thời gian. |
+| UC33B | Cập nhật trạng thái payment | Staff, Admin | Đánh dấu paid/failed/refunded/cancelled…; ghi audit cho staff; phát notify nếu cần. |
+| UC33C | Thống kê thanh toán | Staff, Admin | Xem thống kê tổng hợp (doanh thu, số giao dịch theo trạng thái/thời gian). |
+| UC33D | Đồng bộ payment với booking | Staff, Admin | Chạy đồng bộ payment ↔ booking để đảm bảo trạng thái nhất quán. |
+| UC33E | Xem payment theo booking/khách | Staff, Admin | Truy vấn theo bookingId hoặc customerId (chi tiết endpoints có sẵn). |
+| UC34 | Xử lý hoàn tiền | Admin | Thực hiện/refund theo chính sách sau khi duyệt hủy; cập nhật payment/invoice. |
+| UC35 | Xuất hóa đơn PDF | Customer | Tạo và xem/ tải hóa đơn PDF theo booking. |
+| UC35A | Gửi hóa đơn qua email | System | Gửi file/invoice link đến email khách sau khi thanh toán hoặc khi yêu cầu. |
+| UC36 | Tạo hóa đơn | Staff, Admin | Sinh invoice từ booking/đặt đoàn; thêm dòng chi phí/dịch vụ; chốt hóa đơn. |
+| UC37 | Xem hóa đơn | Customer, Staff, Admin | Xem danh sách/chi tiết invoice theo quyền; không cho sửa sau khi “completed”. |
 
 ### 🛎️ Service Management
 
