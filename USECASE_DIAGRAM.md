@@ -13,253 +13,162 @@
 
 ```mermaid
 graph TB
+    %% Actors
     subgraph Actors[" "]
-        Customer["👤 Customer<br/>(Khách hàng)"]
-        Staff["👨‍💼 Staff<br/>(Nhân viên)"]
-        Admin["👑 Admin<br/>(Quản trị viên)"]
-        System["⚙️ System<br/>(Hệ thống)"]
+        Customer["👤 Customer"]
+        Staff["👨‍💼 Staff"]
+        Admin["👑 Admin"]
+        System["⚙️ System"]
     end
 
-    subgraph AuthGroup["🔐 Authentication & Authorization"]
-        UC1["Đăng ký tài khoản"]
-        UC2["Đăng nhập"]
-        UC3["Đăng xuất"]
-        UC4["Quản lý thông tin cá nhân"]
-        UC5["Đổi mật khẩu"]
-        UC6["Quản lý người dùng"]
-        UC7["Khóa/Mở khóa tài khoản"]
-        UC8["Phân quyền người dùng"]
-        UC9A["Xác thực email"]
-        UC9B["Quên mật khẩu qua OTP"]
+    %% Auth
+    subgraph Auth["🔐 AuthN/AuthZ"]
+        A1["UC1 Đăng ký"]
+        A2["UC2 Đăng nhập"]
+        A3["UC3 Đăng xuất"]
+        A4["UC4 Hồ sơ cá nhân"]
+        A5["UC5 Đổi mật khẩu"]
+        A6["UC6 Quản lý users (admin)"]
+        A7["UC7 Khóa/Mở khóa (admin)"]
+        A8["UC8 Phân quyền (admin)"]
+        A9["UC9A Xác thực email"]
+        A10["UC9B OTP quên mật khẩu"]
     end
 
-    subgraph RoomGroup["🏠 Room Management"]
-        UC9["Xem danh sách phòng"]
-        UC10["Tìm kiếm phòng"]
-        UC11["Xem chi tiết phòng"]
-        UC12["Xem loại phòng"]
-        UC13["Quản lý phòng (admin)"]
-        UC14["Quản lý loại phòng (admin)"]
-        UC15["Cập nhật trạng thái phòng (admin)"]
-        UC15B["Quản lý địa điểm (admin)"]
+    %% Rooms
+    subgraph Rooms["🏠 Rooms"]
+        R1["UC9 Xem DS phòng"]
+        R2["UC10 Tìm kiếm phòng"]
+        R3["UC11 Xem chi tiết phòng"]
+        R4["UC12 Xem loại phòng"]
+        R5["UC13 Quản lý phòng (admin)"]
+        R6["UC14 Quản lý loại phòng (admin)"]
+        R7["UC15 Cập nhật trạng thái (admin)"]
     end
 
-    subgraph BookingGroup["📅 Booking Management"]
-        UC16["Đặt phòng cá nhân"]
-        UC17["Đặt phòng nhóm"]
-        UC18["Xem đặt phòng của mình"]
-        UC19["Hủy đặt phòng"]
-        UC20["Xem danh sách đặt phòng"]
-        UC21["Xem chi tiết đặt phòng"]
-        UC22["Cập nhật trạng thái đặt phòng"]
-        UC23["Check-in khách"]
-        UC24["Check-out khách"]
-        UC25["Gia hạn thời gian check-out"]
-        UC26["Duyệt đặt phòng nhóm"]
-        UC27["Tạo báo giá đặt phòng nhóm"]
-        UC28["Quản lý thông tin khách"]
+    %% Bookings
+    subgraph Bookings["📅 Bookings"]
+        B1["UC16 Đặt phòng cá nhân (cust)"]
+        B2["UC17 Đặt phòng nhóm (cust)"]
+        B3["UC18 Xem booking của tôi (cust)"]
+        B4["UC19 Hủy đặt phòng (cust)"]
+        B5["UC19A Duyệt hủy (staff/admin)"]
+        B6["UC20 DS bookings (staff/admin)"]
+        B7["UC21 Chi tiết booking (staff/admin)"]
+        B8["UC22 Cập nhật trạng thái (staff/admin)"]
+        B9["UC23 Check-in (staff/admin)"]
+        B10["UC24 Check-out (staff/admin)"]
+        B11["UC25 Gia hạn check-out (staff/admin)"]
+        B12["UC26 Duyệt đoàn (staff/admin)"]
+        B13["UC27 Báo giá đoàn (staff/admin)"]
+        B14["UC28 Quản lý thông tin khách (staff/admin)"]
     end
 
-    subgraph PaymentGroup["💳 Payment & Invoice"]
-        UC29["Thanh toán online (Stripe)"]
-        UC30["Thanh toán tiền mặt"]
-        UC31["Thanh toán chuyển khoản"]
-        UC32["Xem lịch sử thanh toán"]
-        UC33["Quản lý thanh toán"]
-        UC34["Xử lý hoàn tiền"]
-        UC35["Xuất hóa đơn PDF"]
-        UC36["Tạo hóa đơn"]
-        UC37["Xem hóa đơn"]
-        UC33B["Cập nhật trạng thái payment"]
+    %% Payments & Invoices
+    subgraph Payments["💳 Payments & Invoices"]
+        P1["UC29 Stripe checkout (cust)"]
+        P2["UC30 Tiền mặt (staff/admin)"]
+        P3["UC31 Chuyển khoản (staff/admin)"]
+        P4["UC32 Lịch sử thanh toán (cust)"]
+        P5["UC33 Quản lý payments (staff/admin)"]
+        P6["UC33B Cập nhật trạng thái payment"]
+        P7["UC33C Thống kê payment"]
+        P8["UC33D Đồng bộ payment↔booking"]
+        P9["UC33E Payment theo booking/khách"]
+        P10["UC34 Hoàn tiền (admin)"]
+        P11["UC35 Hóa đơn PDF (cust)"]
+        P12["UC35A Gửi hóa đơn email (system)"]
+        P13["UC36 Tạo hóa đơn (staff/admin)"]
+        P14["UC37 Xem hóa đơn (cust/staff/admin)"]
     end
 
-    subgraph ServiceGroup["🛎️ Service Management"]
-        UC38["Xem danh sách dịch vụ"]
-        UC39["Xem chi tiết dịch vụ"]
-        UC40["Đặt dịch vụ"]
-        UC41["Xem đặt dịch vụ của mình"]
-        UC42["Quản lý dịch vụ (admin)"]
-        UC43["Quản lý đặt dịch vụ (admin)"]
+    %% Services
+    subgraph Services["🛎️ Services"]
+        S1["UC38 DS dịch vụ (cust)"]
+        S2["UC39 Chi tiết dịch vụ (cust)"]
+        S3["UC40 Đặt dịch vụ (cust)"]
+        S4["UC41 Xem đặt dịch vụ của tôi (cust)"]
+        S5["UC42 Quản lý dịch vụ (admin)"]
+        S6["UC43 Quản lý đặt dịch vụ (staff/admin)"]
+        S7["UC43A Cập nhật trạng thái dịch vụ"]
+        S8["UC43B Hủy đặt dịch vụ"]
+        S9["UC43C Hạch toán vào hóa đơn"]
     end
 
-    subgraph ReviewGroup["⭐ Review Management"]
-        UC44["Xem đánh giá"]
-        UC45["Viết đánh giá"]
-        UC46["Xóa đánh giá của mình"]
-        UC47["Quản lý đánh giá (admin)"]
-        UC48["Duyệt/Từ chối đánh giá (admin)"]
+    %% Chat
+    subgraph Chat["💬 Chat & Realtime"]
+        C1["UC49 Chat với staff (cust)"]
+        C2["UC50 Lịch sử chat"]
+        C3["UC51 Gửi tin nhắn"]
+        C4["UC52 Realtime Socket.IO"]
+        C5["UC53 Quản lý hội thoại"]
+        C6["UC53A Đánh dấu đã đọc"]
+        C7["UC53B Đếm chưa đọc"]
+        C8["UC53C Chat theo booking (context)"]
     end
 
-    subgraph ChatGroup["💬 Chat & Realtime Communication"]
-        UC49["Chat với staff (mặc định) / admin"]
-        UC50["Xem lịch sử chat"]
-        UC51["Gửi tin nhắn"]
-        UC52["Nhận thông báo real-time (Socket.IO)"]
-        UC53["Quản lý cuộc trò chuyện"]
-        UC53B["Đếm tin nhắn chưa đọc"]
+    %% Notifications
+    subgraph Notif["🔔 Notifications"]
+        N1["UC54 Xem thông báo"]
+        N2["UC54A Đếm chưa đọc"]
+        N3["UC55 Đánh dấu đã đọc"]
+        N4["UC56 Gửi thông báo (staff/admin)"]
+        N5["UC56A Thông báo hệ thống (auto)"]
+        N6["UC56B Realtime + fallback polling"]
+        N7["UC56C Cấu hình kênh/ưu tiên (admin)"]
+        N8["UC57 Quản trị thông báo (admin)"]
     end
 
-    subgraph NotificationGroup["🔔 Notification Management"]
-        UC54["Xem thông báo"]
-        UC55["Đánh dấu đã đọc"]
-        UC56["Gửi thông báo (system/staff)"]
-        UC57["Quản lý thông báo"]
+    %% AI
+    subgraph AI["🤖 AI Assistant"]
+        I1["UC59A Gợi ý phòng/dịch vụ (cust)"]
+        I2["UC59B Gợi ý phản hồi chat (staff)"]
+        I3["UC59C Gợi ý tác nghiệp (staff)"]
+        I4["UC59D Quản trị AI & dữ liệu (admin)"]
     end
 
-    subgraph AuditGroup["🧾 Audit Logging"]
-        UC58A["Ghi nhật ký thao tác staff"]
-        UC58B["Xem audit logs (admin-only)"]
-        UC58C["Lọc nhật ký theo người/ thời gian/ loại hành động"]
-        UC58D["Xuất/tra cứu nhật ký"]
+    %% System
+    subgraph SystemAuto["⚙️ System & Integrations"]
+        T1["UC68 Email verify"]
+        T2["UC68A Email OTP reset"]
+        T3["UC68B Email xác nhận reset"]
+        T4["UC69 Email hóa đơn"]
+        T5["UC70 Notify booking"]
+        T6["UC70A Notify payment"]
+        T7["UC70B Notify đặt đoàn"]
+        T8["UC71 Stripe webhook/idempotent"]
+        T9["UC72 Auto cập nhật trạng thái"]
+        T10["UC72A Scheduler/cleanup"]
     end
 
-    subgraph AIAssistGroup["🤖 AI Assistant & Suggestions"]
-        UC59A["Gợi ý phòng/dịch vụ theo sở thích"]
-        UC59B["Gợi ý phản hồi chat"]
-        UC59C["Gợi ý thao tác nghiệp vụ"]
-    end
+    %% Links (high-level)
+    Customer --> A1 & A2 & A3 & A4 & A5
+    Customer --> R1 & R2 & R3 & R4
+    Customer --> B1 & B2 & B3 & B4
+    Customer --> P1 & P4 & P11
+    Customer --> S1 & S2 & S3 & S4
+    Customer --> C1 & C2 & C3 & C4
+    Customer --> N1 & N2 & N3
 
-    subgraph SystemGroup["⚙️ System Automation & Integrations"]
-        UC68["Gửi email xác nhận đăng ký"]
-        UC69["Gửi email hóa đơn/OTP"]
-        UC70["Gửi thông báo đặt phòng"]
-        UC71["Xử lý thanh toán Stripe"]
-        UC72["Cập nhật trạng thái tự động"]
-    end
+    Staff --> A2 & A3 & A4 & A5
+    Staff --> R1 & R2 & R3 & R4
+    Staff --> B6 & B7 & B8 & B9 & B10 & B11 & B12 & B13 & B14 & B5
+    Staff --> P2 & P3 & P5 & P6 & P7 & P8 & P9
+    Staff --> S6 & S7 & S8 & S9
+    Staff --> C2 & C3 & C4 & C5 & C6 & C7 & C8
+    Staff --> N1 & N2 & N3 & N4 & N5 & N6
+    Staff --> I2 & I3
 
-    %% Customer connections
-    Customer --> UC1
-    Customer --> UC2
-    Customer --> UC3
-    Customer --> UC4
-    Customer --> UC5
-    Customer --> UC9
-    Customer --> UC10
-    Customer --> UC11
-    Customer --> UC12
-    Customer --> UC16
-    Customer --> UC17
-    Customer --> UC18
-    Customer --> UC19
-    Customer --> UC29
-    Customer --> UC32
-    Customer --> UC35
-    Customer --> UC37
-    Customer --> UC38
-    Customer --> UC39
-    Customer --> UC40
-    Customer --> UC41
-    Customer --> UC44
-    Customer --> UC45
-    Customer --> UC46
-    Customer --> UC49
-    Customer --> UC50
-    Customer --> UC51
-    Customer --> UC52
-    Customer --> UC54
-    Customer --> UC55
+    Admin --> A2 & A3 & A4 & A5 & A6 & A7 & A8
+    Admin --> R5 & R6 & R7
+    Admin --> B6 & B7 & B8 & B9 & B10 & B11 & B12 & B13 & B14
+    Admin --> P2 & P3 & P5 & P6 & P7 & P8 & P9 & P10 & P12 & P13 & P14
+    Admin --> S5 & S6 & S7 & S8 & S9
+    Admin --> C2 & C3 & C4 & C5
+    Admin --> N4 & N7 & N8
+    Admin --> I4
 
-    %% Staff connections
-    Staff --> UC2
-    Staff --> UC3
-    Staff --> UC4
-    %% Staff không có quyền cấu hình/phòng/dịch vụ/địa điểm
-    Staff --> UC20
-    Staff --> UC21
-    Staff --> UC22
-    Staff --> UC23
-    Staff --> UC24
-    Staff --> UC25
-    Staff --> UC26
-    Staff --> UC27
-    Staff --> UC28
-    Staff --> UC30
-    Staff --> UC31
-    Staff --> UC33
-    Staff --> UC33B
-    Staff --> UC36
-    %% Staff không quản lý dịch vụ/đánh giá
-    Staff --> UC49
-    Staff --> UC50
-    Staff --> UC51
-    Staff --> UC52
-    Staff --> UC54
-    Staff --> UC55
-    Staff --> UC56
-    Staff --> UC58A
-    Staff --> UC59B
-
-    %% Admin connections
-    Admin --> UC2
-    Admin --> UC3
-    Admin --> UC4
-    Admin --> UC6
-    Admin --> UC7
-    Admin --> UC8
-    Admin --> UC13
-    Admin --> UC14
-    Admin --> UC15
-    Admin --> UC20
-    Admin --> UC21
-    Admin --> UC22
-    Admin --> UC23
-    Admin --> UC24
-    Admin --> UC25
-    Admin --> UC26
-    Admin --> UC27
-    Admin --> UC28
-    Admin --> UC33
-    Admin --> UC34
-    Admin --> UC36
-    Admin --> UC37
-    Admin --> UC42
-    Admin --> UC43
-    Admin --> UC47
-    Admin --> UC48
-    Admin --> UC49
-    Admin --> UC50
-    Admin --> UC51
-    Admin --> UC53
-    Admin --> UC54
-    Admin --> UC55
-    Admin --> UC56
-    Admin --> UC57
-    Admin --> UC58B
-    Admin --> UC58C
-    Admin --> UC58D
-
-    %% System connections
-    System --> UC68
-    System --> UC69
-    System --> UC70
-    System --> UC71
-    System --> UC72
-
-    %% Extends/Includes relationships
-    UC16 -.->|includes| UC11
-    UC16 -.->|includes| UC40
-    UC17 -.->|includes| UC11
-    UC29 -.->|includes| UC71
-    UC35 -.->|includes| UC36
-    UC49 -.->|includes| UC52
-    UC62 -.->|includes| UC63
-    UC62 -.->|includes| UC64
-
-    style Customer fill:#e1f5ff
-    style Staff fill:#fff4e1
-    style Admin fill:#ffe1f5
-    style System fill:#e1ffe1
-    style AuthGroup fill:#f0f0f0
-    style RoomGroup fill:#f0f0f0
-    style BookingGroup fill:#f0f0f0
-    style PaymentGroup fill:#f0f0f0
-    style ServiceGroup fill:#f0f0f0
-    style ReviewGroup fill:#f0f0f0
-    style ChatGroup fill:#f0f0f0
-    style NotificationGroup fill:#f0f0f0
-    style AuditGroup fill:#f0f0f0
-    style AIAssistGroup fill:#f0f0f0
-    style SystemGroup fill:#f0f0f0
+    System --> T1 & T2 & T3 & T4 & T5 & T6 & T7 & T8 & T9 & T10 & C4 & N5 & N6
 ```
 
 ---
@@ -376,19 +285,56 @@ graph TB
 
 | ID | Use Case | Actor | Mô tả |
 |---|---|---|---|
-| UC59A | Gợi ý phòng/dịch vụ theo sở thích | System, Customer | Dựa trên preferences của user |
-| UC59B | Gợi ý phản hồi chat | System, Staff | Đề xuất nội dung trả lời |
-| UC59C | Gợi ý thao tác nghiệp vụ | System, Staff | Đề xuất bước xử lý booking |
+| UC59A | Gợi ý phòng/dịch vụ theo sở thích | System, Customer | Dựa trên preferences của user (sở thích đã lưu) + lịch sử đặt phòng để gợi ý loại phòng/dịch vụ phù hợp; hiển thị trong trang tìm kiếm/phòng chi tiết. (Tùy chọn bật/tắt) |
+| UC59B | Gợi ý phản hồi chat | System, Staff | Đề xuất nhanh các câu trả lời (FAQ, chính sách, hướng dẫn check-in/out, báo giá cơ bản) cho staff trong cửa sổ chat; staff có thể chỉnh sửa trước khi gửi. |
+| UC59C | Gợi ý thao tác nghiệp vụ | System, Staff | Đề xuất bước xử lý tiếp theo cho booking (xác nhận, nhắc thanh toán, nhắc check-in, gợi ý hủy theo chính sách…); không tự động thực thi, chỉ hỗ trợ quyết định. |
+| UC59D | Quản trị mô hình/nguồn dữ liệu AI | Admin | Cấu hình bật/tắt AI, phạm vi dữ liệu được phép dùng (chỉ metadata, không dùng PII), lưu lịch sử gợi ý để audit; đảm bảo tuân thủ bảo mật/quyền riêng tư. |
 
 ### ⚙️ System Automation & Integrations
 
 | ID | Use Case | Actor | Mô tả |
 |---|---|---|---|
-| UC68 | Gửi email xác nhận | System | Auto send confirmation emails |
-| UC69 | Gửi email hóa đơn/OTP | System | Send invoice/OTP emails |
-| UC70 | Gửi thông báo đặt phòng | System | Auto send notifications |
-| UC71 | Xử lý thanh toán Stripe | System | Process Stripe payments |
-| UC72 | Cập nhật trạng thái tự động | System | Auto update booking/room status |
+| UC68 | Gửi email xác nhận đăng ký | System | Gửi email verify với token + hạn; link kích hoạt cập nhật `emailVerified`. |
+| UC68A | Gửi OTP quên mật khẩu | System | Tạo OTP 6 số, TTL 10 phút; gửi email OTP; chống lộ thông tin tồn tại account. |
+| UC68B | Xác nhận đặt lại mật khẩu | System | Sau khi đặt lại mật khẩu thành công, gửi email xác nhận. |
+| UC69 | Gửi email hóa đơn | System | Gửi invoice PDF/link sau khi thanh toán/chốt hóa đơn; kèm chi tiết booking. |
+| UC70 | Gửi thông báo đặt phòng | System | Bắn notify realtime (Socket.IO) đến Staff/Admin khi có booking mới/cập nhật. |
+| UC70A | Thông báo payment | System | Notify khi payment thành công/thất bại/hoàn tiền; cập nhật badge và lịch sử. |
+| UC70B | Thông báo đặt đoàn | System | Notify khi có yêu cầu đặt đoàn, duyệt, báo giá, thanh toán. |
+| UC71 | Xử lý thanh toán Stripe | System | Tạo phiên checkout, xác minh webhook (ký HMAC), idempotency key; cập nhật payment/invoice an toàn. |
+| UC72 | Cập nhật trạng thái tự động | System | Cập nhật trạng thái booking/phòng theo mốc thời gian (giữ chỗ hết hạn, no-show, checkout quá hạn...). |
+| UC72A | Lên lịch tác vụ (scheduler) | System | Cron/scheduled jobs cho email/notify/cleanup (OTP hết hạn, tokens, logs). |
+
+
+### 📍 Location Management
+
+| ID | Use Case | Actor | Mô tả |
+|---|---|---|---|
+| UC58 | Xem danh sách địa điểm | Customer | Duyệt các địa điểm (điểm tham quan, khu vực lân cận...) phục vụ tra cứu. |
+| UC59 | Xem chi tiết địa điểm | Customer | Xem mô tả, hình ảnh, vị trí, thời gian mở cửa, gợi ý di chuyển. |
+| UC60 | Tìm kiếm địa điểm | Customer | Tìm theo tên/loại/khoảng cách; lọc nâng cao. |
+| UC61 | Quản lý địa điểm (catalog) | Admin | Tạo/Sửa/Xóa địa điểm; bật/tắt hiển thị. (Staff: chỉ xem) |
+
+### 📊 Dashboard & Reports
+
+| ID | Use Case | Actor | Mô tả |
+|---|---|---|---|
+| UC62 | Xem dashboard | Staff, Admin | Tổng quan đặt phòng, công suất, thông báo gần đây, việc cần làm. |
+| UC63 | Xem thống kê | Staff, Admin | Thống kê số liệu theo ngày/tuần/tháng (đặt phòng, doanh thu, hủy...). |
+| UC64 | Xem biểu đồ | Staff, Admin | Biểu đồ xu hướng công suất phòng/doanh thu/nguồn kênh. |
+| UC65 | Xuất báo cáo Excel | Staff, Admin | Xuất dữ liệu báo cáo ra Excel theo bộ lọc. |
+| UC66 | Xuất báo cáo PDF | Admin | Xuất báo cáo PDF (định dạng chuẩn, đóng dấu). |
+| UC67 | Xem báo cáo tài chính | Admin | Báo cáo doanh thu/chi phí/lợi nhuận, theo kênh và loại phòng. |
+
+### 👥 Guests Management
+
+| ID | Use Case | Actor | Mô tả |
+|---|---|---|---|
+| UC28A | Xem danh sách khách | Staff, Admin | Tra cứu danh sách Guests, lọc theo tên/email/SĐT. |
+| UC28B | Xem chi tiết khách | Staff, Admin | Xem hồ sơ, thông tin liên hệ, ghi chú. |
+| UC28C | Tạo/Sửa thông tin khách | Staff, Admin | Cập nhật hồ sơ khách đi kèm bookings; lưu lịch sử chỉnh sửa. |
+| UC28D | Xóa/Khôi phục khách | Admin | Xóa mềm và khôi phục hồ sơ; kiểm soát quyền truy cập. |
+| UC28E | Lịch sử đặt phòng của khách | Staff, Admin | Xem lịch sử booking/service bookings/invoices theo khách. |
 
 ---
 
@@ -437,33 +383,3 @@ graph TB
 ---
 
 *Biểu đồ này được tạo bằng Mermaid và có thể hiển thị trong các Markdown viewer hỗ trợ Mermaid (GitHub, GitLab, VS Code với extension, v.v.)*
-
-### 📍 Location Management
-
-| ID | Use Case | Actor | Mô tả |
-|---|---|---|---|
-| UC58 | Xem danh sách địa điểm | Customer | Duyệt các địa điểm (điểm tham quan, khu vực lân cận...) phục vụ tra cứu. |
-| UC59 | Xem chi tiết địa điểm | Customer | Xem mô tả, hình ảnh, vị trí, thời gian mở cửa, gợi ý di chuyển. |
-| UC60 | Tìm kiếm địa điểm | Customer | Tìm theo tên/loại/khoảng cách; lọc nâng cao. |
-| UC61 | Quản lý địa điểm (catalog) | Admin | Tạo/Sửa/Xóa địa điểm; bật/tắt hiển thị. (Staff: chỉ xem) |
-
-### 📊 Dashboard & Reports
-
-| ID | Use Case | Actor | Mô tả |
-|---|---|---|---|
-| UC62 | Xem dashboard | Staff, Admin | Tổng quan đặt phòng, công suất, thông báo gần đây, việc cần làm. |
-| UC63 | Xem thống kê | Staff, Admin | Thống kê số liệu theo ngày/tuần/tháng (đặt phòng, doanh thu, hủy...). |
-| UC64 | Xem biểu đồ | Staff, Admin | Biểu đồ xu hướng công suất phòng/doanh thu/nguồn kênh. |
-| UC65 | Xuất báo cáo Excel | Staff, Admin | Xuất dữ liệu báo cáo ra Excel theo bộ lọc. |
-| UC66 | Xuất báo cáo PDF | Admin | Xuất báo cáo PDF (định dạng chuẩn, đóng dấu). |
-| UC67 | Xem báo cáo tài chính | Admin | Báo cáo doanh thu/chi phí/lợi nhuận, theo kênh và loại phòng. |
-
-### 👥 Guests Management
-
-| ID | Use Case | Actor | Mô tả |
-|---|---|---|---|
-| UC28A | Xem danh sách khách | Staff, Admin | Tra cứu danh sách Guests, lọc theo tên/email/SĐT. |
-| UC28B | Xem chi tiết khách | Staff, Admin | Xem hồ sơ, thông tin liên hệ, ghi chú. |
-| UC28C | Tạo/Sửa thông tin khách | Staff, Admin | Cập nhật hồ sơ khách đi kèm bookings; lưu lịch sử chỉnh sửa. |
-| UC28D | Xóa/Khôi phục khách | Admin | Xóa mềm và khôi phục hồ sơ; kiểm soát quyền truy cập. |
-| UC28E | Lịch sử đặt phòng của khách | Staff, Admin | Xem lịch sử booking/service bookings/invoices theo khách. |
