@@ -372,15 +372,6 @@ graph TB
 | UC56C | Ưu tiên/Kênh thông báo | Admin | Cấu hình loại/kênh: in-app, email (nếu bật), theo mức ưu tiên. |
 | UC57 | Quản lý thông báo | Admin | Quản lý template/loại thông báo, TTL, chính sách retry; bật/tắt từng loại. |
 
-### 🧾 Audit Logging
-
-| ID | Use Case | Actor | Mô tả |
-|---|---|---|---|
-| UC58A | Ghi nhật ký thao tác staff | System | Log create/update/delete trên booking status, invoice, payments... |
-| UC58B | Xem audit logs (admin-only) | Admin | Trang xem nhật ký |
-| UC58C | Lọc nhật ký theo người/thời gian/hành động | Admin | Bộ lọc + phân trang |
-| UC58D | Xuất/tra cứu nhật ký | Admin | Export/tra cứu chi tiết |
-
 ### 🤖 AI Assistant & Suggestions
 
 | ID | Use Case | Actor | Mô tả |
@@ -447,3 +438,32 @@ graph TB
 
 *Biểu đồ này được tạo bằng Mermaid và có thể hiển thị trong các Markdown viewer hỗ trợ Mermaid (GitHub, GitLab, VS Code với extension, v.v.)*
 
+### 📍 Location Management
+
+| ID | Use Case | Actor | Mô tả |
+|---|---|---|---|
+| UC58 | Xem danh sách địa điểm | Customer | Duyệt các địa điểm (điểm tham quan, khu vực lân cận...) phục vụ tra cứu. |
+| UC59 | Xem chi tiết địa điểm | Customer | Xem mô tả, hình ảnh, vị trí, thời gian mở cửa, gợi ý di chuyển. |
+| UC60 | Tìm kiếm địa điểm | Customer | Tìm theo tên/loại/khoảng cách; lọc nâng cao. |
+| UC61 | Quản lý địa điểm (catalog) | Admin | Tạo/Sửa/Xóa địa điểm; bật/tắt hiển thị. (Staff: chỉ xem) |
+
+### 📊 Dashboard & Reports
+
+| ID | Use Case | Actor | Mô tả |
+|---|---|---|---|
+| UC62 | Xem dashboard | Staff, Admin | Tổng quan đặt phòng, công suất, thông báo gần đây, việc cần làm. |
+| UC63 | Xem thống kê | Staff, Admin | Thống kê số liệu theo ngày/tuần/tháng (đặt phòng, doanh thu, hủy...). |
+| UC64 | Xem biểu đồ | Staff, Admin | Biểu đồ xu hướng công suất phòng/doanh thu/nguồn kênh. |
+| UC65 | Xuất báo cáo Excel | Staff, Admin | Xuất dữ liệu báo cáo ra Excel theo bộ lọc. |
+| UC66 | Xuất báo cáo PDF | Admin | Xuất báo cáo PDF (định dạng chuẩn, đóng dấu). |
+| UC67 | Xem báo cáo tài chính | Admin | Báo cáo doanh thu/chi phí/lợi nhuận, theo kênh và loại phòng. |
+
+### 👥 Guests Management
+
+| ID | Use Case | Actor | Mô tả |
+|---|---|---|---|
+| UC28A | Xem danh sách khách | Staff, Admin | Tra cứu danh sách Guests, lọc theo tên/email/SĐT. |
+| UC28B | Xem chi tiết khách | Staff, Admin | Xem hồ sơ, thông tin liên hệ, ghi chú. |
+| UC28C | Tạo/Sửa thông tin khách | Staff, Admin | Cập nhật hồ sơ khách đi kèm bookings; lưu lịch sử chỉnh sửa. |
+| UC28D | Xóa/Khôi phục khách | Admin | Xóa mềm và khôi phục hồ sơ; kiểm soát quyền truy cập. |
+| UC28E | Lịch sử đặt phòng của khách | Staff, Admin | Xem lịch sử booking/service bookings/invoices theo khách. |
