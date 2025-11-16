@@ -363,10 +363,14 @@ graph TB
 
 | ID | Use Case | Actor | Mô tả |
 |---|---|---|---|
-| UC54 | Xem thông báo | Customer, Staff, Admin | View notifications |
-| UC55 | Đánh dấu đã đọc | Customer, Staff, Admin | Mark as read |
-| UC56 | Gửi thông báo | Staff, Admin | Trigger manual notifications |
-| UC57 | Quản lý thông báo | Admin | Manage notification system |
+| UC54 | Xem thông báo | Customer, Staff, Admin | Xem danh sách thông báo (booking, payments, group bookings, chat…); phân trang. |
+| UC54A | Đếm thông báo chưa đọc | Customer, Staff, Admin | API trả về tổng số chưa đọc để hiển thị badge. |
+| UC55 | Đánh dấu đã đọc | Customer, Staff, Admin | Mark-as-read một/multiple; cập nhật badge và thời điểm đã đọc. |
+| UC56 | Gửi thông báo (thủ công) | Staff, Admin | Gửi thông báo thủ công tới người dùng/nhóm (role/channel). |
+| UC56A | Gửi thông báo hệ thống (tự động) | System | Tự động bắn notify khi có sự kiện: confirmed, check-in/out, hủy, payment cập nhật… |
+| UC56B | Realtime notifications | Customer, Staff, Admin | Nhận thông báo qua Socket.IO; fallback polling khi mất kết nối. |
+| UC56C | Ưu tiên/Kênh thông báo | Admin | Cấu hình loại/kênh: in-app, email (nếu bật), theo mức ưu tiên. |
+| UC57 | Quản lý thông báo | Admin | Quản lý template/loại thông báo, TTL, chính sách retry; bật/tắt từng loại. |
 
 ### 🧾 Audit Logging
 
