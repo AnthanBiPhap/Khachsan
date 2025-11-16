@@ -346,26 +346,18 @@ graph TB
 | UC43B | Hủy đặt dịch vụ | Staff, Admin | Hủy theo chính sách; hoàn/thu phí nếu có; phát notify cho khách. |
 | UC43C | Hạch toán dịch vụ vào hóa đơn | Staff, Admin | Gộp chi phí dịch vụ vào invoice của booking; không cho sửa sau khi chốt invoice. |
 
-### ⭐ Review Management
-
-| ID | Use Case | Actor | Mô tả |
-|---|---|---|---|
-| UC44 | Xem đánh giá | Customer | View reviews |
-| UC45 | Viết đánh giá | Customer | Write review after stay |
-| UC46 | Xóa đánh giá của mình | Customer | Delete own review |
-| UC47 | Quản lý đánh giá | Staff, Admin | Manage all reviews |
-| UC48 | Duyệt/Từ chối đánh giá | Staff, Admin | Approve/reject reviews |
-
 ### 💬 Chat & Realtime Communication
 
 | ID | Use Case | Actor | Mô tả |
 |---|---|---|---|
-| UC49 | Chat với staff (mặc định) / admin | Customer | Tự động ghép staff active; fallback admin có thể tắt |
-| UC50 | Xem lịch sử chat | Customer, Staff, Admin | View chat history |
-| UC51 | Gửi tin nhắn | Customer, Staff, Admin | Send messages |
-| UC52 | Nhận thông báo real-time (Socket.IO) | Customer, Staff, Admin | Notifications via WebSocket |
-| UC53 | Quản lý cuộc trò chuyện | Staff, Admin | Manage/assign/read markers |
-| UC53B | Đếm tin nhắn chưa đọc | Customer, Staff, Admin | Unread counter API |
+| UC49 | Chat với staff (mặc định) / admin | Customer | Khi mở chat, hệ thống tự động ghép với staff active; có thể cấu hình tắt fallback admin. |
+| UC50 | Xem lịch sử chat | Customer, Staff, Admin | Xem danh sách/chi tiết cuộc trò chuyện theo quyền; phân trang. |
+| UC51 | Gửi tin nhắn | Customer, Staff, Admin | Gửi/nhận tin nhắn văn bản (kèm đính kèm tùy chọn); kiểm tra quyền trong conversation. |
+| UC52 | Nhận thông báo real-time (Socket.IO) | Customer, Staff, Admin | Nhận sự kiện tin nhắn mới/thay đổi trạng thái qua Socket.IO; tự động update UI. |
+| UC53 | Quản lý cuộc trò chuyện | Staff, Admin | Tham gia/thoát room, chọn cuộc trò chuyện, gắn cờ đã đọc; không xóa hội thoại. |
+| UC53A | Đánh dấu đã đọc | Customer, Staff, Admin | Mark read theo conversation; cập nhật unreadCount server-side. |
+| UC53B | Đếm tin nhắn chưa đọc | Customer, Staff, Admin | API lấy tổng số chưa đọc; hiển thị badge/thanh điều hướng. |
+| UC53C | Gắn cuộc trò chuyện với booking (ngữ cảnh) | Staff, Admin | Mở chat từ booking để hỗ trợ theo ngữ cảnh; lưu liên kết booking trong conversation (nếu có). |
 
 ### 🔔 Notification Management
 
