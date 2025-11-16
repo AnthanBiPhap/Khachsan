@@ -20,6 +20,7 @@ import { env } from "../../constanst/getEnvs";
 import { roomTypesColumns } from "../../components/RoomTypes/RoomTypesColumns";
 import RoomTypesForm from "../../components/RoomTypes/RoomTypesForm";
 import RoomTypeSearchFilter from "../../components/RoomTypes/RoomTypeSearchFilter";
+import { useAuthStore } from "../../stores/authStore";
 
 export default function RoomTypesPage() {
   const [roomTypes, setRoomTypes] = useState<RoomType[]>([]);
@@ -39,6 +40,8 @@ export default function RoomTypesPage() {
   const [searchText, setSearchText] = useState("");
   const [filterPrice, setFilterPrice] = useState<string>("all");
   const [filterCapacity, setFilterCapacity] = useState<string>("all");
+  const user = useAuthStore.getState().user;
+  const isStaff = user?.role === 'staff';
 
   const load = async (page = 1, limit = 10) => {
     try {
@@ -165,16 +168,18 @@ export default function RoomTypesPage() {
         <Typography.Title level={4}>
           <AppstoreOutlined /> Quản lý loại phòng
         </Typography.Title>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => {
-            setEditing(null);
-            setOpenForm(true);
-          }}
-        >
-          Thêm loại phòng
-        </Button>
+        {!isStaff && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setEditing(null);
+              setOpenForm(true);
+            }}
+          >
+            Thêm loại phòng
+          </Button>
+        )}
       </div>
 
       {/* Search và Filter */}
@@ -204,7 +209,8 @@ export default function RoomTypesPage() {
           (record) => {
             setDetailItem(record);
             setOpenDetail(true);
-          }
+          },
+          !isStaff
         )}
         dataSource={filteredRoomTypes}
         rowKey="_id"
@@ -220,16 +226,18 @@ export default function RoomTypesPage() {
         locale={{ emptyText: "Không có dữ liệu loại phòng" }}
       />
 
-      <RoomTypesForm
-        open={openForm}
-        roomType={editing}
-        onCancel={() => {
-          setOpenForm(false);
-          setEditing(null);
-        }}
-        onSave={handleSave}
-        loading={loading}
-      />
+      {!isStaff && (
+        <RoomTypesForm
+          open={openForm}
+          roomType={editing}
+          onCancel={() => {
+            setOpenForm(false);
+            setEditing(null);
+          }}
+          onSave={handleSave}
+          loading={loading}
+        />
+      )}
 
       <Drawer
         title={

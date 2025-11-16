@@ -38,7 +38,7 @@ function hasAccessToRoute(userRole: string, path: string): boolean {
     return true; // Admin có quyền truy cập tất cả
   } else if (userRole === 'staff') {
     // Staff chỉ được truy cập các route cụ thể
-    const allowedPaths = ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms'];
+    const allowedPaths = ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms', '/room-types'];
     return allowedPaths.includes(path);
   } else {
     // User thường chỉ được truy cập dashboard
