@@ -1,0 +1,48 @@
+@startuml UC40_BookService
+!theme plain
+title UC40: Đặt dịch vụ
+
+actor Customer
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+Customer -> Frontend: Chọn dịch vụ cần đặt
+Customer -> Frontend: Chọn booking (nếu có)
+Customer -> Frontend: Chọn thời gian (scheduledAt)
+Customer -> Frontend: Chọn số lượng (quantity)
+Customer -> Frontend: Submit booking
+
+Frontend -> API: POST /api/v1/service-bookings\n(Authorization: Bearer token)\n{ bookingId, serviceId, scheduledAt, quantity }
+
+API -> API: Verify JWT token
+API -> DB: Tìm service theo ID
+DB --> API: Service found
+
+API -> DB: Kiểm tra booking tồn tại?\n(bookingId)
+
+alt Booking không tồn tại
+    DB --> API: Booking not found
+    API --> Frontend: Error: "Booking không tồn tại"
+    Frontend --> Customer: Hiển thị lỗi
+else Booking tồn tại
+    DB --> API: Booking found
+    API -> API: Kiểm tra tính khả dụng\n(service đã được đặt trong khung giờ này?)
+    
+    alt Dịch vụ đã được đặt trong khung giờ
+        DB --> API: Service booking exists
+        API --> Frontend: Error: "Dịch vụ đã được đặt cho khung giờ này"
+        Frontend --> Customer: Hiển thị lỗi
+    else Dịch vụ khả dụng
+        DB --> API: Service available
+        API -> API: Tính giá dịch vụ\n(price = service.basePrice * quantity)
+        API -> DB: Tạo service booking\n(status: reserved, bookingId, serviceId, scheduledAt, quantity, price)
+        API -> DB: Cập nhật booking\n(services array, totalPrice)
+        DB --> API: Service booking created
+        
+        API --> Frontend: Success: "Đã đặt dịch vụ thành công"
+        Frontend --> Customer: Hiển thị thông báo\n"Dịch vụ đã được đặt"
+    end
+end
+@enduml
+

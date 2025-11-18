@@ -1,0 +1,29 @@
+@startuml UC53B_CountUnread
+!theme plain
+title UC53B: Đếm tin nhắn chưa đọc
+
+actor User as "Customer/Staff/Admin"
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+User -> Frontend: Truy cập trang chat / dashboard
+Frontend -> API: GET /api/v1/chat/unread-count\n(Authorization: Bearer token)
+
+API -> API: Verify JWT token
+API -> DB: Query conversations\n(filter: participants chứa userId)\n(aggregate: sum unreadCount[userId])
+
+DB --> API: Total unread count
+
+API --> Frontend: Success + { totalUnread: number }
+Frontend --> User: Hiển thị badge unread\n(trên icon chat, navigation bar)
+
+' ========== Real-time update ==========
+note right
+  Khi có tin nhắn mới:
+  - Socket.IO emit "new-message"
+  - Frontend tự động gọi lại API
+  - Hoặc Socket.IO emit "unread-count-updated"
+end note
+@enduml
+

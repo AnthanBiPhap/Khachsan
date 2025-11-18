@@ -1,0 +1,97 @@
+@startuml Authentication & Authorization - Use Case Diagram
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam usecase {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontSize 11
+}
+skinparam actor {
+    BackgroundColor #FFF3E0
+    BorderColor #E65100
+    FontSize 12
+    FontStyle bold
+}
+skinparam rectangle {
+    BackgroundColor #F5F5F5
+    BorderColor #757575
+}
+
+title Authentication & Authorization - Use Case Diagram\nHệ thống Miko Hotel
+
+' ========== ACTORS ==========
+actor "Customer\nKhách hàng" as Customer
+actor "Staff\nNhân viên" as Staff
+actor "Admin\nQuản trị viên" as Admin
+actor "System\nHệ thống" as System
+
+' ========== AUTHENTICATION & AUTHORIZATION USE CASES ==========
+rectangle "Authentication & Authorization" {
+    usecase "UC1: Đăng ký tài khoản" as UC1
+    usecase "UC2: Đăng nhập" as UC2
+    usecase "UC3: Đăng xuất" as UC3
+    usecase "UC4: Quản lý thông tin cá nhân" as UC4
+    usecase "UC5: Đổi mật khẩu" as UC5
+    usecase "UC6: Quản lý người dùng" as UC6
+    usecase "UC7: Khóa/Mở khóa tài khoản" as UC7
+    usecase "UC8: Phân quyền người dùng" as UC8
+    usecase "UC9A: Xác thực email" as UC9A
+    usecase "UC9B: Quên mật khẩu qua OTP" as UC9B
+}
+
+' ========== CUSTOMER CONNECTIONS ==========
+Customer --> UC1 : "Đăng ký tài khoản"
+Customer --> UC2 : "Đăng nhập"
+Customer --> UC3 : "Đăng xuất"
+Customer --> UC4 : "Quản lý hồ sơ"
+Customer --> UC5 : "Đổi mật khẩu"
+Customer --> UC9A : "Xác thực email"
+Customer --> UC9B : "Quên mật khẩu"
+
+' ========== STAFF CONNECTIONS ==========
+Staff --> UC2 : "Đăng nhập"
+Staff --> UC3 : "Đăng xuất"
+Staff --> UC4 : "Quản lý hồ sơ"
+Staff --> UC5 : "Đổi mật khẩu"
+
+' ========== ADMIN CONNECTIONS ==========
+Admin --> UC2 : "Đăng nhập"
+Admin --> UC3 : "Đăng xuất"
+Admin --> UC4 : "Quản lý hồ sơ"
+Admin --> UC5 : "Đổi mật khẩu"
+Admin --> UC6 : "Quản lý người dùng"
+Admin --> UC7 : "Khóa/Mở khóa"
+Admin --> UC8 : "Phân quyền"
+
+' ========== SYSTEM CONNECTIONS ==========
+System --> UC9A : "Gửi email xác thực"
+System --> UC9B : "Gửi OTP email"
+
+' ========== INCLUDES/EXTENDS RELATIONSHIPS ==========
+UC1 ..> UC9A : <<include>>\n"Gửi email xác thực"
+UC9B ..> UC5 : <<extend>>\n"Đặt lại mật khẩu"
+
+note right of UC1
+  Điền form đăng ký và tạo tài khoản mới
+  Hệ thống gửi email xác thực
+end note
+
+note right of UC2
+  Nhập email/mật khẩu để nhận JWT
+  Dùng token cho các API/Socket
+end note
+
+note right of UC9B
+  Gửi OTP 6 số qua email
+  Xác minh OTP
+  Đặt lại mật khẩu an toàn
+end note
+
+note right of UC6
+  Tạo/Sửa/Xóa/Khóa người dùng
+  Đặt role
+  Xem danh sách đã xóa
+end note
+
+@enduml
+

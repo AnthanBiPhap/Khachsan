@@ -1,0 +1,165 @@
+@startuml Booking Management - Use Case Diagram
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam usecase {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontSize 11
+}
+skinparam actor {
+    BackgroundColor #FFF3E0
+    BorderColor #E65100
+    FontSize 12
+    FontStyle bold
+}
+skinparam rectangle {
+    BackgroundColor #F5F5F5
+    BorderColor #757575
+}
+
+title Booking Management - Use Case Diagram\nHệ thống Miko Hotel
+
+' ========== ACTORS ==========
+actor "Customer\nKhách hàng" as Customer
+actor "Staff\nNhân viên" as Staff
+actor "Admin\nQuản trị viên" as Admin
+
+' ========== BOOKING MANAGEMENT USE CASES ==========
+rectangle "Booking Management" {
+    usecase "UC16: Đặt phòng cá nhân" as UC16
+    usecase "UC17: Đặt phòng nhóm" as UC17
+    usecase "UC18: Xem đặt phòng của mình" as UC18
+    usecase "UC19: Hủy đặt phòng" as UC19
+    usecase "UC19A: Duyệt hủy đặt phòng" as UC19A
+    usecase "UC20: Xem danh sách đặt phòng" as UC20
+    usecase "UC21: Xem chi tiết đặt phòng" as UC21
+    usecase "UC22: Cập nhật trạng thái đặt phòng" as UC22
+    usecase "UC23: Check-in khách" as UC23
+    usecase "UC24: Check-out khách" as UC24
+    usecase "UC25: Gia hạn thời gian check-out" as UC25
+    usecase "UC26: Duyệt đặt phòng nhóm" as UC26
+    usecase "UC27: Tạo báo giá đặt phòng nhóm" as UC27
+    usecase "UC28: Quản lý thông tin khách" as UC28
+}
+
+' ========== CUSTOMER CONNECTIONS ==========
+Customer --> UC16 : "Đặt phòng cá nhân"
+Customer --> UC17 : "Đặt phòng nhóm"
+Customer --> UC18 : "Xem booking của mình"
+Customer --> UC19 : "Hủy đặt phòng"
+
+' ========== STAFF CONNECTIONS ==========
+Staff --> UC19A : "Duyệt hủy"
+Staff --> UC20 : "Xem danh sách bookings"
+Staff --> UC21 : "Xem chi tiết booking"
+Staff --> UC22 : "Cập nhật trạng thái"
+Staff --> UC23 : "Check-in khách"
+Staff --> UC24 : "Check-out khách"
+Staff --> UC25 : "Gia hạn check-out"
+Staff --> UC26 : "Duyệt đặt phòng nhóm"
+Staff --> UC27 : "Tạo báo giá đoàn"
+Staff --> UC28 : "Quản lý thông tin khách"
+
+' ========== ADMIN CONNECTIONS ==========
+Admin --> UC19A : "Duyệt hủy"
+Admin --> UC20 : "Xem danh sách bookings"
+Admin --> UC21 : "Xem chi tiết booking"
+Admin --> UC22 : "Cập nhật trạng thái"
+Admin --> UC23 : "Check-in khách"
+Admin --> UC24 : "Check-out khách"
+Admin --> UC25 : "Gia hạn check-out"
+Admin --> UC26 : "Duyệt đặt phòng nhóm"
+Admin --> UC27 : "Tạo báo giá đoàn"
+Admin --> UC28 : "Quản lý thông tin khách"
+
+' ========== INCLUDES/EXTENDS RELATIONSHIPS ==========
+UC16 ..> UC11 : <<include>>\n"Xem chi tiết phòng"
+UC16 ..> UC40 : <<include>>\n"Đặt dịch vụ"
+UC17 ..> UC11 : <<include>>\n"Xem chi tiết phòng"
+UC19 ..> UC19A : <<extend>>\n"Cần duyệt"
+UC21 ..> UC20 : <<extend>>\n"Xem chi tiết từ danh sách"
+UC23 ..> UC22 : <<include>>\n"Cập nhật trạng thái"
+UC24 ..> UC22 : <<include>>\n"Cập nhật trạng thái"
+UC26 ..> UC17 : <<extend>>\n"Duyệt yêu cầu"
+UC27 ..> UC17 : <<extend>>\n"Tạo báo giá"
+
+note right of UC16
+  Khách tự đặt phòng qua frontend
+  Kiểm tra tồn phòng theo khoảng ngày
+  Tạo booking và giữ phòng tạm thời
+end note
+
+note right of UC17
+  Gửi yêu cầu đặt đoàn:
+  - Số người
+  - Số phòng
+  - Ngày check-in/out
+  Chờ staff/admin xử lý duyệt/báo giá
+end note
+
+note right of UC18
+  Xem danh sách/chi tiết các booking:
+  - Trạng thái booking
+  - Thông tin thanh toán
+  - Lịch sử cập nhật
+end note
+
+note right of UC19
+  Hủy trước hạn theo chính sách
+  Ghi lý do hủy
+  Cập nhật tồn phòng
+end note
+
+note right of UC19A
+  Xem yêu cầu hủy của khách
+  Phê duyệt/từ chối theo chính sách
+  Hoàn tiền (nếu có)
+  Cập nhật trạng thái/tồn phòng
+  Ghi audit cho staff
+end note
+
+note right of UC22
+  Cập nhật theo workflow:
+  pending → confirmed → 
+  checked_in → checked_out → 
+  cancelled
+  Ghi audit cho staff
+end note
+
+note right of UC23
+  Thực hiện nhận phòng:
+  - Xác thực khách
+  - Cập nhật trạng thái booking/phòng
+  - Ghi nhận thời điểm check-in
+end note
+
+note right of UC24
+  Trả phòng:
+  - Chốt công nợ/dịch vụ
+  - Cập nhật trạng thái booking/phòng
+  - Phát sinh hóa đơn (nếu chưa)
+end note
+
+note right of UC26
+  Xem yêu cầu đặt đoàn
+  Duyệt/từ chối
+  Cập nhật tồn phòng theo phân bổ dự kiến
+end note
+
+note right of UC27
+  Lập báo giá:
+  - Giá/phòng
+  - Phụ phí
+  Gửi link thanh toán (nếu cần)
+  Theo dõi tiến độ thanh toán
+end note
+
+note right of UC28
+  Quản lý hồ sơ khách đi kèm booking:
+  - CMND/CCCD
+  - Thông tin liên hệ
+  Cập nhật khi check-in/out
+end note
+
+@enduml
+

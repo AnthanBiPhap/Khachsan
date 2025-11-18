@@ -1,0 +1,67 @@
+@startuml UC72_AutoUpdateStatus
+!theme plain
+title UC72: Cập nhật trạng thái tự động
+
+actor System
+participant "Scheduler" as Scheduler
+participant "Backend Service" as Service
+database "Database" as DB
+
+' ========== Scheduled Job: Check expired bookings ==========
+Scheduler -> Service: Cron job: Mỗi giờ\n(check expired bookings)
+
+Service -> DB: Query bookings\n(status: pending, paymentStatus: pending)\n(createdAt < now - 2h)
+
+DB --> Service: Expired bookings list
+
+loop Mỗi expired booking
+    Service -> DB: Cập nhật booking\n(status: cancelled, paymentStatus: cancelled)
+    Service -> DB: Cập nhật phòng\n(status: available)
+    Service -> DB: Tạo booking status log\n(action: cancelled, note: "Hết hạn giữ chỗ")
+    DB --> Service: Updated
+end
+
+' ========== Scheduled Job: Check no-show ==========
+Scheduler -> Service: Cron job: Mỗi ngày 14:00\n(check no-show bookings)
+
+Service -> DB: Query bookings\n(status: confirmed, checkIn < now - 2h)\n(chưa check-in)
+
+DB --> Service: No-show bookings list
+
+loop Mỗi no-show booking
+    Service -> DB: Cập nhật booking\n(status: cancelled, note: "No-show")
+    Service -> DB: Cập nhật phòng\n(status: available)
+    Service -> DB: Tạo booking status log
+    Service -> DB: Gửi notification cho customer
+    DB --> Service: Updated
+end
+
+' ========== Scheduled Job: Auto check-out ==========
+Scheduler -> Service: Cron job: Mỗi giờ\n(check overdue check-out)
+
+Service -> DB: Query bookings\n(status: checked_in, checkOut < now)
+
+DB --> Service: Overdue check-out bookings list
+
+loop Mỗi overdue booking
+    Service -> DB: Cập nhật booking\n(status: checked_out)
+    Service -> DB: Cập nhật phòng\n(status: available)
+    Service -> DB: Tính phụ thu (nếu có)
+    Service -> DB: Tạo booking status log\n(action: checked_out, note: "Auto check-out")
+    Service -> DB: Gửi notification
+    DB --> Service: Updated
+end
+
+' ========== Scheduled Job: Auto complete service bookings ==========
+Scheduler -> Service: Cron job: Mỗi giờ\n(check completed services)
+
+Service -> DB: Query service bookings\n(status: reserved, scheduledAt < now)
+
+DB --> Service: Completed service bookings list
+
+loop Mỗi completed service booking
+    Service -> DB: Cập nhật service booking\n(status: completed)
+    DB --> Service: Updated
+end
+@enduml
+

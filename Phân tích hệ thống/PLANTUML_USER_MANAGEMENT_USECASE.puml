@@ -1,0 +1,90 @@
+@startuml User Management - Use Case Diagram
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam usecase {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontSize 11
+}
+skinparam actor {
+    BackgroundColor #FFF3E0
+    BorderColor #E65100
+    FontSize 12
+    FontStyle bold
+}
+skinparam rectangle {
+    BackgroundColor #F5F5F5
+    BorderColor #757575
+}
+
+title User Management - Use Case Diagram\nHệ thống Miko Hotel
+
+' ========== ACTORS ==========
+actor "Admin\nQuản trị viên" as Admin
+
+' ========== USER MANAGEMENT USE CASES ==========
+rectangle "User Management" {
+    usecase "UC6: Quản lý người dùng" as UC6
+    usecase "UC7: Khóa/Mở khóa tài khoản" as UC7
+    usecase "UC8: Phân quyền người dùng" as UC8
+}
+
+' ========== ADMIN CONNECTIONS ==========
+Admin --> UC6 : "Quản lý người dùng"
+Admin --> UC7 : "Khóa/Mở khóa"
+Admin --> UC8 : "Phân quyền"
+
+' ========== INCLUDES/EXTENDS RELATIONSHIPS ==========
+UC7 ..> UC6 : <<extend>>\n"Khóa/Mở từ quản lý"
+UC8 ..> UC6 : <<extend>>\n"Phân quyền từ quản lý"
+
+note right of UC6
+  Quản lý người dùng (CRUD):
+  - Tạo người dùng mới
+  - Sửa thông tin người dùng
+  - Xóa người dùng (soft delete)
+  - Khóa người dùng
+  - Đặt role (customer/staff/admin)
+  - Xem danh sách người dùng
+  - Xem danh sách đã xóa
+  - Khôi phục người dùng đã xóa
+  - Tìm kiếm/Lọc người dùng
+  - Xem chi tiết người dùng
+  - Export danh sách
+end note
+
+note right of UC7
+  Khóa/Mở khóa tài khoản:
+  - Chuyển status user:
+    * active → blocked
+    * blocked → active
+  - Chặn truy cập khi blocked:
+    * Không thể đăng nhập
+    * Không thể sử dụng API
+    * Không thể truy cập Socket.IO
+  - Ghi lý do khóa
+  - Thời gian khóa
+  - Tự động mở khóa (nếu có)
+  - Audit log
+end note
+
+note right of UC8
+  Phân quyền người dùng:
+  - Gán vai trò:
+    * customer
+    * staff
+    * admin
+  - Áp dụng RBAC:
+    * Menu permissions
+    * Route permissions
+    * API permissions
+  - Quản lý permissions:
+    * Xem danh sách permissions
+    * Gán/bỏ permissions
+    * Custom permissions
+  - Xem lịch sử thay đổi quyền
+  - Audit log
+end note
+
+@enduml
+

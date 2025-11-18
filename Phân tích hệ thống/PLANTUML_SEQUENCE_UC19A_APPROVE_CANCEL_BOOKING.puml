@@ -1,0 +1,52 @@
+@startuml UC19A_ApproveCancelBooking
+!theme plain
+title UC19A: Duyệt hủy đặt phòng
+
+actor Staff as "Staff/Admin"
+participant "Admin Frontend" as AdminFrontend
+participant "Backend API" as API
+database "Database" as DB
+
+Staff -> AdminFrontend: Xem yêu cầu hủy booking
+Staff -> AdminFrontend: Xem thông tin booking\n(lý do hủy, số tiền đã thanh toán)
+Staff -> AdminFrontend: Chọn phê duyệt/từ chối
+
+alt Phê duyệt hủy và hoàn tiền
+    AdminFrontend -> API: PUT /api/v1/bookings/:id\n(Authorization: Bearer token)\n{ paymentStatus: "refunded", refundAmount }
+    
+    API -> API: Verify JWT + Check role (staff/admin)
+    API -> DB: Tìm booking theo ID
+    DB --> API: Booking found
+    
+    API -> API: Validate paymentStatus\n(phải là refund_requested)
+    
+    alt Status không hợp lệ
+        API --> AdminFrontend: Error: "Không thể hoàn tiền"
+        AdminFrontend --> Staff: Hiển thị lỗi
+    else Status hợp lệ
+        API -> API: Tính số tiền hoàn\n(refundAmount = paidAmount hoặc theo chính sách)
+        API -> DB: Cập nhật booking\n(paymentStatus: refunded, refundAmount)
+        API -> DB: Cập nhật invoice\n(paymentStatus: refunded)
+        API -> DB: Cập nhật payment\n(status: refunded)
+        API -> DB: Tạo booking status log\n(action: refunded, actorId: staffId)
+        API -> DB: Gửi email thông báo hoàn tiền cho customer
+        API -> DB: Gửi notification cho customer
+        DB --> API: Updated
+        
+        API --> AdminFrontend: Success: "Đã hoàn tiền thành công"
+        AdminFrontend --> Staff: Hiển thị thông báo\n"Đã hoàn tiền cho khách hàng"
+    end
+else Từ chối hủy (giữ nguyên booking)
+    AdminFrontend -> API: PUT /api/v1/bookings/:id\n{ paymentStatus: "paid", note: "Từ chối yêu cầu hủy" }
+    
+    API -> API: Verify JWT + Check role
+    API -> DB: Cập nhật booking\n(paymentStatus: paid, status: confirmed)
+    API -> DB: Tạo booking status log\n(action: confirmed, note: "Từ chối yêu cầu hủy")
+    API -> DB: Gửi notification cho customer
+    DB --> API: Updated
+    
+    API --> AdminFrontend: Success: "Đã từ chối yêu cầu hủy"
+    AdminFrontend --> Staff: Hiển thị thông báo
+end
+@enduml
+

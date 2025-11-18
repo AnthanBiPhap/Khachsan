@@ -1,0 +1,55 @@
+@startuml UC57_ManageNotifications
+!theme plain
+title UC57: Quản lý thông báo
+
+actor Admin
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+' ========== Quản lý notification types ==========
+Admin -> Frontend: Truy cập "Quản lý thông báo"
+Frontend -> API: GET /api/v1/notifications/types\n(Authorization: Bearer token)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Query notification types\n(cấu hình types, templates, TTL, retry policy)
+
+DB --> API: Notification types config
+API --> Frontend: Success + types data
+Frontend --> Admin: Hiển thị danh sách types\n(template, TTL, retry, enabled)
+
+' ========== Cập nhật notification type ==========
+Admin -> Frontend: Chọn type cần cấu hình
+Admin -> Frontend: Cập nhật settings\n(template, TTL, retry policy, enabled)
+Admin -> Frontend: Submit
+
+Frontend -> API: PUT /api/v1/notifications/types/:type\n{ template, ttl, retryPolicy, enabled }
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Cập nhật notification type config
+DB --> API: Updated
+
+API --> Frontend: Success: "Đã cập nhật cấu hình"
+Frontend --> Admin: Hiển thị thông báo thành công
+
+' ========== Bật/tắt notification type ==========
+Admin -> Frontend: Toggle enabled cho type
+Frontend -> API: PUT /api/v1/notifications/types/:type\n{ enabled: true/false }
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Cập nhật enabled status
+DB --> API: Updated
+
+API --> Frontend: Success
+Frontend --> Admin: Cập nhật UI\n(type enabled/disabled)
+
+note right
+  Quản lý bao gồm:
+  - Template notification (nội dung mẫu)
+  - TTL (Time To Live) cho notifications
+  - Retry policy (số lần thử lại khi gửi thất bại)
+  - Bật/tắt từng loại notification
+  - Cấu hình kênh (in-app, email)
+end note
+@enduml
+

@@ -1,0 +1,37 @@
+@startuml UC24_CheckOut
+!theme plain
+title UC24: Check-out khách
+
+actor Staff as "Staff/Admin"
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+Staff -> Frontend: Chọn booking cần check-out
+Staff -> Frontend: Xem tổng công nợ\n(phòng + dịch vụ)
+Staff -> Frontend: Submit check-out
+
+Frontend -> API: POST /api/v1/bookings/:id/check-out\n(Authorization: Bearer token)
+
+API -> API: Verify JWT + Check role (staff/admin)
+API -> DB: Tìm booking theo ID
+DB --> API: Booking found
+
+API -> DB: Tính toán tổng công nợ\n(phòng + services đã sử dụng)
+API -> DB: Kiểm tra invoice đã tồn tại?
+
+alt Chưa có invoice
+    API -> DB: Tạo invoice mới\n(tổng công nợ, paymentStatus)
+    DB --> API: Invoice created
+end
+
+API -> DB: Cập nhật booking\n(status: checked_out, paymentStatus)
+API -> DB: Cập nhật phòng\n(status: available)
+API -> DB: Cập nhật service bookings\n(status: completed)
+API -> DB: Tạo booking status log\n(action: checked_out, actorId: staffId)
+DB --> API: Updated
+
+API --> Frontend: Success + invoice data
+Frontend --> Staff: Hiển thị thông báo\n"Check-out thành công" + hóa đơn
+@enduml
+

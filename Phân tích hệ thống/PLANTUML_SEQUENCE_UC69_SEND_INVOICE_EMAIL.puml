@@ -1,0 +1,33 @@
+@startuml UC69_SendInvoiceEmail
+!theme plain
+title UC69: Gửi email hóa đơn
+
+actor System
+participant "Backend Service" as Service
+participant "Email Service" as Email
+database "Database" as DB
+
+System -> Service: Event: Thanh toán thành công / Chốt hóa đơn\n(bookingId, invoiceId)
+Service -> DB: Tìm invoice theo ID\n(populate booking, customer)
+DB --> Service: Invoice data
+
+Service -> DB: Tìm booking theo ID\n(populate room, services)
+DB --> Service: Booking data
+
+Service -> Service: Generate invoice PDF\n(invoice details, booking info, services)
+Service -> Service: Create PDF buffer
+
+Service -> Email: Gửi email hóa đơn\n(to: customer.email, invoice PDF attachment, booking details)
+
+Email -> Email: Attach PDF file\n(filename: HoaDon_{invoiceId}.pdf)
+Email --> Customer: Email với hóa đơn PDF\n(kèm chi tiết booking)
+
+note right
+  Email bao gồm:
+  - Invoice PDF attachment
+  - Chi tiết booking (phòng, ngày, dịch vụ)
+  - Tổng tiền và trạng thái thanh toán
+  - Link xem invoice online
+end note
+@enduml
+

@@ -1,0 +1,109 @@
+@startuml Guests Management - Use Case Diagram
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam usecase {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontSize 11
+}
+skinparam actor {
+    BackgroundColor #FFF3E0
+    BorderColor #E65100
+    FontSize 12
+    FontStyle bold
+}
+skinparam rectangle {
+    BackgroundColor #F5F5F5
+    BorderColor #757575
+}
+
+title Guests Management - Use Case Diagram\nHệ thống Miko Hotel
+
+' ========== ACTORS ==========
+actor "Staff\nNhân viên" as Staff
+actor "Admin\nQuản trị viên" as Admin
+
+' ========== GUESTS MANAGEMENT USE CASES ==========
+rectangle "Guests Management" {
+    usecase "UC28A: Xem danh sách khách" as UC28A
+    usecase "UC28B: Xem chi tiết khách" as UC28B
+    usecase "UC28C: Tạo/Sửa thông tin khách" as UC28C
+    usecase "UC28D: Xóa/Khôi phục khách" as UC28D
+    usecase "UC28E: Lịch sử đặt phòng của khách" as UC28E
+}
+
+' ========== STAFF CONNECTIONS ==========
+Staff --> UC28A : "Xem danh sách khách"
+Staff --> UC28B : "Xem chi tiết khách"
+Staff --> UC28C : "Tạo/Sửa thông tin khách"
+Staff --> UC28E : "Lịch sử đặt phòng"
+
+' ========== ADMIN CONNECTIONS ==========
+Admin --> UC28A : "Xem danh sách khách"
+Admin --> UC28B : "Xem chi tiết khách"
+Admin --> UC28C : "Tạo/Sửa thông tin khách"
+Admin --> UC28D : "Xóa/Khôi phục khách"
+Admin --> UC28E : "Lịch sử đặt phòng"
+
+' ========== INCLUDES/EXTENDS RELATIONSHIPS ==========
+UC28B ..> UC28A : <<extend>>\n"Xem chi tiết từ danh sách"
+UC28C ..> UC28B : <<include>>\n"Xem chi tiết trước khi sửa"
+UC28E ..> UC28B : <<extend>>\n"Xem lịch sử từ chi tiết"
+UC28D ..> UC28B : <<include>>\n"Xem chi tiết trước khi xóa"
+
+note right of UC28A
+  Tra cứu danh sách Guests
+  Lọc theo:
+  - Tên
+  - Email
+  - Số điện thoại
+  - Booking ID
+  - Ngày check-in/out
+  Phân trang
+  Export dữ liệu
+end note
+
+note right of UC28B
+  Xem hồ sơ khách:
+  - Thông tin cá nhân
+  - Thông tin liên hệ
+  - Ghi chú
+  - Lịch sử bookings
+  - Preferences
+  - Đánh giá
+end note
+
+note right of UC28C
+  Cập nhật hồ sơ khách đi kèm bookings:
+  - Thông tin cá nhân
+  - CMND/CCCD
+  - Số điện thoại
+  - Email
+  - Địa chỉ
+  - Ghi chú đặc biệt
+  Lưu lịch sử chỉnh sửa
+  Audit log
+end note
+
+note right of UC28D
+  Admin only:
+  - Xóa mềm (soft delete)
+  - Khôi phục hồ sơ
+  - Kiểm soát quyền truy cập
+  - Xóa vĩnh viễn (nếu cần)
+  Bảo vệ dữ liệu quan trọng
+end note
+
+note right of UC28E
+  Xem lịch sử đặt phòng của khách:
+  - Bookings (cá nhân/nhóm)
+  - Service bookings
+  - Invoices
+  - Payments
+  - Reviews
+  - Check-in/out history
+  Thống kê theo khách
+end note
+
+@enduml
+

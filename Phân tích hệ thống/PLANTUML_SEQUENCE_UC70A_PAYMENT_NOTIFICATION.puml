@@ -1,0 +1,36 @@
+@startuml UC70A_PaymentNotification
+!theme plain
+title UC70A: Thông báo payment
+
+actor System
+participant "Backend Service" as Service
+participant "Socket.IO" as Socket
+database "Database" as DB
+
+System -> Service: Event: Payment status changed\n(paymentId, status: completed/failed/refunded)
+Service -> DB: Tìm payment theo ID\n(populate booking, customer)
+DB --> Service: Payment data
+
+Service -> DB: Tạo notification\n(type: payment_received/payment_failed/payment_refunded)
+Service -> DB: Set recipients\n(customer + admin/staff)
+DB --> Service: Notification created
+
+Service -> Socket: Emit "payment_notification"\n(payment data, status, notification message)
+Socket -> Socket: Broadcast đến users\n(customerId room, role:admin, role:staff)
+Socket --> Frontend: Real-time notification
+
+Frontend -> Frontend: Update UI\n(badge unread, payment history)
+Frontend --> User: Hiển thị notification\n(toast, badge)
+
+Service -> DB: Cập nhật badge unread count\n(recipients)
+DB --> Service: Updated
+
+note right
+  Notification types:
+  - payment_received: Thanh toán thành công
+  - payment_failed: Thanh toán thất bại
+  - payment_refunded: Đã hoàn tiền
+  Tự động cập nhật badge và lịch sử
+end note
+@enduml
+

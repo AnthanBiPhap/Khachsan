@@ -1,0 +1,60 @@
+@startuml UC49_ChatWithStaff
+!theme plain
+title UC49: Chat với staff (mặc định) / admin
+
+actor Customer
+participant "Frontend" as Frontend
+participant "Backend API" as API
+participant "Stream Chat" as Stream
+database "Database" as DB
+
+Customer -> Frontend: Mở chat
+Frontend -> API: POST /api/v1/chat/token\n{ userId, name }
+
+API -> API: Verify JWT token
+API -> Stream: Generate Stream Chat token\n(userId, name)
+Stream --> API: Token + apiKey
+API --> Frontend: Token + apiKey + user
+
+Frontend -> Stream: Connect user\n(connectUser với token)
+Stream --> Frontend: Connected
+
+Frontend -> API: POST /api/v1/chat/staff\n{ userId }
+
+API -> API: Verify JWT token
+API -> DB: Tìm staff active\n(role: staff, status: active)\n(sort: createdAt ASC)
+
+alt Không có staff active
+    DB --> API: No staff found
+    
+    alt Fallback admin enabled
+        API -> DB: Tìm admin active\n(role: admin, status: active)
+        
+        alt Có admin active
+            DB --> API: Admin found
+            API -> Stream: Tạo/Get channel\n(customer ↔ admin)
+            Stream --> API: Channel ID
+        else Không có admin
+            DB --> API: No admin found
+            API --> Frontend: Error: "Không có staff/admin online"
+            Frontend --> Customer: Hiển thị thông báo
+        end
+    else Fallback admin disabled
+        API --> Frontend: Error: "Không có staff online"
+        Frontend --> Customer: Hiển thị thông báo
+    end
+else Có staff active
+    DB --> API: Staff found
+    API -> Stream: Tạo/Get channel\n(customer ↔ staff)
+    Stream --> API: Channel ID
+end
+
+alt Channel created/found
+    API --> Frontend: Success + channelId
+    Frontend -> Stream: Watch channel\n(channel.watch())
+    Stream --> Frontend: Channel ready
+    
+    Frontend --> Customer: Hiển thị chat interface\n(đã kết nối với staff/admin)
+end
+@enduml
+

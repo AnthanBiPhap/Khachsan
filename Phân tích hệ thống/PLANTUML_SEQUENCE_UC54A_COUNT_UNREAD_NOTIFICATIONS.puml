@@ -1,0 +1,29 @@
+@startuml UC54A_CountUnreadNotifications
+!theme plain
+title UC54A: Đếm thông báo chưa đọc
+
+actor User as "Customer/Staff/Admin"
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+User -> Frontend: Truy cập trang / dashboard
+Frontend -> API: GET /api/v1/notifications/unread-count\n(Authorization: Bearer token)
+
+API -> API: Verify JWT token
+API -> DB: Query notifications\n(filter: recipients chứa userId, read: false)\n(aggregate: count)
+
+DB --> API: Total unread count
+
+API --> Frontend: Success + { totalUnread: number }
+Frontend --> User: Hiển thị badge unread\n(trên icon notification, navigation bar)
+
+' ========== Real-time update ==========
+note right
+  Khi có notification mới:
+  - Socket.IO emit "new_notification"
+  - Frontend tự động gọi lại API
+  - Hoặc Socket.IO emit "unread-count-updated"
+end note
+@enduml
+

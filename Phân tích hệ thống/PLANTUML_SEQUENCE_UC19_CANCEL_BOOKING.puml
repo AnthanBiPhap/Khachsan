@@ -1,0 +1,58 @@
+@startuml UC19_CancelBooking
+!theme plain
+title UC19: Hủy đặt phòng
+
+actor Customer
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+Customer -> Frontend: Chọn booking cần hủy
+Customer -> Frontend: Nhập lý do hủy
+Customer -> Frontend: Submit cancel
+
+Frontend -> API: POST /api/v1/bookings/:id/cancel\n(Authorization: Bearer token)\n{ reason }
+
+API -> API: Verify JWT + Check ownership
+API -> DB: Tìm booking theo ID
+
+alt Booking không tồn tại hoặc không thuộc customer
+    DB --> API: Booking not found / unauthorized
+    API --> Frontend: Error: 404 / 403
+    Frontend --> Customer: Hiển thị lỗi
+else Booking tồn tại
+    DB --> API: Booking found
+    API -> API: Kiểm tra chính sách hủy\n(thời gian, trạng thái)
+    
+    alt Không thể hủy (quá hạn, đã check-in...)
+        API --> Frontend: Error: "Không thể hủy booking"
+        Frontend --> Customer: Hiển thị lỗi
+    else Có thể hủy
+        API -> API: Kiểm tra đã thanh toán?\n(paidAmount > 0)
+        
+        alt Đã thanh toán
+            API -> DB: Cập nhật booking\n(status: cancelled, paymentStatus: refund_requested)
+            API -> DB: Tính số tiền hoàn\n(refundAmount = paidAmount)
+            API -> DB: Tạo booking status log\n(action: refund_requested)
+            API -> DB: Gửi notification cho staff/admin
+            DB --> API: Updated
+        else Chưa thanh toán
+            API -> DB: Cập nhật booking\n(status: cancelled, paymentStatus: cancelled)
+            API -> DB: Tạo booking status log\n(action: cancelled)
+            DB --> API: Updated
+        end
+        
+        API -> DB: Cập nhật tồn phòng
+        DB --> API: Updated
+        
+        API --> Frontend: Success: "Đã gửi yêu cầu hủy"
+        Frontend --> Customer: Hiển thị thông báo\n"Yêu cầu hủy đã được gửi, chờ xử lý"
+    end
+end
+
+note right
+  Yêu cầu chờ Staff/Admin:
+  - Duyệt hủy (UC19A)
+  - Hoàn tiền (nếu có)
+end note
+@enduml

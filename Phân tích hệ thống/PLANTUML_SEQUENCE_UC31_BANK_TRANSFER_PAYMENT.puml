@@ -1,0 +1,48 @@
+@startuml UC31_BankTransferPayment
+!theme plain
+title UC31: Thanh toán chuyển khoản
+
+actor Staff as "Staff/Admin"
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+Staff -> Frontend: Chọn booking cần thanh toán
+Staff -> Frontend: Chọn "Thanh toán chuyển khoản"
+Staff -> Frontend: Nhập thông tin\n(bankName, accountNumber, transactionCode, amount)
+Staff -> Frontend: Submit payment
+
+Frontend -> API: POST /api/v1/payments\n(Authorization: Bearer token)\n{ bookingId, paymentMethod: "bank_transfer", amount, bankInfo }
+
+API -> API: Verify JWT + Check role (staff/admin)
+API -> DB: Tìm booking theo ID
+DB --> API: Booking found
+
+API -> API: Validate amount\n(amount <= remainingAmount)
+API -> API: Validate transactionCode\n(kiểm tra trùng lặp)
+
+alt TransactionCode đã tồn tại
+    DB --> API: TransactionCode exists
+    API --> Frontend: Error: "Mã giao dịch đã tồn tại"
+    Frontend --> Staff: Hiển thị lỗi
+else TransactionCode hợp lệ
+    DB --> API: TransactionCode available
+    API -> DB: Tạo payment record\n(paymentMethod: bank_transfer, status: completed, bankInfo)
+    API -> DB: Cập nhật booking\n(paidAmount += amount, remainingAmount -= amount)
+    
+    alt Đã thanh toán đủ
+        API -> DB: Cập nhật booking\n(paymentStatus: paid)
+        API -> DB: Cập nhật invoice\n(paymentStatus: paid, status: paid)
+    else Chưa thanh toán đủ
+        API -> DB: Cập nhật booking\n(paymentStatus: partial_paid)
+        API -> DB: Cập nhật invoice\n(paymentStatus: partial_paid)
+    end
+    
+    API -> DB: Tạo booking status log\n(action: paid, actorId: staffId)
+    DB --> API: Updated
+    
+    API --> Frontend: Success: "Đã ghi nhận thanh toán chuyển khoản"
+    Frontend --> Staff: Hiển thị thông báo\n"Thanh toán thành công"
+end
+@enduml
+

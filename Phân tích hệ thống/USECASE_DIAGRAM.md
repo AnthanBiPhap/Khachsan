@@ -281,14 +281,21 @@ graph TB
 | UC56C | Ưu tiên/Kênh thông báo | Admin | Cấu hình loại/kênh: in-app, email (nếu bật), theo mức ưu tiên. |
 | UC57 | Quản lý thông báo | Admin | Quản lý template/loại thông báo, TTL, chính sách retry; bật/tắt từng loại. |
 
+### 📍 Location Management
+
+| ID | Use Case | Actor | Mô tả |
+|---|---|---|---|
+| UC58 | Xem danh sách địa điểm | Customer | Duyệt các địa điểm (điểm tham quan, khu vực lân cận...) phục vụ tra cứu. |
+| UC59 | Xem chi tiết địa điểm | Customer | Xem mô tả, hình ảnh, vị trí, thời gian mở cửa, gợi ý di chuyển. |
+| UC60 | Tìm kiếm địa điểm | Customer | Tìm theo tên/loại/khoảng cách; lọc nâng cao. |
+| UC61 | Quản lý địa điểm (catalog) | Admin | Tạo/Sửa/Xóa địa điểm; bật/tắt hiển thị. (Staff: chỉ xem) |
+
 ### 🤖 AI Assistant & Suggestions
 
 | ID | Use Case | Actor | Mô tả |
 |---|---|---|---|
 | UC59A | Gợi ý phòng/dịch vụ theo sở thích | System, Customer | Dựa trên preferences của user (sở thích đã lưu) + lịch sử đặt phòng để gợi ý loại phòng/dịch vụ phù hợp; hiển thị trong trang tìm kiếm/phòng chi tiết. (Tùy chọn bật/tắt) |
 | UC59B | Gợi ý phản hồi chat | System, Staff | Đề xuất nhanh các câu trả lời (FAQ, chính sách, hướng dẫn check-in/out, báo giá cơ bản) cho staff trong cửa sổ chat; staff có thể chỉnh sửa trước khi gửi. |
-| UC59C | Gợi ý thao tác nghiệp vụ | System, Staff | Đề xuất bước xử lý tiếp theo cho booking (xác nhận, nhắc thanh toán, nhắc check-in, gợi ý hủy theo chính sách…); không tự động thực thi, chỉ hỗ trợ quyết định. |
-| UC59D | Quản trị mô hình/nguồn dữ liệu AI | Admin | Cấu hình bật/tắt AI, phạm vi dữ liệu được phép dùng (chỉ metadata, không dùng PII), lưu lịch sử gợi ý để audit; đảm bảo tuân thủ bảo mật/quyền riêng tư. |
 
 ### ⚙️ System Automation & Integrations
 
@@ -304,16 +311,6 @@ graph TB
 | UC71 | Xử lý thanh toán Stripe | System | Tạo phiên checkout, xác minh webhook (ký HMAC), idempotency key; cập nhật payment/invoice an toàn. |
 | UC72 | Cập nhật trạng thái tự động | System | Cập nhật trạng thái booking/phòng theo mốc thời gian (giữ chỗ hết hạn, no-show, checkout quá hạn...). |
 | UC72A | Lên lịch tác vụ (scheduler) | System | Cron/scheduled jobs cho email/notify/cleanup (OTP hết hạn, tokens, logs). |
-
-
-### 📍 Location Management
-
-| ID | Use Case | Actor | Mô tả |
-|---|---|---|---|
-| UC58 | Xem danh sách địa điểm | Customer | Duyệt các địa điểm (điểm tham quan, khu vực lân cận...) phục vụ tra cứu. |
-| UC59 | Xem chi tiết địa điểm | Customer | Xem mô tả, hình ảnh, vị trí, thời gian mở cửa, gợi ý di chuyển. |
-| UC60 | Tìm kiếm địa điểm | Customer | Tìm theo tên/loại/khoảng cách; lọc nâng cao. |
-| UC61 | Quản lý địa điểm (catalog) | Admin | Tạo/Sửa/Xóa địa điểm; bật/tắt hiển thị. (Staff: chỉ xem) |
 
 ### 📊 Dashboard & Reports
 

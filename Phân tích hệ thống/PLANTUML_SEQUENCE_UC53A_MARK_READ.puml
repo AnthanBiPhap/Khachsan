@@ -1,0 +1,35 @@
+@startuml UC53A_MarkRead
+!theme plain
+title UC53A: Đánh dấu đã đọc
+
+actor User as "Customer/Staff/Admin"
+participant "Frontend" as Frontend
+participant "Backend API" as API
+participant "Socket.IO" as Socket
+database "Database" as DB
+
+User -> Frontend: Mở conversation / đọc tin nhắn
+Frontend -> API: PUT /api/v1/chat/conversations/:id/read\n(Authorization: Bearer token)
+
+API -> API: Verify JWT token
+API -> DB: Tìm conversation theo ID
+DB --> API: Conversation found
+
+API -> API: Check permission\n(user có trong participants?)
+
+alt Không có quyền
+    API --> Frontend: Error: 403 Forbidden
+    Frontend --> User: Hiển thị lỗi
+else Có quyền
+    API -> DB: Cập nhật read status\n(conversation.readBy[userId] = now)\n(conversation.unreadCount[userId] = 0)
+    DB --> API: Updated
+    
+    API -> Socket: Emit "conversation-read"\n(conversationId, userId)
+    Socket -> Socket: Broadcast đến room\n(conversation:conversationId)
+    Socket --> Frontend: Real-time notification\n(tất cả users trong conversation)
+    
+    API --> Frontend: Success: "Đã đánh dấu đã đọc"
+    Frontend --> User: Cập nhật UI\n(xóa badge unread, cập nhật read status)
+end
+@enduml
+

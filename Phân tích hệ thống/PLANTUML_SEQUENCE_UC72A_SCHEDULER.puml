@@ -1,0 +1,75 @@
+@startuml UC72A_Scheduler
+!theme plain
+title UC72A: Lên lịch tác vụ (scheduler)
+
+actor System
+participant "Cron Scheduler" as Scheduler
+participant "Backend Service" as Service
+database "Database" as DB
+
+' ========== Cleanup expired OTP ==========
+Scheduler -> Service: Cron: Mỗi giờ\n(cleanup expired OTP)
+
+Service -> DB: Query users\n(passwordResetOTPExpires < now)
+DB --> Service: Users with expired OTP
+
+loop Mỗi user
+    Service -> DB: Xóa expired OTP\n(passwordResetOTP: null, passwordResetOTPExpires: null)
+    DB --> Service: Cleaned
+end
+
+' ========== Cleanup expired tokens ==========
+Scheduler -> Service: Cron: Mỗi ngày\n(cleanup expired tokens)
+
+Service -> DB: Query expired tokens\n(emailVerificationTokenExpires < now)
+DB --> Service: Expired tokens list
+
+loop Mỗi token
+    Service -> DB: Xóa expired token
+    DB --> Service: Cleaned
+end
+
+' ========== Cleanup old logs ==========
+Scheduler -> Service: Cron: Mỗi tuần\n(cleanup old logs)
+
+Service -> DB: Query old logs\n(createdAt < now - 90 days)
+DB --> Service: Old logs list
+
+Service -> DB: Xóa logs cũ\n(archive hoặc delete)
+DB --> Service: Cleaned
+
+' ========== Send scheduled emails ==========
+Scheduler -> Service: Cron: Mỗi 5 phút\n(send scheduled emails)
+
+Service -> DB: Query pending emails\n(status: pending, scheduledAt <= now)
+DB --> Service: Pending emails list
+
+loop Mỗi email
+    Service -> Service: Gửi email
+    Service -> DB: Cập nhật email status\n(status: sent, sentAt: now)
+    DB --> Service: Updated
+end
+
+' ========== Retry failed notifications ==========
+Scheduler -> Service: Cron: Mỗi 10 phút\n(retry failed notifications)
+
+Service -> DB: Query failed notifications\n(status: failed, retryCount < maxRetries)
+DB --> Service: Failed notifications list
+
+loop Mỗi notification
+    Service -> Service: Retry send notification
+    Service -> DB: Cập nhật retry count\n(retryCount++, lastRetryAt: now)
+    DB --> Service: Updated
+end
+
+note right
+  Scheduled tasks:
+  - Cleanup expired OTP (hourly)
+  - Cleanup expired tokens (daily)
+  - Cleanup old logs (weekly)
+  - Send scheduled emails (every 5 min)
+  - Retry failed notifications (every 10 min)
+  - Auto update booking status (hourly/daily)
+end note
+@enduml
+

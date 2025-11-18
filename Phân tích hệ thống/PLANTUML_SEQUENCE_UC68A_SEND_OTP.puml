@@ -1,0 +1,38 @@
+@startuml UC68A_SendOTP
+!theme plain
+title UC68A: Gửi OTP quên mật khẩu
+
+actor System
+participant "Backend Service" as Service
+participant "Email Service" as Email
+database "Database" as DB
+
+System -> Service: Event: User yêu cầu quên mật khẩu\n(email)
+Service -> DB: Tìm user theo email
+
+alt User không tồn tại
+    DB --> Service: User not found
+    Service -> Service: Return success (không tiết lộ email tồn tại)
+    Service --> User: "Nếu email tồn tại, chúng tôi đã gửi OTP"
+else User tồn tại
+    DB --> Service: User found
+    
+    Service -> Service: Tạo OTP 6 số\n(Math.random: 100000-999999)
+    Service -> Service: Set TTL: 10 phút
+    Service -> DB: Lưu OTP vào user\n(passwordResetOTP, passwordResetOTPExpires)
+    DB --> Service: OTP saved
+    
+    Service -> Email: Gửi email OTP\n(to: user.email, otp: 6 digits)
+    Email --> User: Email với OTP 6 số
+    
+    Service --> User: "Nếu email tồn tại, chúng tôi đã gửi OTP"
+    
+    note right
+      Bảo mật:
+      - Không tiết lộ email có tồn tại
+      - OTP chỉ có hiệu lực 10 phút
+      - Tự động xóa OTP sau khi sử dụng
+    end note
+end
+@enduml
+

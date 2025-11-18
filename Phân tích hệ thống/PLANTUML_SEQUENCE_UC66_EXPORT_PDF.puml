@@ -1,0 +1,46 @@
+@startuml UC66_ExportPDF
+!theme plain
+title UC66: Xuất báo cáo PDF
+
+actor Admin
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+participant "jsPDF Library" as PDF
+
+Admin -> Frontend: Chọn bộ lọc\n(status, source, dateRange)
+Admin -> Frontend: Click "Xuất PDF"
+Frontend -> API: GET /api/v1/bookings\n(Authorization: Bearer token)\n(query params: filters)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Query bookings với filters\n(populate guests, roomId, customerId)
+DB --> API: Filtered bookings
+
+Frontend -> API: GET /api/v1/invoices\n(Authorization: Bearer token)\n(query params: filters)
+API -> DB: Query invoices với filters\n(populate bookingId, customerId)
+DB --> API: Filtered invoices
+
+Frontend -> Frontend: Tính toán thống kê từ dữ liệu đã lọc
+
+Frontend -> PDF: Tạo PDF document mới
+PDF --> Frontend: PDF document created
+
+Frontend -> PDF: Thêm tiêu đề\n("Báo cáo Dashboard", font size 20)
+PDF --> Frontend: Title added
+
+Frontend -> PDF: Thêm thống kê\n(totalBookings, currentGuests, revenue, paymentRate)
+PDF --> Frontend: Statistics added
+
+Frontend -> PDF: Thêm bảng dữ liệu\n(bookings table với autoTable)
+PDF --> Frontend: Table added
+
+Frontend -> PDF: Thêm đóng dấu/watermark\n(logo, company info, date)
+PDF --> Frontend: Watermark added
+
+Frontend -> PDF: Xuất file PDF\n(filename: dashboard_YYYY-MM-DD.pdf)
+PDF --> Admin: Download file PDF
+
+API --> Frontend: Success + data (bookings, invoices)
+Frontend --> Admin: File PDF đã được tải xuống\n(định dạng chuẩn, đóng dấu)
+@enduml
+

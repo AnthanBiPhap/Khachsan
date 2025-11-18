@@ -1,0 +1,107 @@
+@startuml AI Assistant & Suggestions - Use Case Diagram
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam usecase {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontSize 11
+}
+skinparam actor {
+    BackgroundColor #FFF3E0
+    BorderColor #E65100
+    FontSize 12
+    FontStyle bold
+}
+skinparam rectangle {
+    BackgroundColor #F5F5F5
+    BorderColor #757575
+}
+
+title AI Assistant & Suggestions - Use Case Diagram\nHệ thống Miko Hotel
+
+' ========== ACTORS ==========
+actor "Customer\nKhách hàng" as Customer
+actor "Staff\nNhân viên" as Staff
+actor "Admin\nQuản trị viên" as Admin
+actor "System\nHệ thống" as System
+
+' ========== AI ASSISTANT & SUGGESTIONS USE CASES ==========
+rectangle "AI Assistant & Suggestions" {
+    usecase "UC59A: Gợi ý phòng/dịch vụ theo sở thích" as UC59A
+    usecase "UC59B: Gợi ý phản hồi chat" as UC59B
+    usecase "UC59C: Gợi ý tác nghiệp" as UC59C
+    usecase "UC59D: Quản trị AI & dữ liệu" as UC59D
+}
+
+' ========== CUSTOMER CONNECTIONS ==========
+Customer --> UC59A : "Nhận gợi ý phòng/dịch vụ"
+
+' ========== STAFF CONNECTIONS ==========
+Staff --> UC59B : "Gợi ý phản hồi chat"
+Staff --> UC59C : "Gợi ý tác nghiệp"
+
+' ========== ADMIN CONNECTIONS ==========
+Admin --> UC59D : "Quản trị AI"
+
+' ========== SYSTEM CONNECTIONS ==========
+System --> UC59A : "Phân tích preferences"
+System --> UC59B : "Đề xuất câu trả lời"
+System --> UC59C : "Phân tích nghiệp vụ"
+
+' ========== INCLUDES/EXTENDS RELATIONSHIPS ==========
+UC59A ..> UC9 : <<extend>>\n"Gợi ý trong danh sách phòng"
+UC59A ..> UC38 : <<extend>>\n"Gợi ý trong danh sách dịch vụ"
+UC59B ..> UC51 : <<extend>>\n"Gợi ý khi gửi tin nhắn"
+UC59C ..> UC22 : <<extend>>\n"Gợi ý cập nhật trạng thái"
+UC59C ..> UC43 : <<extend>>\n"Gợi ý xử lý dịch vụ"
+
+note right of UC59A
+  Dựa trên preferences của user:
+  - Sở thích đã lưu
+  - Lịch sử đặt phòng
+  Gợi ý loại phòng/dịch vụ phù hợp
+  Hiển thị trong:
+  - Trang tìm kiếm
+  - Trang phòng chi tiết
+  - Trang dịch vụ
+  Tùy chọn bật/tắt
+end note
+
+note right of UC59B
+  Đề xuất nhanh các câu trả lời cho staff:
+  - FAQ thường gặp
+  - Chính sách khách sạn
+  - Hướng dẫn check-in/out
+  - Báo giá cơ bản
+  - Thông tin phòng/dịch vụ
+  Staff có thể chỉnh sửa trước khi gửi
+  Hiển thị trong cửa sổ chat
+end note
+
+note right of UC59C
+  Đề xuất bước xử lý tiếp theo cho booking:
+  - Xác nhận booking
+  - Nhắc thanh toán
+  - Nhắc check-in
+  - Gợi ý hủy theo chính sách
+  - Gợi ý dịch vụ phù hợp
+  Không tự động thực thi
+  Chỉ hỗ trợ quyết định
+  Hiển thị trong dashboard
+end note
+
+note right of UC59D
+  Cấu hình bật/tắt AI
+  Phạm vi dữ liệu được phép dùng:
+  - Chỉ metadata
+  - Không dùng PII (Personal Identifiable Information)
+  Lưu lịch sử gợi ý để audit
+  Đảm bảo tuân thủ:
+  - Bảo mật
+  - Quyền riêng tư
+  Quản lý mô hình AI
+  Cấu hình tham số
+end note
+
+@enduml
+

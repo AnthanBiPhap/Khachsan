@@ -1,0 +1,66 @@
+@startuml UC71_StripeWebhook
+!theme plain
+title UC71: Xử lý thanh toán Stripe
+
+actor Stripe
+participant "Backend API" as API
+participant "Database" as DB
+
+Stripe -> API: POST /api/stripe/webhook\n(Stripe-Signature header, event data)
+
+API -> API: Verify webhook signature\n(HMAC SHA256 với Stripe secret)
+
+alt Signature không hợp lệ
+    API --> Stripe: Error: 401 Unauthorized
+else Signature hợp lệ
+    API -> API: Parse event\n(event.type, event.data)
+    
+    alt Event: checkout.session.completed
+        API -> API: Extract session data\n(session_id, metadata, payment_status)
+        API -> Stripe: Verify session\n(GET /checkout/sessions/:id)
+        Stripe --> API: Session verified
+        
+        API -> API: Check idempotency key\n(tránh xử lý trùng lặp)
+        
+        alt Đã xử lý (idempotency key exists)
+            API -> DB: Skip processing
+            API --> Stripe: Success: "Already processed"
+        else Chưa xử lý
+            API -> DB: Lưu idempotency key
+            API -> DB: Tạo booking\n(status: pending, paymentStatus: paid)
+            API -> DB: Tạo payment record\n(paymentMethod: stripe, status: completed, stripeSessionId)
+            API -> DB: Cập nhật invoice\n(paymentStatus: paid)
+            API -> DB: Tạo booking status log
+            DB --> API: Booking + Payment created
+            
+            API -> API: Gửi email xác nhận thanh toán\n(kèm PDF hóa đơn)
+            API -> API: Gửi notification real-time
+            
+            API --> Stripe: Success: 200 OK
+        end
+    else Event: payment_intent.failed
+        API -> DB: Cập nhật payment\n(status: failed)
+        API -> DB: Cập nhật booking\n(paymentStatus: failed)
+        DB --> API: Updated
+        
+        API -> API: Gửi notification thất bại
+        API --> Stripe: Success: 200 OK
+    else Event: charge.refunded
+        API -> DB: Cập nhật payment\n(status: refunded)
+        API -> DB: Cập nhật booking\n(paymentStatus: refunded)
+        DB --> API: Updated
+        
+        API -> API: Gửi notification hoàn tiền
+        API --> Stripe: Success: 200 OK
+    end
+end
+
+note right
+  Bảo mật:
+  - Verify HMAC signature
+  - Idempotency key để tránh xử lý trùng
+  - Verify session với Stripe API
+  - Log tất cả webhook events
+end note
+@enduml
+

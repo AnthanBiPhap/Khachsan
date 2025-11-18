@@ -1,0 +1,32 @@
+@startuml UC35_ExportInvoicePDF
+!theme plain
+title UC35: Xuất hóa đơn PDF
+
+actor Customer
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+Customer -> Frontend: Chọn booking đã thanh toán
+Customer -> Frontend: Click "Xuất hóa đơn PDF"
+
+Frontend -> API: GET /api/v1/invoices/:id/print\n(Authorization: Bearer token)
+
+API -> API: Verify JWT + Check ownership
+API -> DB: Tìm invoice theo ID\n(populate booking, customer)
+
+alt Invoice không tồn tại hoặc không thuộc customer
+    DB --> API: Invoice not found / unauthorized
+    API --> Frontend: Error: 404 / 403
+    Frontend --> Customer: Hiển thị lỗi
+else Invoice tồn tại
+    DB --> API: Invoice data với booking details
+    
+    API -> API: Tạo PDF hóa đơn\n(header, customer info, booking info, services, total)
+    API -> API: Generate PDF buffer
+    
+    API --> Frontend: PDF file (application/pdf)
+    Frontend --> Customer: Hiển thị PDF\n(hoặc download file)
+end
+@enduml
+

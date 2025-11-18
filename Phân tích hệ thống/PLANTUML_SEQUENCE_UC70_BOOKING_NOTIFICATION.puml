@@ -1,0 +1,33 @@
+@startuml UC70_BookingNotification
+!theme plain
+title UC70: Gửi thông báo đặt phòng
+
+actor System
+participant "Backend Service" as Service
+participant "Socket.IO" as Socket
+database "Database" as DB
+
+System -> Service: Event: Booking mới / Cập nhật\n(bookingId, action: new_booking/booking_updated)
+Service -> DB: Tìm booking theo ID\n(populate customer, room)
+DB --> Service: Booking data
+
+Service -> DB: Tạo notification\n(type: new_booking/booking_updated, recipients: admin/staff)
+Service -> DB: Set recipients\n(role: admin, staff, read: false)
+DB --> Service: Notification created
+
+Service -> Socket: Emit "new_booking" / "booking_updated"\n(booking data, notification message)
+Socket -> Socket: Broadcast đến rooms\n(role:admin, role:staff)
+Socket --> Frontend: Real-time notification\n(tất cả admin/staff online)
+
+Frontend -> Frontend: Update UI\n(badge unread, notification list)
+Frontend --> Staff: Hiển thị notification\n(toast, badge, sound)
+
+note right
+  Notification bao gồm:
+  - Booking ID, customer info
+  - Room, check-in/out dates
+  - Total price, payment status
+  - Source (online/walk_in)
+end note
+@enduml
+

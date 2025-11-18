@@ -1,0 +1,60 @@
+@startuml UC13_ManageRoom
+!theme plain
+title UC13: Quản lý phòng (Admin CRUD)
+
+actor Admin
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+' ========== CREATE ROOM ==========
+Admin -> Frontend: Tạo phòng mới
+Frontend -> API: POST /api/v1/rooms\n(Authorization: Bearer token)\n{ roomNumber, typeId, amenities, images }
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Kiểm tra roomNumber đã tồn tại?
+
+alt RoomNumber đã tồn tại
+    DB --> API: Room exists
+    API --> Frontend: Error: "Số phòng đã tồn tại"
+    Frontend --> Admin: Hiển thị lỗi
+else RoomNumber chưa tồn tại
+    DB --> API: RoomNumber available
+    API -> DB: Tạo phòng mới\n(status: available)
+    DB --> API: Room created
+    API --> Frontend: Success + room data
+    Frontend --> Admin: Hiển thị thông báo thành công
+end
+
+' ========== UPDATE ROOM ==========
+Admin -> Frontend: Sửa thông tin phòng
+Frontend -> API: PUT /api/v1/rooms/:id\n{ roomNumber, typeId, amenities, images }
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Tìm phòng theo ID
+DB --> API: Room found
+API -> DB: Cập nhật thông tin phòng
+DB --> API: Updated
+API --> Frontend: Success + updated room
+Frontend --> Admin: Hiển thị thông báo thành công
+
+' ========== DELETE ROOM ==========
+Admin -> Frontend: Xóa phòng
+Frontend -> API: DELETE /api/v1/rooms/:id
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Kiểm tra phòng có booking đang active?
+
+alt Có booking active
+    DB --> API: Has active bookings
+    API --> Frontend: Error: "Không thể xóa phòng có booking đang active"
+    Frontend --> Admin: Hiển thị lỗi
+else Không có booking active
+    DB --> API: No active bookings
+    API -> DB: Soft delete phòng\n(deletedAt = now)
+    DB --> API: Deleted
+    API --> Frontend: Success: "Đã xóa phòng"
+    Frontend --> Admin: Hiển thị thông báo thành công
+end
+@enduml
+

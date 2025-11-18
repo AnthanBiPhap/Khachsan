@@ -1,0 +1,58 @@
+@startuml UC59A_RoomServiceSuggestions
+!theme plain
+title UC59A: Gợi ý phòng/dịch vụ theo sở thích
+
+actor Customer
+actor System
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+Customer -> Frontend: Truy cập trang tìm kiếm phòng / dịch vụ
+Frontend -> API: GET /api/v1/rooms\nhoặc GET /api/v1/services\n(Authorization: Bearer token)\n(query params: preferences)
+
+API -> API: Verify JWT token
+API -> DB: Lấy user preferences\n(user.preferences)
+DB --> API: User preferences
+
+alt AI suggestions enabled
+    API -> System: Phân tích preferences\n(user preferences + booking history)
+    
+    System -> System: Tính điểm phù hợp\n(match preferences với room/service features)
+    System -> System: Sắp xếp theo độ phù hợp\n(score: high → low)
+    System --> API: Suggested rooms/services
+    
+    API -> DB: Query rooms/services\n(filter: suggested IDs, status: active)
+    DB --> API: Suggested items
+    
+    API --> Frontend: Success + rooms/services\n(flagged: "recommended" based on preferences)
+    Frontend --> Customer: Hiển thị danh sách\n(highlight gợi ý phù hợp với sở thích)
+else AI suggestions disabled
+    API -> DB: Query rooms/services\n(standard query, no AI filtering)
+    DB --> API: Standard results
+    
+    API --> Frontend: Success + rooms/services\n(no recommendations)
+    Frontend --> Customer: Hiển thị danh sách bình thường
+end
+
+' ========== Quick Suggestions trong AI Chat ==========
+Customer -> Frontend: Mở AI Chat Bubble
+Frontend -> API: GET /api/v1/users/me\n(Authorization: Bearer token)
+
+API -> API: Verify JWT token
+API -> DB: Lấy user data\n(user.preferences)
+DB --> API: User preferences
+
+API --> Frontend: User preferences
+Frontend -> Frontend: Hiển thị quick suggestions\n(dựa trên preferences)
+
+Customer -> Frontend: Click vào suggestion\n(ví dụ: "tham quan", "ăn uống")
+Frontend -> API: POST /api/ai-chat\n{ message: suggestion query, userPreferences }
+
+API -> API: Call AI service (Groq API)\n(prompt với user preferences context)
+API -> API: Generate AI response\n(ưu tiên gợi ý phù hợp với preferences)
+API --> Frontend: AI response
+
+Frontend --> Customer: Hiển thị gợi ý từ AI\n(phù hợp với sở thích)
+@enduml
+

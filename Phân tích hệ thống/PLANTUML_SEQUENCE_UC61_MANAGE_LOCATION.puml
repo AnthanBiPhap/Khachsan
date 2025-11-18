@@ -1,0 +1,74 @@
+@startuml UC61_ManageLocation
+!theme plain
+title UC61: Quản lý địa điểm (catalog)
+
+actor Admin
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+' ========== CREATE LOCATION ==========
+Admin -> Frontend: Tạo địa điểm mới
+Frontend -> API: POST /api/v1/locations\n(Authorization: Bearer token)\n{ name, type, description, address, images, ratingAvg }
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Kiểm tra location đã tồn tại?\n(name + type, status != deleted)
+
+alt Location đã tồn tại
+    DB --> API: Location exists
+    API --> Frontend: Error: "Địa điểm với tên và loại này đã tồn tại"
+    Frontend --> Admin: Hiển thị lỗi
+else Location chưa tồn tại
+    DB --> API: Location available
+    API -> DB: Tạo location mới\n(status: active)
+    DB --> API: Location created
+    
+    API --> Frontend: Success + location data
+    Frontend --> Admin: Hiển thị thông báo thành công
+end
+
+' ========== UPDATE LOCATION ==========
+Admin -> Frontend: Sửa thông tin địa điểm
+Frontend -> API: PUT /api/v1/locations/:id\n{ name, type, description, address, images, ratingAvg, status }
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Tìm location theo ID
+DB --> API: Location found
+API -> DB: Cập nhật thông tin location
+DB --> API: Updated
+
+API --> Frontend: Success + updated location
+Frontend --> Admin: Hiển thị thông báo thành công
+
+' ========== DELETE LOCATION ==========
+Admin -> Frontend: Xóa địa điểm
+Frontend -> API: DELETE /api/v1/locations/:id
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Tìm location theo ID
+DB --> API: Location found
+
+API -> DB: Soft delete location\n(status: deleted)
+DB --> API: Deleted
+
+API --> Frontend: Success: "Đã xóa địa điểm"
+Frontend --> Admin: Hiển thị thông báo thành công
+
+' ========== TOGGLE VISIBILITY ==========
+Admin -> Frontend: Bật/tắt hiển thị địa điểm
+Frontend -> API: PUT /api/v1/locations/:id\n{ status: "active" / "hidden" }
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Cập nhật status
+DB --> API: Updated
+
+API --> Frontend: Success: "Đã cập nhật trạng thái"
+Frontend --> Admin: Hiển thị thông báo thành công
+
+note right
+  Staff chỉ có quyền xem:
+  - GET /api/v1/locations (read-only)
+  - Không thể tạo/sửa/xóa
+end note
+@enduml
+

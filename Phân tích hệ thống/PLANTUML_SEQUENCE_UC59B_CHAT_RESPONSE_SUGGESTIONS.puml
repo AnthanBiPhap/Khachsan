@@ -1,0 +1,58 @@
+@startuml UC59B_ChatResponseSuggestions
+!theme plain
+title UC59B: Gợi ý phản hồi chat
+
+actor Staff
+actor System
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+Staff -> Frontend: Mở chat với customer
+Staff -> Frontend: Đọc tin nhắn từ customer
+Staff -> Frontend: Click vào input field để gửi tin nhắn
+
+Frontend -> API: POST /api/v1/ai/chat-suggestions\n(Authorization: Bearer token)\n{ customerMessage, conversationContext }
+
+API -> API: Verify JWT + Check role (staff/admin)
+API -> System: Phân tích tin nhắn customer\n(extract intent, keywords)
+
+System -> System: Match với FAQ/Knowledge base\n(FAQ, chính sách, hướng dẫn check-in/out, báo giá)
+
+alt Tìm thấy phản hồi phù hợp
+    System -> System: Generate suggested responses\n(FAQ answers, policy info, check-in/out guide, pricing)
+    System --> API: Suggested responses array
+    
+    API --> Frontend: Success + suggestions\n[{ text: "...", type: "faq" }, { text: "...", type: "policy" }]
+    Frontend --> Staff: Hiển thị gợi ý phản hồi\n(buttons hoặc dropdown)
+    
+    Staff -> Frontend: Chọn gợi ý hoặc chỉnh sửa
+    Staff -> Frontend: Chỉnh sửa nội dung (nếu cần)
+    Staff -> Frontend: Click "Gửi"
+    
+    Frontend -> API: POST /api/v1/chat/messages\n{ conversationId, content: edited_suggestion }
+    
+    API -> API: Verify JWT + Check permission
+    API -> DB: Lưu message
+    API -> DB: Log suggestion usage\n(aiSuggestionId, edited: true/false)
+    DB --> API: Message saved
+    
+    API --> Frontend: Success: "Đã gửi tin nhắn"
+    Frontend --> Staff: Hiển thị tin nhắn đã gửi
+else Không tìm thấy phản hồi phù hợp
+    System --> API: No suggestions
+    API --> Frontend: Success + suggestions: []
+    Frontend --> Staff: Không hiển thị gợi ý\n(Staff tự soạn tin nhắn)
+end
+
+note right
+  Gợi ý bao gồm:
+  - FAQ thường gặp
+  - Chính sách khách sạn
+  - Hướng dẫn check-in/out
+  - Báo giá cơ bản
+  - Thông tin phòng/dịch vụ
+  Staff có thể chỉnh sửa trước khi gửi
+end note
+@enduml
+

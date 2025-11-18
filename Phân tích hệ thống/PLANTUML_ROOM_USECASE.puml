@@ -1,0 +1,109 @@
+@startuml Room Management - Use Case Diagram
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam usecase {
+    BackgroundColor #E3F2FD
+    BorderColor #1976D2
+    FontSize 11
+}
+skinparam actor {
+    BackgroundColor #FFF3E0
+    BorderColor #E65100
+    FontSize 12
+    FontStyle bold
+}
+skinparam rectangle {
+    BackgroundColor #F5F5F5
+    BorderColor #757575
+}
+
+title Room Management - Use Case Diagram\nHệ thống Miko Hotel
+
+' ========== ACTORS ==========
+actor "Customer\nKhách hàng" as Customer
+actor "Staff\nNhân viên" as Staff
+actor "Admin\nQuản trị viên" as Admin
+
+' ========== ROOM MANAGEMENT USE CASES ==========
+rectangle "Room Management" {
+    usecase "UC9: Xem danh sách phòng" as UC9
+    usecase "UC10: Tìm kiếm phòng" as UC10
+    usecase "UC11: Xem chi tiết phòng" as UC11
+    usecase "UC12: Xem loại phòng" as UC12
+    usecase "UC13: Quản lý phòng" as UC13
+    usecase "UC14: Quản lý loại phòng" as UC14
+    usecase "UC15: Cập nhật trạng thái phòng" as UC15
+}
+
+' ========== CUSTOMER CONNECTIONS ==========
+Customer --> UC9 : "Xem danh sách phòng"
+Customer --> UC10 : "Tìm kiếm phòng"
+Customer --> UC11 : "Xem chi tiết phòng"
+Customer --> UC12 : "Xem loại phòng"
+
+' ========== STAFF CONNECTIONS ==========
+Staff --> UC9 : "Xem danh sách phòng\n(tác nghiệp)"
+Staff --> UC10 : "Tìm kiếm phòng"
+Staff --> UC11 : "Xem chi tiết phòng"
+Staff --> UC12 : "Xem loại phòng\n(read-only)"
+Staff --> UC13 : "Xem phòng\n(read-only)"
+Staff --> UC14 : "Xem loại phòng\n(read-only)"
+Staff --> UC15 : "Xem trạng thái\n(read-only)"
+
+' ========== ADMIN CONNECTIONS ==========
+Admin --> UC9 : "Xem danh sách phòng\n(tác nghiệp)"
+Admin --> UC10 : "Tìm kiếm phòng"
+Admin --> UC11 : "Xem chi tiết phòng"
+Admin --> UC12 : "Xem loại phòng"
+Admin --> UC13 : "Quản lý phòng\n(CRUD)"
+Admin --> UC14 : "Quản lý loại phòng\n(CRUD)"
+Admin --> UC15 : "Cập nhật trạng thái"
+
+' ========== INCLUDES/EXTENDS RELATIONSHIPS ==========
+UC10 ..> UC9 : <<include>>\n"Tìm kiếm từ danh sách"
+UC11 ..> UC9 : <<extend>>\n"Xem chi tiết từ danh sách"
+
+note right of UC9
+  Tất cả roles đều xem được danh sách phòng
+  Staff/Admin xem để tác nghiệp
+  Customer để đặt phòng
+end note
+
+note right of UC10
+  Tất cả roles có thể lọc/tìm theo tiêu chí:
+  - Loại phòng
+  - Ngày
+  - Trạng thái
+  - Giá cả
+end note
+
+note right of UC11
+  Tất cả roles xem chi tiết phòng:
+  - Mô tả
+  - Tiện nghi
+  - Hình ảnh
+  - Giá theo loại phòng
+end note
+
+note right of UC13
+  Chỉ Admin được tạo/sửa/xóa phòng (CRUD)
+  Staff chỉ được xem tại trang Rooms (read-only)
+end note
+
+note right of UC14
+  Chỉ Admin được tạo/sửa/xóa loại phòng (CRUD)
+  Staff: chỉ xem danh sách/chi tiết loại phòng (read-only)
+end note
+
+note right of UC15
+  Chỉ Admin được thay đổi trạng thái phòng:
+  - available
+  - maintenance
+  - unavailable
+  - booked
+  - checked_in
+  Staff: chỉ xem trạng thái hiện tại (read-only)
+end note
+
+@enduml
+

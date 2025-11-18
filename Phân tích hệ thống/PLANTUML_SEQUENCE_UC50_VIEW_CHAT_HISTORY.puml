@@ -1,0 +1,39 @@
+@startuml UC50_ViewChatHistory
+!theme plain
+title UC50: Xem lịch sử chat
+
+actor User as "Customer/Staff/Admin"
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+User -> Frontend: Truy cập trang chat
+Frontend -> API: GET /api/v1/chat/conversations\n(Authorization: Bearer token)\n(query params: page, limit)
+
+API -> API: Verify JWT token
+API -> API: Check role và apply filters\n(Customer: chỉ xem conversations của mình\nStaff/Admin: xem tất cả)
+
+API -> DB: Query conversations\n(filter: participants chứa userId)\n(populate participants, lastMessage)
+
+DB --> API: Danh sách conversations + pagination
+
+API --> Frontend: Success + conversations data
+Frontend --> User: Hiển thị danh sách conversations
+
+User -> Frontend: Click vào conversation để xem chi tiết
+Frontend -> API: GET /api/v1/chat/conversations/:id/messages\n(Authorization: Bearer token)\n(query params: page, limit, before)
+
+API -> API: Verify JWT + Check permission\n(kiểm tra user có trong participants)
+
+alt Không có quyền
+    API --> Frontend: Error: 403 Forbidden
+    Frontend --> User: Hiển thị lỗi
+else Có quyền
+    API -> DB: Query messages\n(filter: conversationId)\n(sort: createdAt DESC, pagination)
+    DB --> API: Danh sách messages + pagination
+    
+    API --> Frontend: Success + messages data
+    Frontend --> User: Hiển thị lịch sử tin nhắn\n(phân trang, scroll to bottom)
+end
+@enduml
+

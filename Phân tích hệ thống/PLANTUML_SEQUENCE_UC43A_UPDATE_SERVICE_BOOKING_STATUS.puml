@@ -1,0 +1,42 @@
+@startuml UC43A_UpdateServiceBookingStatus
+!theme plain
+title UC43A: Cập nhật trạng thái đặt dịch vụ
+
+actor Staff as "Staff/Admin"
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+Staff -> Frontend: Chọn service booking cần cập nhật
+Staff -> Frontend: Chọn trạng thái mới\n(reserved → confirmed → completed → cancelled)
+Staff -> Frontend: Nhập lý do (nếu có)
+Staff -> Frontend: Submit
+
+Frontend -> API: PUT /api/v1/service-bookings/:id\n(Authorization: Bearer token)\n{ status, note }
+
+API -> API: Verify JWT + Check role (staff/admin)
+API -> DB: Tìm service booking theo ID
+DB --> API: Service booking found
+
+API -> API: Validate status transition\n(workflow hợp lệ)
+
+alt Trạng thái không hợp lệ
+    API --> Frontend: Error: "Không thể chuyển sang trạng thái này"
+    Frontend --> Staff: Hiển thị lỗi
+else Trạng thái hợp lệ
+    API -> DB: Cập nhật service booking\n(status mới, note)
+    API -> DB: Ghi audit log\n(actorId: staffId, action: status, note)
+    DB --> API: Updated
+    
+    alt Status = completed
+        API -> DB: Cập nhật booking\n(totalPrice nếu cần)
+    else Status = cancelled
+        API -> DB: Cập nhật booking\n(totalPrice, services array)
+        API -> DB: Gửi notification cho customer
+    end
+    
+    API --> Frontend: Success: "Đã cập nhật trạng thái"
+    Frontend --> Staff: Hiển thị thông báo thành công
+end
+@enduml
+

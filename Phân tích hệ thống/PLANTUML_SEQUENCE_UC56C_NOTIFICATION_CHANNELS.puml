@@ -1,0 +1,58 @@
+@startuml UC56C_NotificationChannels
+!theme plain
+title UC56C: Ưu tiên/Kênh thông báo
+
+actor Admin
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+participant "Email Service" as Email
+database "Database" as DB
+
+Admin -> Frontend: Truy cập "Cấu hình kênh thông báo"
+Frontend -> API: GET /api/v1/notifications/channels\n(Authorization: Bearer token)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Query notification channels config\n(in-app, email, priority levels)
+
+DB --> API: Channels config
+API --> Frontend: Success + channels data
+Frontend --> Admin: Hiển thị cấu hình kênh\n(in-app: enabled, email: enabled, priority)
+
+' ========== Cấu hình kênh ==========
+Admin -> Frontend: Chọn notification type
+Admin -> Frontend: Cấu hình kênh\n(in-app: true/false, email: true/false, priority: high/medium/low)
+Admin -> Frontend: Submit
+
+Frontend -> API: PUT /api/v1/notifications/channels/:type\n{ inApp: true, email: false, priority: "high" }
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Cập nhật channel config cho type
+DB --> API: Updated
+
+API --> Frontend: Success: "Đã cập nhật cấu hình kênh"
+Frontend --> Admin: Hiển thị thông báo thành công
+
+' ========== Gửi notification theo kênh ==========
+note right
+  Khi có notification:
+  1. Kiểm tra channel config
+  2. Nếu in-app enabled: gửi qua Socket.IO
+  3. Nếu email enabled: gửi email
+  4. Ưu tiên theo priority level
+end note
+
+Service -> Service: Event: Có notification mới
+Service -> DB: Lấy channel config cho type
+DB --> Service: Channel config\n(inApp: true, email: true, priority: high)
+
+alt In-app enabled
+    Service -> Socket: Emit "new_notification"\n(priority: high)
+    Socket --> Frontend: Real-time notification
+end
+
+alt Email enabled
+    Service -> Email: Gửi email notification\n(priority: high)
+    Email --> User: Email notification
+end
+@enduml
+

@@ -1,0 +1,35 @@
+@startuml UC23_CheckIn
+!theme plain
+title UC23: Check-in khách
+
+actor Staff as "Staff/Admin"
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+Staff -> Frontend: Chọn booking cần check-in
+Staff -> Frontend: Xác thực thông tin khách\n(CMND/CCCD, đối chiếu với booking)
+Staff -> Frontend: Submit check-in
+
+Frontend -> API: POST /api/v1/bookings/:id/check-in\n(Authorization: Bearer token)
+
+API -> API: Verify JWT + Check role (staff/admin)
+API -> DB: Tìm booking theo ID
+DB --> API: Booking found
+
+API -> API: Validate booking status\n(phải là confirmed hoặc pending)
+
+alt Booking không hợp lệ để check-in
+    API --> Frontend: Error: "Booking không thể check-in"
+    Frontend --> Staff: Hiển thị lỗi
+else Booking hợp lệ
+    API -> DB: Cập nhật booking\n(status: checked_in)
+    API -> DB: Cập nhật phòng\n(status: occupied)
+    API -> DB: Tạo booking status log\n(action: checked_in, actorId: staffId)
+    DB --> API: Updated
+    
+    API --> Frontend: Success: "Check-in thành công"
+    Frontend --> Staff: Hiển thị thông báo\n"Khách đã nhận phòng"
+end
+@enduml
+

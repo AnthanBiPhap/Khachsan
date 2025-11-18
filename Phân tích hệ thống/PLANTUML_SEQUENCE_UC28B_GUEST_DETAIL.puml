@@ -1,0 +1,31 @@
+@startuml UC28B_GuestDetail
+!theme plain
+title UC28B: Xem chi tiết khách
+
+actor Staff as "Staff/Admin"
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+Staff -> Frontend: Click vào khách trong danh sách
+Frontend -> API: GET /api/v1/bookings/:bookingId\n(Authorization: Bearer token)\n(populate guests, roomId, customerId)
+
+API -> API: Verify JWT + Check role (staff/admin)
+API -> DB: Tìm booking theo ID\n(populate guests, roomId, customerId, services)
+
+alt Booking không tồn tại
+    DB --> API: Booking not found
+    API --> Frontend: Error: 404
+    Frontend --> Staff: Hiển thị lỗi
+else Booking tồn tại
+    DB --> API: Booking data với guests array
+    
+    API -> API: Extract guest info\n(fullName, idNumber, dateOfBirth, phoneNumber, email, isMainGuest)
+    API -> DB: Query booking history\n(filter: guests chứa guest info)
+    DB --> API: Related bookings
+    
+    API --> Frontend: Success + guest detail + booking history
+    Frontend --> Staff: Hiển thị chi tiết khách\n(hồ sơ, thông tin liên hệ, ghi chú, lịch sử booking)
+end
+@enduml
+

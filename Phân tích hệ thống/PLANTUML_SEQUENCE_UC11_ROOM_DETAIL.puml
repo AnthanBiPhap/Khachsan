@@ -1,0 +1,26 @@
+@startuml UC11_RoomDetail
+!theme plain
+title UC11: Xem chi tiết phòng
+
+actor User as "Customer/Staff/Admin"
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+User -> Frontend: Click vào phòng
+Frontend -> API: GET /api/v1/rooms/:id\n(Authorization: Bearer token)
+
+API -> API: Verify JWT token (nếu có)
+API -> DB: Tìm phòng theo ID\n(populate roomType, images, amenities)
+
+alt Phòng không tồn tại
+    DB --> API: Room not found
+    API --> Frontend: Error: 404
+    Frontend --> User: Hiển thị lỗi
+else Phòng tồn tại
+    DB --> API: Room data với roomType details
+    API --> Frontend: Success + room detail
+    Frontend --> User: Hiển thị chi tiết phòng\n(mô tả, tiện nghi, hình ảnh, giá)
+end
+@enduml
+

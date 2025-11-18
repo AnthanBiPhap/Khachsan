@@ -1,0 +1,43 @@
+@startuml UC65_ExportExcel
+!theme plain
+title UC65: Xuất báo cáo Excel
+
+actor Staff as "Staff/Admin"
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+participant "XLSX Library" as XLSX
+
+Staff -> Frontend: Chọn bộ lọc\n(status, source, dateRange, amountRange)
+Staff -> Frontend: Click "Xuất Excel"
+Frontend -> API: GET /api/v1/bookings\n(Authorization: Bearer token)\n(query params: filters)
+
+API -> API: Verify JWT + Check role (staff/admin)
+API -> DB: Query bookings với filters\n(populate guests, roomId, customerId, services)
+DB --> API: Filtered bookings
+
+Frontend -> API: GET /api/v1/invoices\n(Authorization: Bearer token)\n(query params: filters)
+API -> DB: Query invoices với filters\n(populate bookingId, customerId)
+DB --> API: Filtered invoices
+
+Frontend -> Frontend: Tính toán thống kê từ dữ liệu đã lọc\n(totalBookings, revenue, paymentRate, etc.)
+
+Frontend -> XLSX: Tạo workbook mới
+XLSX --> Frontend: Workbook created
+
+Frontend -> XLSX: Tạo sheet "Danh sách Booking"\n(convert bookings data to sheet)
+XLSX --> Frontend: Sheet 1 created
+
+Frontend -> XLSX: Tạo sheet "Thống kê"\n(statistics data)
+XLSX --> Frontend: Sheet 2 created
+
+Frontend -> XLSX: Tạo sheet "Phân tích" (nếu có)\n(customer analysis, trends)
+XLSX --> Frontend: Sheet 3 created
+
+Frontend -> XLSX: Xuất file Excel\n(filename: bookings_YYYY-MM-DD.xlsx)
+XLSX --> Staff: Download file Excel
+
+API --> Frontend: Success + data (bookings, invoices)
+Frontend --> Staff: File Excel đã được tải xuống\n(dữ liệu báo cáo theo bộ lọc)
+@enduml
+

@@ -1,0 +1,39 @@
+@startuml UC25_ExtendCheckOut
+!theme plain
+title UC25: Gia hạn thời gian check-out
+
+actor Staff as "Staff/Admin"
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+Staff -> Frontend: Chọn booking cần gia hạn
+Staff -> Frontend: Nhập số giờ gia hạn
+Staff -> Frontend: Submit extend
+
+Frontend -> API: PUT /api/v1/bookings/:id\n(Authorization: Bearer token)\n{ extendHours, checkOut }
+
+API -> API: Verify JWT + Check role (staff/admin)
+API -> DB: Tìm booking theo ID
+DB --> API: Booking found
+
+API -> API: Tính toán checkOut mới\n(checkOut + extendHours)
+API -> DB: Kiểm tra conflict với bookings khác\n(overlap + 2h cleaning time)
+
+alt Có conflict hoặc không đủ thời gian dọn phòng
+    DB --> API: Conflict found
+    API --> Frontend: Error: "Không thể gia hạn, phòng đã có booking"
+    Frontend --> Staff: Hiển thị lỗi
+else Không có conflict
+    DB --> API: No conflict
+    API -> API: Tính phụ thu (nếu có)
+    API -> DB: Cập nhật booking\n(checkOut mới, totalPrice mới)
+    API -> DB: Cập nhật invoice\n(tổng tiền mới)
+    API -> DB: Tạo booking status log\n(action: extend_check_out, actorId: staffId)
+    DB --> API: Updated
+    
+    API --> Frontend: Success: "Đã gia hạn check-out"
+    Frontend --> Staff: Hiển thị thông báo\n"Gia hạn thành công"
+end
+@enduml
+

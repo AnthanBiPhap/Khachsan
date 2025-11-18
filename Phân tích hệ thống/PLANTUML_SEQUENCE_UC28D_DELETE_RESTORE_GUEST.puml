@@ -1,0 +1,57 @@
+@startuml UC28D_DeleteRestoreGuest
+!theme plain
+title UC28D: Xóa/Khôi phục khách
+
+actor Admin
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+' ========== DELETE GUEST ==========
+Admin -> Frontend: Chọn guest cần xóa
+Admin -> Frontend: Click "Xóa"
+Frontend -> API: DELETE /api/v1/bookings/:id/guests/:guestIndex\n(Authorization: Bearer token)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Tìm booking theo ID
+DB --> API: Booking found
+
+API -> API: Validate guest index\n(guestIndex < guests.length)
+
+alt Guest index không hợp lệ
+    API --> Frontend: Error: "Guest không tồn tại"
+    Frontend --> Admin: Hiển thị lỗi
+else Guest index hợp lệ
+    API -> API: Soft delete guest\n(remove từ guests array hoặc mark deleted)
+    API -> DB: Cập nhật booking\n(guests array, guestCount--)
+    API -> DB: Lưu audit log\n(action: guest_deleted, actorId: adminId)
+    DB --> API: Updated
+    
+    API --> Frontend: Success: "Đã xóa khách"
+    Frontend --> Admin: Hiển thị thông báo thành công
+end
+
+' ========== RESTORE GUEST ==========
+Admin -> Frontend: Chọn booking có guest đã xóa
+Admin -> Frontend: Click "Khôi phục"
+Frontend -> API: POST /api/v1/bookings/:id/guests/:guestIndex/restore\n(Authorization: Bearer token)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Tìm booking theo ID
+DB --> API: Booking found
+
+API -> API: Kiểm tra guest có thể khôi phục?\n(guest đã bị xóa, booking chưa completed)
+
+alt Không thể khôi phục
+    API --> Frontend: Error: "Không thể khôi phục khách"
+    Frontend --> Admin: Hiển thị lỗi
+else Có thể khôi phục
+    API -> DB: Khôi phục guest\n(restore vào guests array, guestCount++)
+    API -> DB: Lưu audit log\n(action: guest_restored, actorId: adminId)
+    DB --> API: Updated
+    
+    API --> Frontend: Success: "Đã khôi phục khách"
+    Frontend --> Admin: Hiển thị thông báo thành công
+end
+@enduml
+

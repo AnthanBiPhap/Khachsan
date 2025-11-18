@@ -1,0 +1,21 @@
+@startuml UC41_ViewMyServiceBookings
+!theme plain
+title UC41: Xem đặt dịch vụ của mình
+
+actor Customer
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+Customer -> Frontend: Truy cập trang "Dịch vụ của tôi"
+Frontend -> API: GET /api/v1/service-bookings\n(Authorization: Bearer token)\n(query params: bookingId, page, limit)
+
+API -> API: Verify JWT token
+API -> DB: Query service bookings\n(filter: customerId = currentUser)\n(populate serviceId, bookingId)
+
+DB --> API: Danh sách service bookings + pagination
+
+API --> Frontend: Success + service bookings data
+Frontend --> Customer: Hiển thị danh sách đặt dịch vụ\n(dịch vụ, booking, thời gian, số lượng, trạng thái)
+@enduml
+

@@ -1,0 +1,31 @@
+@startuml UC4_UpdateProfile
+!theme plain
+title UC4: Quản lý thông tin cá nhân
+
+actor User as "Customer/Staff/Admin"
+participant "Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+User -> Frontend: Mở trang hồ sơ
+Frontend -> API: GET /api/v1/users/profile\n(Authorization: Bearer token)
+
+API -> API: Verify JWT token
+API -> DB: Lấy thông tin user
+DB --> API: User data
+API --> Frontend: User profile
+
+Frontend --> User: Hiển thị form với dữ liệu hiện tại
+
+User -> Frontend: Cập nhật thông tin\n(fullName, phoneNumber, avatar, dateOfBirth)
+User -> Frontend: Submit form
+
+Frontend -> API: PUT /api/v1/users/profile\n(updated data)
+
+API -> API: Validate dữ liệu
+API -> DB: Cập nhật user
+DB --> API: Updated user
+API --> Frontend: Success + updated user
+Frontend --> User: Hiển thị thông báo thành công
+@enduml
+

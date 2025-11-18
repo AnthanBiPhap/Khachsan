@@ -1,0 +1,48 @@
+@startuml UC43B_CancelServiceBooking
+!theme plain
+title UC43B: Hủy đặt dịch vụ
+
+actor Staff as "Staff/Admin"
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+database "Database" as DB
+
+Staff -> Frontend: Chọn service booking cần hủy
+Staff -> Frontend: Nhập lý do hủy
+Staff -> Frontend: Submit cancel
+
+Frontend -> API: PUT /api/v1/service-bookings/:id\n(Authorization: Bearer token)\n{ status: "cancelled", note }
+
+API -> API: Verify JWT + Check role (staff/admin)
+API -> DB: Tìm service booking theo ID
+DB --> API: Service booking found
+
+API -> API: Validate status\n(phải là reserved hoặc confirmed)
+
+alt Status không hợp lệ (đã completed)
+    API --> Frontend: Error: "Không thể hủy dịch vụ đã hoàn thành"
+    Frontend --> Staff: Hiển thị lỗi
+else Status hợp lệ
+    API -> API: Kiểm tra chính sách hủy\n(thời gian, đã thanh toán?)
+    
+    alt Đã thanh toán và cần hoàn tiền
+        API -> API: Tính số tiền hoàn\n(refundAmount = price)
+        API -> DB: Cập nhật service booking\n(status: cancelled, note)
+        API -> DB: Cập nhật booking\n(totalPrice -= price, services array)
+        API -> DB: Cập nhật invoice\n(remainingAmount += refundAmount)
+        API -> DB: Ghi audit log\n(actorId: staffId, action: cancelled, note)
+        API -> DB: Gửi notification cho customer\n(thông báo hủy + hoàn tiền)
+    else Chưa thanh toán hoặc không hoàn tiền
+        API -> DB: Cập nhật service booking\n(status: cancelled, note)
+        API -> DB: Cập nhật booking\n(totalPrice -= price, services array)
+        API -> DB: Ghi audit log\n(actorId: staffId, action: cancelled, note)
+        API -> DB: Gửi notification cho customer\n(thông báo hủy)
+    end
+    
+    DB --> API: Updated
+    
+    API --> Frontend: Success: "Đã hủy đặt dịch vụ"
+    Frontend --> Staff: Hiển thị thông báo\n"Hủy dịch vụ thành công"
+end
+@enduml
+

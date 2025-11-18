@@ -1,0 +1,38 @@
+@startuml UC56_SendManualNotification
+!theme plain
+title UC56: Gửi thông báo (thủ công)
+
+actor Staff as "Staff/Admin"
+participant "Admin Frontend" as Frontend
+participant "Backend API" as API
+participant "Socket.IO" as Socket
+database "Database" as DB
+
+Staff -> Frontend: Chọn "Gửi thông báo"
+Staff -> Frontend: Nhập thông tin\n(title, message, recipients: user/role/channel)
+Staff -> Frontend: Submit send
+
+Frontend -> API: POST /api/v1/notifications\n(Authorization: Bearer token)\n{ type, title, message, recipients }
+
+API -> API: Verify JWT + Check role (staff/admin)
+API -> API: Validate recipients\n(userId hoặc role hoặc channel)
+
+alt Recipients không hợp lệ
+    API --> Frontend: Error: "Recipients không hợp lệ"
+    Frontend --> Staff: Hiển thị lỗi
+else Recipients hợp lệ
+    API -> DB: Tìm users theo recipients\n(userId hoặc role)
+    DB --> API: Users list
+    
+    API -> DB: Tạo notification\n(type, title, message, recipients)
+    DB --> API: Notification created
+    
+    API -> Socket: Emit "new_notification"\n(notification data)
+    Socket -> Socket: Broadcast đến users\n(userId rooms hoặc role rooms)
+    Socket --> Frontend: Real-time notification\n(tất cả recipients)
+    
+    API --> Frontend: Success: "Đã gửi thông báo"
+    Frontend --> Staff: Hiển thị thông báo\n"Gửi thông báo thành công"
+end
+@enduml
+

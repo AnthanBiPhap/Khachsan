@@ -1,0 +1,37 @@
+@startuml UC51_SendMessage
+!theme plain
+title UC51: Gửi tin nhắn
+
+actor User as "Customer/Staff/Admin"
+participant "Frontend" as Frontend
+participant "Stream Chat" as Stream
+participant "Backend API" as API
+participant "Socket.IO" as Socket
+database "Database" as DB
+
+User -> Frontend: Nhập tin nhắn
+User -> Frontend: Chọn đính kèm (nếu có)
+User -> Frontend: Click "Gửi"
+
+Frontend -> Stream: Send message\n(channel.sendMessage(content, attachments))
+
+Stream -> Stream: Validate message\n(kiểm tra quyền trong channel)
+
+alt Không có quyền
+    Stream --> Frontend: Error: "Không có quyền gửi tin nhắn"
+    Frontend --> User: Hiển thị lỗi
+else Có quyền
+    Stream -> Stream: Lưu message vào Stream
+    Stream -> DB: Lưu message vào database\n(conversation, sender, content, attachments)
+    DB --> Stream: Message saved
+    
+    Stream --> Frontend: Message sent success
+    
+    Stream -> Socket: Emit "new-message"\n(conversationId, message)
+    Socket -> Socket: Broadcast đến room\n(conversation:conversationId)
+    Socket --> Frontend: Real-time notification\n(tất cả users trong conversation)
+    
+    Frontend --> User: Hiển thị tin nhắn\n(tự động update UI)
+end
+@enduml
+
