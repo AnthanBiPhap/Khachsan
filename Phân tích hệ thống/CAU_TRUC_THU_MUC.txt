@@ -1,0 +1,28 @@
+Backend-api
+│
+├── font                     // Chứa font chữ (NotoSans-Regular.ttf) dùng cho PDF
+│
+├── http                     // File test API (.http) - test endpoints bằng REST Client
+│
+├── node_modules             // Đống thư viện cài bằng npm/pnpm
+│
+├── src
+│   ├── controllers          // Nhận request → gọi service → trả response (16 controllers)
+│   ├── helpers              // Hàm tiện ích (env, pricing, response, slugify)
+│   ├── middlewares          // Auth (JWT), validate (Yup), error handler
+│   ├── models               // Mongoose schemas & models (15 models cho MongoDB)
+│   ├── router               // Khai báo route API, map URL → controller (v1/)
+│   ├── services             // Business logic thật sự của hệ thống (18 services)
+│   ├── utility              // Module hỗ trợ (generateInvoicePdf - tạo PDF hóa đơn)
+│   ├── validations          // Validate input bằng Yup (auth, booking, services, users...)
+│   │
+│   ├── app.ts               // Setup express app + middleware + router + CORS
+│   ├── seeder.ts            // Seed dữ liệu mẫu (admin, services) vào MongoDB
+│   └── server.ts            // Khởi động server + connect MongoDB + Socket.IO
+│
+├── .env                     // Biến môi trường (PORT, MongoDB_URI, JWT_SECRET, GMAIL...)
+├── .gitignore               // File ignore cho Git
+├── package-lock.json        // Lock version khi dùng npm
+├── package.json             // Thông tin dự án + dependencies + scripts
+├── pnpm-lock.yaml           // Lockfile của pnpm
+└── tsconfig.json            // Cấu hình TypeScript
