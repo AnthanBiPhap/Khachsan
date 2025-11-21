@@ -21,8 +21,19 @@ export interface Notification {
   createdAt: string;
   updatedAt: string;
   metadata?: {
+    groupBookingId?: string;
     refundAmount?: number;
     paidAmount?: number;
+    remainingAmount?: number;
+    isDeposit?: boolean;
+    isFullPayment?: boolean;
+    roomCount?: number;
+    peopleCount?: number;
+    requesterName?: string;
+    requesterPhone?: string;
+    requesterEmail?: string;
+    quoteAmount?: number;
+    paymentLink?: string;
   };
 }
 

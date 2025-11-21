@@ -17,6 +17,9 @@ interface NotificationPopupData {
   timestamp: string;
   bookingId?: string;
   groupBookingId?: string;
+  metadata?: {
+    groupBookingId?: string;
+  };
 }
 
 export default function NotificationPopup() {
@@ -37,7 +40,8 @@ export default function NotificationPopup() {
         message: data.message,
         timestamp: data.timestamp,
         bookingId: data.booking?._id,
-        groupBookingId: data.groupBooking?._id,
+        groupBookingId: data.groupBooking?._id || data.metadata?.groupBookingId,
+        metadata: data.metadata,
       });
       
       setIsVisible(true);
@@ -109,10 +113,17 @@ export default function NotificationPopup() {
 
   const handleView = () => {
     handleClose();
-    if (notification?.bookingId) {
+    // Ưu tiên group booking (kiểm tra type hoặc groupBookingId)
+    const isGroupBooking = notification?.type?.startsWith('group_booking') || 
+                           notification?.groupBookingId || 
+                           notification?.metadata?.groupBookingId;
+    
+    if (isGroupBooking) {
+      const groupBookingId = notification?.groupBookingId || notification?.metadata?.groupBookingId;
+      const url = groupBookingId ? `/group-booking?requestId=${groupBookingId}` : '/group-booking';
+      router.push(url);
+    } else if (notification?.bookingId) {
       router.push('/my-bookings');
-    } else if (notification?.groupBookingId) {
-      router.push('/group-booking');
     } else {
       router.push('/notifications');
     }

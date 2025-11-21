@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { DatePicker, Input, InputNumber, Button, message, Card, Space, Upload, Tabs, Tag, Steps, Divider, Alert, Empty, Descriptions, Form, Row, Col, Table, Modal } from 'antd';
 import dayjs from 'dayjs';
 import type { UploadProps } from 'antd';
@@ -26,6 +27,7 @@ type GroupBookingStatus =
 
 export default function GroupBookingPage() {
   const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [loadingCreate, setLoadingCreate] = useState(false);
   const [requestId, setRequestId] = useState<string>("");
   const [showMembersModal, setShowMembersModal] = useState(false);
@@ -146,9 +148,32 @@ export default function GroupBookingPage() {
     }
   };
 
+  // Đọc requestId từ URL query parameter (ưu tiên cao nhất)
+  useEffect(() => {
+    const urlRequestId = searchParams.get('requestId');
+    if (urlRequestId) {
+      setRequestId(urlRequestId);
+      setCreatedId(urlRequestId);
+      // Lưu vào localStorage nếu có user
+      if (user?._id) {
+        localStorage.setItem('group_booking_request_id', urlRequestId);
+        localStorage.setItem('group_booking_user_id', user._id);
+      }
+      // Fetch status ngay lập tức
+      fetchStatus(urlRequestId);
+      return; // Không cần restore từ localStorage nữa
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, user?._id]);
+
   // Restore existing request from localStorage on mount (only if belongs to current user)
+  // Chỉ restore nếu không có requestId từ URL
   useEffect(() => {
     if (!user?._id) return;
+    // Nếu đã có requestId từ URL thì không restore từ localStorage
+    const urlRequestId = searchParams.get('requestId');
+    if (urlRequestId) return;
+    
     const savedId = typeof window !== 'undefined' ? localStorage.getItem('group_booking_request_id') : null;
     const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('group_booking_user_id') : null;
     
@@ -166,7 +191,7 @@ export default function GroupBookingPage() {
       fetchStatus(savedId);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?._id]);
+  }, [user?._id, searchParams]);
 
   // Auto poll status every 15s when we have a requestId
   useEffect(() => {

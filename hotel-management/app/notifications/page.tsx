@@ -320,7 +320,18 @@ export default function NotificationsPage() {
                               {format(new Date(notification.createdAt), 'dd/MM/yyyy HH:mm', { locale: vi })}
                             </span>
                           </div>
-                          {notification.bookingId && (
+                          {/* Ưu tiên hiển thị link đặt phòng nhóm nếu có (kiểm tra type hoặc metadata.groupBookingId) */}
+                          {notification.type?.startsWith('group_booking') || notification.metadata?.groupBookingId ? (
+                            <Link
+                              href={`/group-booking${notification.metadata?.groupBookingId ? `?requestId=${notification.metadata.groupBookingId}` : ''}`}
+                              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+                            >
+                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                              Xem đặt phòng nhóm
+                            </Link>
+                          ) : notification.bookingId && !notification.type?.startsWith('group_booking') ? (
                             <Link
                               href={`/my-bookings`}
                               className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
@@ -330,18 +341,7 @@ export default function NotificationsPage() {
                               </svg>
                               Xem đặt phòng
                             </Link>
-                          )}
-                          {notification.metadata?.groupBookingId && (
-                            <Link
-                              href={`/group-booking`}
-                              className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:text-primary/80 transition-colors"
-                            >
-                              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                              </svg>
-                              Xem đặt phòng nhóm
-                            </Link>
-                          )}
+                          ) : null}
                         </div>
                       </div>
                     </div>
