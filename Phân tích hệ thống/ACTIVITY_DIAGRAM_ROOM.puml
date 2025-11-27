@@ -1,0 +1,37 @@
+﻿@startuml Activity Diagram - Room Management (Tổng hợp)
+!theme plain
+title Activity Diagram - Room Management (Tổng hợp)
+
+|User|
+start
+if (Xem danh sách?) then
+    :Xem danh sách phòng;
+elseif (Tìm kiếm?) then
+    :Tìm kiếm phòng;
+elseif (Xem chi tiết?) then
+    :Xem chi tiết phòng;
+elseif (Xem loại phòng?) then
+    :Xem loại phòng;
+elseif (Quản lý phòng?) then
+    |Admin|
+    :Quản lý phòng;
+    |System|
+    :Tạo/Sửa/Xóa phòng;
+elseif (Quản lý loại phòng?) then
+    |Admin|
+    :Quản lý loại phòng;
+    |System|
+    :Tạo/Sửa/Xóa loại phòng;
+elseif (Cập nhật trạng thái?) then
+    |Admin|
+    :Cập nhật trạng thái phòng;
+    |System|
+    :Cập nhật status;
+endif
+|Staff|
+if (Role = Staff?) then (có)
+    :Chỉ xem (read-only);
+endif
+stop
+@enduml
+

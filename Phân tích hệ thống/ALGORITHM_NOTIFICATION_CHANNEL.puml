@@ -1,0 +1,20 @@
+﻿@startuml Algorithm - Ưu tiên/Kênh thông báo
+!theme plain
+title Sơ đồ thuật toán - Ưu tiên/Kênh thông báo
+
+start
+if (Cấu hình kênh?) then
+ :Input: notificationType, channels (in-app, email);
+ :Kiểm tra quyền Admin;
+ :Cập nhật cấu hình kênh;
+ :Lưu vào database;
+elseif (Cấu hình ưu tiên?) then
+ :Input: notificationType, priority (low, normal, high, urgent);
+ :Kiểm tra quyền Admin;
+ :Cập nhật priority;
+ :Lưu vào database;
+endif
+:Return SUCCESS;
+stop
+@enduml
+

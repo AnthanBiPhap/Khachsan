@@ -1,0 +1,17 @@
+﻿@startuml Algorithm - Xem thống kê
+!theme plain
+title Sơ đồ thuật toán - Xem thống kê
+
+start
+:Input: period (day/week/month), userId, role;
+:Kiểm tra quyền Staff/Admin;
+:Lấy bookings trong khoảng thời gian;
+:Tính số đặt phòng;
+:Tính số hủy;
+:Tính doanh thu;
+:Tính tỷ lệ hủy (%);
+:Tính tỷ lệ công suất (%);
+:Return thống kê;
+stop
+@enduml
+

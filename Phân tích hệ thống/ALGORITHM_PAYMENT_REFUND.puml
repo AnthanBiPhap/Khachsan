@@ -1,0 +1,26 @@
+﻿@startuml Algorithm - Xử lý hoàn tiền
+!theme plain
+title Sơ đồ thuật toán - Xử lý hoàn tiền
+
+start
+:Input: bookingId, refundAmount, reason;
+:Kiểm tra quyền = Admin;
+:Kiểm tra booking đã duyệt hủy?;
+:Tính số tiền hoàn lại (theo chính sách);
+:Kiểm tra số tiền hoàn ≤ số tiền đã trả;
+if (Payment method = Stripe?) then (Có)
+ :Gọi Stripe Refund API;
+elseif (Payment method = cash?) then (Có)
+ :Ghi nhận hoàn tiền tiền mặt;
+elseif (Payment method = bank_transfer?) then (Có)
+ :Ghi nhận hoàn tiền chuyển khoản;
+endif
+:Cập nhật payment status = refunded;
+:Cập nhật booking payment status;
+:Tạo refund record;
+:Ghi audit log;
+:Gửi email thông báo;
+:Return SUCCESS;
+stop
+@enduml
+

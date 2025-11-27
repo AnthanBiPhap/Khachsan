@@ -1,0 +1,38 @@
+@startuml Algorithm - Location Management (Tổng hợp)
+!theme plain
+title Sơ đồ thuật toán - Location Management (Tổng hợp)
+
+start
+:Input: action, locationId, searchCriteria, data;
+:Validate action;
+if (action = "list"?) then (Có)
+    :Gọi thuật toán Xem danh sách địa điểm;
+    :Input: filters;
+    :Lấy locations từ DB (status = active);
+    :Tính khoảng cách từ khách sạn;
+    :Return: danh sách locations;
+elseif (action = "detail"?) then (Có)
+    :Gọi thuật toán Xem chi tiết địa điểm;
+    :Input: locationId;
+    :Lấy chi tiết location;
+    :Tính khoảng cách;
+    :Tạo gợi ý di chuyển;
+    :Return: location detail;
+elseif (action = "search"?) then (Có)
+    :Gọi thuật toán Tìm kiếm địa điểm;
+    :Input: keyword, filters;
+    :Tìm kiếm trong DB;
+    :Áp dụng filters;
+    :Tính khoảng cách;
+    :Return: danh sách kết quả;
+elseif (action = "manage"?) then (Có)
+    :Kiểm tra quyền Admin;
+    :Gọi thuật toán Quản lý địa điểm;
+    :Input: operation, locationData;
+    :Validate location data;
+    :Return: SUCCESS / ERROR;
+endif
+:Return result;
+stop
+@enduml
+

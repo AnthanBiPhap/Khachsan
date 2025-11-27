@@ -1,0 +1,21 @@
+﻿@startuml Algorithm - Xem lịch sử chat
+!theme plain
+title Sơ đồ thuật toán - Xem lịch sử chat
+
+start
+:Input: userId, conversationId (optional);
+if (Lấy danh sách conversations?) then (Có)
+ :Lấy conversations theo quyền;
+ :Sắp xếp theo lastMessageAt;
+ :Phân trang;
+ :Return danh sách conversations;
+else
+ :Lấy tin nhắn của conversation;
+ :Kiểm tra quyền truy cập;
+ :Sắp xếp theo timestamp;
+ :Phân trang;
+ :Return danh sách tin nhắn;
+endif
+stop
+@enduml
+

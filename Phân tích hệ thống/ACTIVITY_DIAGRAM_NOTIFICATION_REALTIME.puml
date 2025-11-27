@@ -1,0 +1,36 @@
+﻿@startuml Activity Diagram - Realtime notifications 
+!theme plain
+title Activity Diagram - Realtime notifications 
+
+|User|
+start
+:Kết nối Socket.IO;
+:Gửi JWT token để xác thực;
+|Socket.IO Server|
+:Xác thực JWT token;
+:Join room theo userId;
+:Gửi sự kiện 'connected';
+|User|
+:Nhận sự kiện 'connected';
+:Nhận thông báo real-time;
+|Socket.IO|
+:Nhận event 'notification:new';
+:Broadcast đến room của userId;
+|User|
+:Nhận event 'notification:new';
+if (Đang mở trang notifications?) then (có)
+    :Hiển thị thông báo mới ngay;
+    :Tăng unreadCount;
+    :Cập nhật badge;
+else
+    :Tăng unreadCount;
+    :Cập nhật badge;
+    :Hiển thị toast/popup;
+    :Phát âm thanh (nếu bật);
+endif
+if (Mất kết nối?) then (có)
+    :Kích hoạt polling fallback;
+    :Poll API mỗi 30-60 giây;
+endif
+stop
+@enduml

@@ -1,0 +1,29 @@
+﻿@startuml Algorithm - Xóa/Khôi phục khách
+!theme plain
+title Sơ đồ thuật toán - Xóa/Khôi phục khách
+
+start
+if (Xóa khách?) then
+ :Input: guestId, userId;
+ :Kiểm tra quyền Admin;
+ :Lấy guest từ database;
+ :Kiểm tra có booking active?;
+ if (Có booking active?) then (Có)
+ :Return ERROR (cannot delete);
+ stop
+ endif
+ :Xóa mềm (soft delete);
+ :Lưu deletedAt timestamp;
+ :Lưu vào database;
+elseif (Khôi phục khách?) then
+ :Input: guestId, userId;
+ :Kiểm tra quyền Admin;
+ :Lấy guest đã bị xóa từ database;
+ :Khôi phục (restore);
+ :Xóa deletedAt timestamp;
+ :Lưu vào database;
+endif
+:Return SUCCESS;
+stop
+@enduml
+

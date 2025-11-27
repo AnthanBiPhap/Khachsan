@@ -1,0 +1,23 @@
+﻿@startuml Activity Diagram - Dashboard & Reports (Tổng hợp)
+!theme plain
+
+
+|Staff/Admin|
+start
+if (Xem dashboard?) then
+    :Xem dashboard;
+elseif (Xem thống kê?) then
+    :Xem thống kê;
+elseif (Xem biểu đồ?) then
+    :Xem biểu đồ;
+elseif (Xuất Excel?) then
+    :Xuất báo cáo Excel;
+elseif (Xuất PDF?) then
+    :Xuất báo cáo PDF;
+elseif (Báo cáo tài chính?) then
+    |Admin|
+    :Xem báo cáo tài chính;
+endif
+stop
+@enduml
+

@@ -1,0 +1,54 @@
+@startuml Algorithm - Dashboard & Reports (Tổng hợp)
+!theme plain
+title Sơ đồ thuật toán - Dashboard & Reports (Tổng hợp)
+
+start
+:Input: action, period, filters, exportFormat;
+:Validate action;
+:Kiểm tra quyền Staff/Admin;
+if (action = "viewDashboard"?) then (Có)
+    :Gọi thuật toán Xem dashboard;
+    :Input: dateRange;
+    :Lấy tổng quan bookings;
+    :Tính công suất phòng;
+    :Lấy thông báo gần đây;
+    :Lấy tasks;
+    :Tính doanh thu hôm nay;
+    :Return: dashboard data;
+elseif (action = "statistics"?) then (Có)
+    :Gọi thuật toán Xem thống kê;
+    :Input: period, statType;
+    :Tính số liệu theo period;
+    :So sánh với kỳ trước;
+    :Return: statistics data;
+elseif (action = "charts"?) then (Có)
+    :Gọi thuật toán Xem biểu đồ;
+    :Input: chartType, period;
+    :Tính dữ liệu biểu đồ;
+    :Return: chart data;
+elseif (action = "exportExcel"?) then (Có)
+    :Gọi thuật toán Xuất Excel;
+    :Input: reportType, filters, period;
+    :Lấy dữ liệu báo cáo;
+    :Tạo Excel file;
+    :Return: file download URL;
+elseif (action = "exportPDF"?) then (Có)
+    :Kiểm tra quyền Admin;
+    :Gọi thuật toán Xuất PDF;
+    :Input: reportType, filters, period;
+    :Lấy dữ liệu báo cáo;
+    :Render PDF;
+    :Return: file download URL;
+elseif (action = "financialReport"?) then (Có)
+    :Kiểm tra quyền Admin;
+    :Gọi thuật toán Báo cáo tài chính;
+    :Input: period, filters;
+    :Tính doanh thu;
+    :Tính chi phí;
+    :Tính lợi nhuận;
+    :Return: financial report;
+endif
+:Return result;
+stop
+@enduml
+

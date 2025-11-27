@@ -1,0 +1,49 @@
+@startuml Algorithm - Authentication & Authorization (Tổng hợp)
+!theme plain
+title Sơ đồ thuật toán - Authentication & Authorization (Tổng hợp)
+
+start
+:Input: requestType, credentials/data;
+:Validate requestType;
+if (requestType = "register"?) then (Có)
+    :Gọi thuật toán Đăng ký;
+    :Input: email, password, name, phone;
+    :Return: SUCCESS/ERROR;
+elseif (requestType = "login"?) then (Có)
+    :Gọi thuật toán Đăng nhập;
+    :Input: email, password;
+    :Return: SUCCESS + JWT token / ERROR;
+elseif (requestType = "logout"?) then (Có)
+    :Gọi thuật toán Đăng xuất;
+    :Input: JWT token;
+    :Return: SUCCESS;
+elseif (requestType = "updateProfile"?) then (Có)
+    :Gọi thuật toán Quản lý thông tin;
+    :Input: userId, updateData;
+    :Return: SUCCESS/ERROR;
+elseif (requestType = "changePassword"?) then (Có)
+    :Gọi thuật toán Đổi mật khẩu;
+    :Input: userId, oldPassword, newPassword;
+    :Return: SUCCESS/ERROR;
+elseif (requestType = "verifyEmail"?) then (Có)
+    :Gọi thuật toán Xác thực email;
+    :Input: verificationToken;
+    :Return: SUCCESS/ERROR;
+elseif (requestType = "forgotPassword"?) then (Có)
+    :Gọi thuật toán Quên mật khẩu;
+    :Input: email;
+    :Return: SUCCESS + OTP / ERROR;
+elseif (requestType = "manageUsers"?) then (Có)
+    :Kiểm tra quyền Admin;
+    if (Không có quyền?) then (Có)
+        :Return ERROR: UNAUTHORIZED;
+        stop
+    endif
+    :Gọi thuật toán Quản lý users;
+    :Input: action, userId, userData;
+    :Return: SUCCESS/ERROR;
+endif
+:Return result;
+stop
+@enduml
+

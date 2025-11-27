@@ -1,0 +1,32 @@
+﻿@startuml Activity Diagram - Quản lý địa điểm (catalog) - UC61
+!theme plain
+title Activity Diagram - Quản lý địa điểm (catalog) - UC61
+
+|Admin|
+start
+if (Tạo địa điểm?) then
+    :Tạo địa điểm mới;
+    :Điền thông tin địa điểm;
+    |System|
+    :Kiểm tra tên đã tồn tại?;
+    :Kiểm tra tọa độ GPS hợp lệ?;
+    :Tính khoảng cách từ khách sạn;
+    :Tạo địa điểm (status = active);
+    :Lưu vào database;
+elseif (Sửa địa điểm?) then
+    :Sửa địa điểm;
+    :Cập nhật thông tin;
+    |System|
+    :Lưu thay đổi;
+elseif (Xóa địa điểm?) then
+    :Xóa địa điểm;
+    :Xác nhận xóa;
+    |System|
+    :Xóa mềm (soft delete);
+elseif (Bật/tắt hiển thị?) then
+    :Bật/tắt hiển thị địa điểm;
+    |System|
+    :Cập nhật status active/inactive;
+endif
+stop
+@enduml

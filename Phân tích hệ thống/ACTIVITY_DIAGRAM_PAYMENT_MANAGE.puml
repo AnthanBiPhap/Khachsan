@@ -1,0 +1,37 @@
+﻿@startuml Activity Diagram - Quản lý thanh toán (Staff/Admin) - UC33, UC33B, UC33C, UC33D, UC33E
+!theme plain
+title Activity Diagram - Quản lý thanh toán (Staff/Admin) - UC33, UC33B, UC33C, UC33D, UC33E
+
+|Staff/Admin|
+start
+if (Quản lý thanh toán?) then
+    :Quản lý thanh toán;
+    :Nhập tiêu chí lọc;
+    |System|
+    :Lấy payments từ database;
+    :Áp dụng bộ lọc;
+    :Phân trang;
+    :Trả về danh sách;
+elseif (Cập nhật trạng thái?) then
+    :Cập nhật trạng thái payment;
+    :Chọn trạng thái mới;
+    |System|
+    :Cập nhật status;
+    :Ghi audit log;
+elseif (Thống kê thanh toán?) then
+    :Thống kê thanh toán;
+    |System|
+    :Tính thống kê theo period;
+    :Trả về thống kê;
+elseif (Đồng bộ payment?) then
+    :Đồng bộ payment với booking;
+    |System|
+    :Đồng bộ payment và booking status;
+elseif (Xem payment theo booking/khách?) then
+    :Xem payment theo booking/khách;
+    |System|
+    :Lấy payments theo booking/guest;
+    :Trả về danh sách;
+endif
+stop
+@enduml

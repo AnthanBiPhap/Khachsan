@@ -1,0 +1,30 @@
+﻿@startuml Activity Diagram - Gợi ý phản hồi chat
+!theme plain
+title Activity Diagram - Gợi ý phản hồi chat
+
+|Staff|
+start
+:Nhận tin nhắn từ customer;
+:Kiểm tra AI Assistant bật?;
+if (AI Assistant tắt?) then (có)
+    :Không hiển thị gợi ý AI;
+    stop
+endif
+:Gợi ý phản hồi chat;
+|AI|
+:Phân tích nội dung tin nhắn;
+:Tìm kiếm trong knowledge base (FAQ, policies, guides);
+:So khớp với các mẫu câu trả lời;
+:Tạo gợi ý phản hồi;
+if (Có context booking?) then (có)
+    :Thêm thông tin booking vào gợi ý;
+endif
+if (Cần báo giá?) then (có)
+    :Tạo gợi ý báo giá cơ bản;
+endif
+:Trả về danh sách gợi ý phản hồi;
+|Staff|
+:Nhận gợi ý phản hồi;
+:Chỉnh sửa trước khi gửi;
+stop
+@enduml

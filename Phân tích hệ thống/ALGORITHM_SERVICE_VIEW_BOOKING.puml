@@ -1,0 +1,14 @@
+﻿@startuml Algorithm - Xem đặt dịch vụ của mình
+!theme plain
+title Sơ đồ thuật toán - Xem đặt dịch vụ của mình
+
+start
+:Input: bookingId hoặc userId;
+:Lấy danh sách service bookings;
+:Lọc theo bookingId hoặc userId;
+:Lấy thông tin dịch vụ liên quan;
+:Sắp xếp theo ngày phục vụ;
+:Return danh sách service bookings;
+stop
+@enduml
+

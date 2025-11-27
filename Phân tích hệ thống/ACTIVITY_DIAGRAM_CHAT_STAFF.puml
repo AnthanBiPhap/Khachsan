@@ -1,0 +1,28 @@
+﻿@startuml Activity Diagram - Quản lý cuộc trò chuyện (Staff/Admin) - UC53, UC53C
+!theme plain
+title Activity Diagram - Quản lý cuộc trò chuyện (Staff/Admin) - UC53, UC53C
+
+|Staff/Admin|
+start
+if (Quản lý conversation?) then
+    :Quản lý cuộc trò chuyện;
+    :Xem danh sách conversations;
+    :Chọn conversation;
+    :Tham gia conversation;
+    |System|
+    :Kiểm tra conversation chưa được gán?;
+    if (Chưa được gán?) then (có)
+        :Gán staff/admin;
+        :Cập nhật status = active;
+    endif
+    :Join Socket.IO room;
+elseif (Gắn với booking?) then
+    :Gắn với booking;
+    :Mở chat từ booking;
+    |System|
+    :Gắn bookingId vào conversation;
+    :Lưu booking context;
+    :Gửi thông báo cho customer;
+endif
+stop
+@enduml

@@ -1,0 +1,15 @@
+﻿@startuml Algorithm - Xem chi tiết phòng
+!theme plain
+title Sơ đồ thuật toán - Xem chi tiết phòng
+
+start
+:Input: roomId;
+:Lấy chi tiết phòng từ database;
+:Lấy mô tả, tiện nghi;
+:Lấy hình ảnh;
+:Lấy giá theo loại phòng;
+:Lấy trạng thái hiện tại;
+:Return chi tiết phòng;
+stop
+@enduml
+

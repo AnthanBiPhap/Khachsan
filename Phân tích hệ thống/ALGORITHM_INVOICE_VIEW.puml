@@ -1,0 +1,21 @@
+﻿@startuml Algorithm - Xem và xuất hóa đơn (UC35, UC37)
+!theme plain
+title Sơ đồ thuật toán - Xem và xuất hóa đơn (UC35, UC37)
+
+start
+:Input: invoiceId hoặc filters;
+if (Xem hóa đơn?) then (Có)
+ :Lấy invoice từ database;
+ :Kiểm tra quyền truy cập;
+ :Lấy thông tin liên quan (booking, payments);
+ :Return chi tiết invoice;
+elseif (Xuất PDF?) then (Có)
+ :Kiểm tra invoice status = completed;
+ :Tạo PDF từ template;
+ :Thêm thông tin (khách hàng, booking, chi phí);
+ :Trả về file PDF;
+endif
+:Return SUCCESS;
+stop
+@enduml
+

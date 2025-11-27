@@ -1,0 +1,20 @@
+﻿@startuml Activity Diagram - Xem báo cáo tài chính 
+!theme plain
+title Activity Diagram - Xem báo cáo tài chính 
+
+|Admin|
+start
+:Xem báo cáo tài chính;
+:Chọn period và filters (channel, roomType);
+|System|
+:Kiểm tra quyền Admin;
+:Lấy payments trong khoảng thời gian;
+:Tính tổng doanh thu;
+:Tính tổng chi phí (nếu có);
+:Tính lợi nhuận (revenue - cost);
+:Phân loại theo kênh (direct, OTA, etc.);
+:Phân loại theo loại phòng;
+:Tạo bảng tổng hợp;
+:Trả về báo cáo tài chính;
+stop
+@enduml

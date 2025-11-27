@@ -1,0 +1,29 @@
+﻿@startuml Algorithm - Quản lý phòng
+!theme plain
+title Sơ đồ thuật toán - Quản lý phòng
+
+start
+:Input: action (create/update/delete), roomData;
+:Kiểm tra quyền = Admin;
+if (action == 'create') then (Tạo)
+ :Validate dữ liệu;
+ :Kiểm tra số phòng trùng?;
+ :Tạo phòng mới;
+ :Lưu vào database;
+elseif (action == 'update') then (Sửa)
+ :Kiểm tra phòng có booking active?;
+ :Cập nhật thông tin;
+ :Lưu vào database;
+elseif (action == 'delete') then (Xóa)
+ :Kiểm tra phòng có booking active?;
+ if (Có booking?) then (Có)
+ :Return ERROR;
+ stop
+ endif
+ :Xóa mềm (soft delete);
+endif
+:Ghi audit log;
+:Return SUCCESS;
+stop
+@enduml
+

@@ -1,0 +1,19 @@
+﻿@startuml Algorithm - Gửi email hóa đơn
+!theme plain
+title Sơ đồ thuật toán - Gửi email hóa đơn
+
+start
+:Input: invoiceId, paymentId;
+:Lấy thông tin invoice và booking;
+:Tạo PDF invoice;
+if (Tạo PDF thành công?) then (Không)
+ :Gửi link xem invoice online;
+else
+ :Đính kèm PDF vào email;
+endif
+:Render email template với chi tiết booking;
+:Gửi email (async);
+:Return SUCCESS;
+stop
+@enduml
+

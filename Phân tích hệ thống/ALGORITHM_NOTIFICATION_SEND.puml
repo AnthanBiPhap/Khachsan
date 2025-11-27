@@ -1,0 +1,29 @@
+﻿@startuml Algorithm - Gửi thông báo (UC56, UC56A)
+!theme plain
+title Sơ đồ thuật toán - Gửi thông báo (UC56, UC56A)
+
+start
+if (Gửi thủ công?) then
+ :Input: userId/role/channel, content, type, priority;
+ :Kiểm tra quyền Staff/Admin;
+ :Lấy danh sách recipients;
+else
+ :Input: event, context (booking, payment, etc.);
+ :Tìm template theo event type;
+ :Render content từ template;
+ :Xác định recipients từ context;
+endif
+:Lấy cấu hình kênh;
+:Tạo notification record;
+:Lưu vào database;
+if (Kênh in-app enabled?) then (Có)
+ :Phát event 'notification:new' qua Socket.IO;
+endif
+if (Kênh email enabled?) then (Có)
+ :Gửi email (async);
+endif
+:Cập nhật unreadCount;
+:Return SUCCESS;
+stop
+@enduml
+

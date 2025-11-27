@@ -1,0 +1,26 @@
+﻿@startuml Algorithm - Thanh toán Stripe
+!theme plain
+title Sơ đồ thuật toán - Thanh toán Stripe
+
+start
+:Input: bookingId, amount;
+:Tạo payment record (status = pending);
+:Tạo idempotency key;
+:Tạo Stripe Checkout Session;
+:Trả về checkout URL;
+:Customer thanh toán trên Stripe;
+:Nhận Stripe webhook;
+:Xác minh webhook signature (HMAC);
+:Kiểm tra idempotency;
+if (Payment thành công?) then (Có)
+ :Cập nhật payment status = paid;
+ :Cập nhật booking payment status;
+ :Tạo invoice nếu chưa có;
+else
+ :Cập nhật payment status = failed;
+endif
+:Ghi audit log;
+:Return SUCCESS;
+stop
+@enduml
+

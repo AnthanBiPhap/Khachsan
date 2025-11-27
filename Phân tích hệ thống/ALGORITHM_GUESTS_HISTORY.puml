@@ -1,0 +1,17 @@
+﻿@startuml Algorithm - Lịch sử đặt phòng của khách
+!theme plain
+title Sơ đồ thuật toán - Lịch sử đặt phòng của khách
+
+start
+:Input: guestId, userId, role;
+:Kiểm tra quyền Staff/Admin;
+:Lấy guest từ database;
+:Lấy lịch sử bookings của guest;
+:Lấy lịch sử service bookings;
+:Lấy lịch sử invoices;
+:Sắp xếp theo createdAt DESC;
+:Phân trang;
+:Return lịch sử đặt phòng;
+stop
+@enduml
+

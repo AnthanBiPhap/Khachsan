@@ -1,0 +1,32 @@
+﻿@startuml Activity Diagram - Hóa đơn (UC35, UC36, UC37, UC35A)
+!theme plain
+
+
+|Customer|
+start
+if (Xem hóa đơn?) then
+    :Xem hóa đơn;
+    |System|
+    :Lấy danh sách invoices của customer;
+    :Trả về danh sách;
+elseif (Xuất PDF?) then
+    :Xuất hóa đơn PDF;
+    :Chọn hóa đơn;
+    |System|
+    :Tạo PDF invoice;
+    :Trả về file download URL;
+endif
+|Staff/Admin|
+if (Tạo hóa đơn?) then
+    :Tạo hóa đơn;
+    :Chọn booking;
+    |System|
+    :Phát sinh invoice từ booking;
+    :Tính tổng tiền (phòng + dịch vụ + phụ phí);
+    :Tạo invoice (status = pending);
+    :Lưu vào database;
+    |System|
+    :Gửi email hóa đơn;
+endif
+stop
+@enduml

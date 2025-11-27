@@ -1,0 +1,31 @@
+﻿@startuml Algorithm - Quản lý dịch vụ catalog
+!theme plain
+title Sơ đồ thuật toán - Quản lý dịch vụ catalog
+
+start
+:Input: action (create/update/delete/toggle), serviceData;
+:Kiểm tra quyền = Admin;
+if (action == 'create') then (Tạo)
+ :Validate dữ liệu;
+ :Kiểm tra tên trùng?;
+ :Tạo dịch vụ mới;
+ :Lưu vào database;
+elseif (action == 'update') then (Sửa)
+ :Kiểm tra có service bookings active?;
+ :Cập nhật thông tin;
+ :Lưu vào database;
+elseif (action == 'delete') then (Xóa)
+ :Kiểm tra có service bookings active?;
+ if (Có bookings?) then (Có)
+ :Return ERROR;
+ stop
+ endif
+ :Xóa mềm (soft delete);
+elseif (action == 'toggle') then (Bật/tắt)
+ :Chuyển status active/inactive;
+endif
+:Ghi audit log;
+:Return SUCCESS;
+stop
+@enduml
+

@@ -1,0 +1,19 @@
+﻿@startuml Algorithm - Xem đặt phòng (UC18, UC20, UC21)
+!theme plain
+title Sơ đồ thuật toán - Xem đặt phòng (UC18, UC20, UC21)
+
+start
+:Input: userId (Customer) hoặc filters (Staff/Admin);
+if (Role = Customer?) then (Có)
+ :Lấy bookings của customer;
+else
+ :Lấy tất cả bookings;
+ :Áp dụng filters;
+endif
+:Lấy thông tin liên quan (phòng, payments, invoices);
+:Sắp xếp kết quả;
+:Phân trang;
+:Return danh sách bookings;
+stop
+@enduml
+

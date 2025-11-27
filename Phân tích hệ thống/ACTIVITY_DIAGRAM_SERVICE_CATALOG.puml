@@ -1,0 +1,30 @@
+﻿@startuml Activity Diagram - Quản lý dịch vụ (catalog) - UC42
+!theme plain
+title Activity Diagram - Quản lý dịch vụ (catalog) - UC42
+
+|Admin|
+start
+if (Tạo dịch vụ?) then
+    :Tạo dịch vụ mới;
+    :Điền thông tin dịch vụ;
+    |System|
+    :Kiểm tra tên đã tồn tại?;
+    :Tạo dịch vụ (status = active);
+    :Lưu vào database;
+elseif (Sửa dịch vụ?) then
+    :Sửa dịch vụ;
+    :Cập nhật thông tin;
+    |System|
+    :Lưu thay đổi;
+elseif (Xóa dịch vụ?) then
+    :Xóa dịch vụ;
+    :Xác nhận xóa;
+    |System|
+    :Xóa mềm (soft delete);
+elseif (Bật/tắt hiển thị?) then
+    :Bật/tắt hiển thị dịch vụ;
+    |System|
+    :Cập nhật status active/inactive;
+endif
+stop
+@enduml

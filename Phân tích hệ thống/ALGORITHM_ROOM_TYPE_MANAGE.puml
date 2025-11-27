@@ -1,0 +1,29 @@
+﻿@startuml Algorithm - Quản lý loại phòng
+!theme plain
+title Sơ đồ thuật toán - Quản lý loại phòng
+
+start
+:Input: action (create/update/delete), typeData;
+:Kiểm tra quyền = Admin;
+if (action == 'create') then (Tạo)
+ :Validate dữ liệu;
+ :Kiểm tra tên trùng?;
+ :Tạo loại phòng mới;
+ :Lưu vào database;
+elseif (action == 'update') then (Sửa)
+ :Kiểm tra có phòng đang sử dụng?;
+ :Cập nhật thông tin;
+ :Lưu vào database;
+elseif (action == 'delete') then (Xóa)
+ :Kiểm tra có phòng đang sử dụng?;
+ if (Có phòng?) then (Có)
+ :Return ERROR;
+ stop
+ endif
+ :Xóa mềm (soft delete);
+endif
+:Ghi audit log;
+:Return SUCCESS;
+stop
+@enduml
+

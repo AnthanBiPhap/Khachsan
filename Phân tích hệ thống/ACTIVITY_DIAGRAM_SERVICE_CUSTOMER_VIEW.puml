@@ -1,0 +1,23 @@
+﻿@startuml Activity Diagram - Xem đặt dịch vụ của mình 
+!theme plain
+title Activity Diagram - Xem đặt dịch vụ của mình 
+
+|Customer|
+start
+:Xem đặt dịch vụ của mình;
+:Chọn booking từ danh sách;
+|System|
+:Lấy danh sách service bookings của booking;
+:Lấy thông tin dịch vụ liên quan;
+:Lấy trạng thái service booking;
+:Trả về danh sách;
+|Customer|
+:Hiển thị danh sách dịch vụ đã đặt;
+if (Xem chi tiết?) then (có)
+    :Chọn service booking;
+    |System|
+    :Lấy chi tiết service booking;
+    :Trả về chi tiết;
+endif
+stop
+@enduml

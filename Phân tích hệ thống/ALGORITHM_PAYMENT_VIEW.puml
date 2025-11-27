@@ -1,0 +1,19 @@
+﻿@startuml Algorithm - Xem lịch sử thanh toán (UC32, UC33)
+!theme plain
+title Sơ đồ thuật toán - Xem lịch sử thanh toán (UC32, UC33)
+
+start
+:Input: userId (Customer) hoặc filters (Staff/Admin);
+if (Role = Customer?) then (Có)
+ :Lấy payments của customer;
+else
+ :Lấy tất cả payments;
+ :Áp dụng filters (booking, khách, trạng thái, thời gian);
+endif
+:Lấy thông tin liên quan (booking, invoice);
+:Sắp xếp kết quả;
+:Phân trang;
+:Return danh sách payments;
+stop
+@enduml
+

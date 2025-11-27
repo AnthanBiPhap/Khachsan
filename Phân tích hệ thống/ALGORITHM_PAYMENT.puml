@@ -1,0 +1,69 @@
+@startuml Algorithm - Payment & Invoice (Tổng hợp)
+!theme plain
+title Sơ đồ thuật toán - Payment & Invoice (Tổng hợp)
+
+start
+:Input: action, paymentId, bookingId, data, filters;
+:Validate action;
+if (action = "stripePayment"?) then (Có)
+    :Gọi thuật toán Thanh toán Stripe;
+    :Input: bookingId, amount;
+    :Tạo Stripe session;
+    :Return: checkoutURL / ERROR;
+elseif (action = "cashPayment"?) then (Có)
+    :Kiểm tra quyền Staff/Admin;
+    :Gọi thuật toán Thanh toán tiền mặt;
+    :Input: bookingId, amount, staffId;
+    :Tạo payment record;
+    :Return: SUCCESS / ERROR;
+elseif (action = "transferPayment"?) then (Có)
+    :Kiểm tra quyền Staff/Admin;
+    :Gọi thuật toán Thanh toán chuyển khoản;
+    :Input: bookingId, amount, transactionRef;
+    :Tạo payment record;
+    :Return: SUCCESS / ERROR;
+elseif (action = "viewHistory"?) then (Có)
+    :Gọi thuật toán Xem lịch sử;
+    :Input: filters, pagination;
+    :Lấy payments từ DB;
+    :Return: danh sách payments;
+elseif (action = "updateStatus"?) then (Có)
+    :Kiểm tra quyền Staff/Admin;
+    :Gọi thuật toán Cập nhật trạng thái;
+    :Input: paymentId, newStatus;
+    :Validate status transition;
+    :Return: SUCCESS / ERROR;
+elseif (action = "statistics"?) then (Có)
+    :Kiểm tra quyền Staff/Admin;
+    :Gọi thuật toán Thống kê;
+    :Input: period, filters;
+    :Tính toán thống kê;
+    :Return: statistics data;
+elseif (action = "sync"?) then (Có)
+    :Kiểm tra quyền Staff/Admin;
+    :Gọi thuật toán Đồng bộ;
+    :Input: paymentId, bookingId;
+    :Đồng bộ payment và booking;
+    :Return: SUCCESS / ERROR;
+elseif (action = "refund"?) then (Có)
+    :Kiểm tra quyền Admin;
+    :Gọi thuật toán Hoàn tiền;
+    :Input: paymentId, refundAmount, reason;
+    :Xử lý hoàn tiền;
+    :Return: SUCCESS / ERROR;
+elseif (action = "createInvoice"?) then (Có)
+    :Kiểm tra quyền Staff/Admin;
+    :Gọi thuật toán Tạo hóa đơn;
+    :Input: bookingId;
+    :Tạo invoice từ booking;
+    :Return: invoiceId / ERROR;
+elseif (action = "viewInvoice"?) then (Có)
+    :Gọi thuật toán Xem hóa đơn;
+    :Input: invoiceId hoặc bookingId;
+    :Lấy thông tin invoice;
+    :Return: invoice data;
+endif
+:Return result;
+stop
+@enduml
+

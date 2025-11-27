@@ -1,0 +1,24 @@
+﻿@startuml Algorithm - Tìm kiếm địa điểm
+!theme plain
+title Sơ đồ thuật toán - Tìm kiếm địa điểm
+
+start
+:Input: keyword, type, distance, filters;
+:Lấy danh sách locations enabled = true;
+if (Có keyword?) then (Có)
+ :Tìm kiếm theo tên (LIKE);
+endif
+if (Có type?) then (Có)
+ :Lọc theo type;
+endif
+if (Có distance?) then (Có)
+ :Tính khoảng cách từ điểm tham chiếu;
+ :Lọc locations trong khoảng cách;
+endif
+:Áp dụng filters nâng cao;
+:Sắp xếp theo khoảng cách hoặc name;
+:Phân trang;
+:Return danh sách locations;
+stop
+@enduml
+

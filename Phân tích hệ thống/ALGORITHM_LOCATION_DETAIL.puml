@@ -1,0 +1,17 @@
+﻿@startuml Algorithm - Xem chi tiết địa điểm
+!theme plain
+title Sơ đồ thuật toán - Xem chi tiết địa điểm
+
+start
+:Input: locationId;
+:Lấy location từ database;
+:Kiểm tra enabled = true?;
+if (Không enabled?) then (Có)
+ :Return ERROR (404);
+ stop
+endif
+:Lấy hình ảnh, mô tả, vị trí;
+:Return chi tiết location;
+stop
+@enduml
+

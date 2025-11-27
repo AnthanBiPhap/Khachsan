@@ -1,0 +1,22 @@
+﻿@startuml Algorithm - Cập nhật trạng thái phòng
+!theme plain
+title Sơ đồ thuật toán - Cập nhật trạng thái phòng
+
+start
+:Input: roomId, newStatus (available/maintenance/unavailable);
+:Kiểm tra quyền = Admin;
+:Lấy phòng từ database;
+:Kiểm tra trạng thái hợp lệ?;
+if (Chuyển sang maintenance/unavailable?) then (Có)
+ :Kiểm tra có booking sắp tới?;
+ if (Có booking?) then (Có)
+ :Cảnh báo;
+ endif
+endif
+:Cập nhật trạng thái phòng;
+:Cập nhật availability;
+:Ghi audit log;
+:Return SUCCESS;
+stop
+@enduml
+

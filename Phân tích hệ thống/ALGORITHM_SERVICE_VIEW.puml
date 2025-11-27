@@ -1,0 +1,20 @@
+﻿@startuml Algorithm - Xem danh sách và chi tiết dịch vụ (UC38, UC39)
+!theme plain
+title Sơ đồ thuật toán - Xem danh sách và chi tiết dịch vụ (UC38, UC39)
+
+start
+if (Xem danh sách?) then
+ :Input: filters (loại, giá);
+ :Lấy danh sách dịch vụ;
+ :Lọc theo status = active;
+ :Áp dụng filters;
+ :Return danh sách dịch vụ;
+elseif (Xem chi tiết?) then
+ :Input: serviceId;
+ :Lấy chi tiết dịch vụ;
+ :Lấy mô tả, giá, điều kiện, thời gian phục vụ;
+ :Return chi tiết dịch vụ;
+endif
+stop
+@enduml
+

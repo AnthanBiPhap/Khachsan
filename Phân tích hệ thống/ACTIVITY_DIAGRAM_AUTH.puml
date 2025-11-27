@@ -1,0 +1,39 @@
+@startuml Activity Diagram - Authentication & Authorization (Tổng hợp)
+!theme plain
+title Activity Diagram - Authentication & Authorization (Tổng hợp)
+
+|User|
+start
+if (Đăng ký?) then
+    :Điền form đăng ký;
+    |System|
+    :Tạo tài khoản;
+    :Gửi email xác thực;
+    |User|
+    :Xác thực email;
+elseif (Đăng nhập?) then
+    :Nhập email/mật khẩu;
+    |System|
+    :Xác thực;
+    :Phát JWT token;
+    |User|
+    :Kết nối Socket.IO;
+elseif (Quản lý profile?) then
+    :Cập nhật thông tin;
+    :Đổi mật khẩu;
+elseif (Quên mật khẩu?) then
+    :Quên mật khẩu;
+    |System|
+    :Gửi OTP;
+    |User|
+    :Đặt lại mật khẩu;
+elseif (Quản lý Admin?) then
+    |Admin|
+    :Quản lý users;
+    :Khóa/Mở khóa;
+    :Phân quyền;
+endif
+:Đăng xuất;
+stop
+@enduml
+

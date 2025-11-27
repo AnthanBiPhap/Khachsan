@@ -1,0 +1,30 @@
+﻿@startuml Activity Diagram - Quản lý thông tin khách 
+!theme plain
+title Activity Diagram - Quản lý thông tin khách 
+
+|Staff/Admin|
+start
+if (Tạo khách mới?) then
+    :Tạo/Sửa thông tin khách;
+    :Điền thông tin khách;
+    |System|
+    :Kiểm tra email/SĐT đã tồn tại?;
+    if (Đã tồn tại?) then (có)
+        |Staff/Admin|
+        :Hiển thị cảnh báo;
+        :Yêu cầu xác nhận;
+    endif
+    :Tạo guest record;
+    :Lưu vào database;
+    :Lưu lịch sử chỉnh sửa;
+elseif (Sửa thông tin khách?) then
+    :Sửa thông tin khách;
+    :Cập nhật thông tin;
+    |System|
+    :Lưu trạng thái cũ vào history;
+    :Cập nhật fields;
+    :Lưu vào database;
+    :Lưu lịch sử chỉnh sửa;
+endif
+stop
+@enduml

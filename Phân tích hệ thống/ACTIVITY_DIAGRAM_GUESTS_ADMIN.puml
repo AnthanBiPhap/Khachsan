@@ -1,0 +1,42 @@
+﻿@startuml Activity Diagram - Xóa/Khôi phục khách  & Lịch sử đặt phòng 
+!theme plain
+title Activity Diagram - Xóa/Khôi phục khách  & Lịch sử đặt phòng 
+
+|Admin|
+start
+if (Xóa khách?) then
+    :Xóa/Khôi phục khách;
+    :Chọn guest;
+    :Kiểm tra có booking active?;
+    if (Có booking active?) then (có)
+        :Hiển thị lỗi;
+        stop
+    endif
+    :Xác nhận xóa;
+    |System|
+    :Kiểm tra quyền Admin;
+    :Xóa mềm (soft delete);
+    :Lưu deletedAt timestamp;
+    :Lưu vào database;
+elseif (Khôi phục khách?) then
+    :Khôi phục khách;
+    :Chọn guest đã bị xóa;
+    |System|
+    :Khôi phục (restore);
+    :Xóa deletedAt timestamp;
+    :Lưu vào database;
+endif
+|Staff/Admin|
+if (Lịch sử đặt phòng?) then
+    :Lịch sử đặt phòng của khách;
+    :Chọn guest;
+    |System|
+    :Lấy lịch sử bookings của guest;
+    :Lấy lịch sử service bookings;
+    :Lấy lịch sử invoices;
+    :Sắp xếp theo createdAt DESC;
+    :Phân trang;
+    :Trả về lịch sử;
+endif
+stop
+@enduml

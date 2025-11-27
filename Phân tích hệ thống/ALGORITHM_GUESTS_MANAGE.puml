@@ -1,0 +1,37 @@
+﻿@startuml Algorithm - Tạo/Sửa thông tin khách
+!theme plain
+title Sơ đồ thuật toán - Tạo/Sửa thông tin khách
+
+start
+if (Tạo mới?) then
+ :Input: name, email, phone, notes, userId, role;
+ :Kiểm tra quyền Staff/Admin;
+ :Kiểm tra email/phone đã tồn tại?;
+ if (Đã tồn tại?) then (Có)
+ :Return ERROR (duplicate);
+ stop
+ endif
+ :Tạo guest record;
+ :Lưu vào database;
+ :Lưu lịch sử chỉnh sửa;
+elseif (Sửa?) then
+ :Input: guestId, fields to update, userId, role;
+ :Kiểm tra quyền Staff/Admin;
+ :Lấy guest từ database;
+ :Kiểm tra guest đã bị xóa mềm?;
+ if (Đã bị xóa mềm?) then (Có)
+ :Kiểm tra quyền Admin;
+ if (Không phải Admin?) then (Có)
+ :Return ERROR (403);
+ stop
+ endif
+ endif
+ :Lưu trạng thái cũ vào history;
+ :Cập nhật fields;
+ :Lưu vào database;
+ :Lưu lịch sử chỉnh sửa (userId, timestamp, changes);
+endif
+:Return SUCCESS;
+stop
+@enduml
+

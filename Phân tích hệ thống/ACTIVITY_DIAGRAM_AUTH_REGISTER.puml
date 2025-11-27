@@ -1,0 +1,34 @@
+﻿@startuml Activity Diagram - Đăng ký tài khoản  & Xác thực email 
+!theme plain
+title Activity Diagram - Đăng ký tài khoản  & Xác thực email 
+
+|Customer|
+start
+:Điền form đăng ký;
+|System|
+:Kiểm tra email tồn tại?;
+if (Email đã tồn tại?) then (có)
+    |Customer|
+    :Hiển thị lỗi;
+    stop
+endif
+:Hash mật khẩu;
+:Tạo tài khoản (status = pending);
+:Tạo token xác thực;
+:Gửi email xác thực;
+|Customer|
+:Click link xác thực;
+|System|
+:Kiểm tra token hợp lệ?;
+if (Token không hợp lệ?) then (có)
+    |Customer|
+    :Hiển thị lỗi;
+    stop
+endif
+:Cập nhật emailVerified = true;
+:Cập nhật status = active;
+|Customer|
+:Xác thực thành công;
+stop
+@enduml
+

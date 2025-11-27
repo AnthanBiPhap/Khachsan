@@ -1,0 +1,19 @@
+﻿@startuml Algorithm - Tạo báo giá đặt phòng nhóm
+!theme plain
+title Sơ đồ thuật toán - Tạo báo giá đặt phòng nhóm
+
+start
+:Input: groupBookingId, pricePerRoom, fees, discounts;
+:Tính tổng giá (giá/phòng × số phòng × số đêm);
+:Thêm phụ phí;
+:Áp dụng giảm giá;
+:Tính giá cuối cùng;
+:Lưu báo giá vào database;
+:Cập nhật status = quoted;
+:Tạo link thanh toán (nếu cần);
+:Gửi email báo giá;
+:Ghi audit log;
+:Return SUCCESS;
+stop
+@enduml
+

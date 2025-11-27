@@ -1,0 +1,25 @@
+﻿@startuml Algorithm - Đăng ký tài khoản
+!theme plain
+title Sơ đồ thuật toán - Đăng ký tài khoản
+
+start
+:Input: email, password, name, phone;
+:Validate input;
+if (Input hợp lệ?) then (Không)
+ :Return ERROR;
+ stop
+endif
+:Kiểm tra email đã tồn tại?;
+if (Email đã tồn tại?) then (Có)
+ :Return ERROR;
+ stop
+endif
+:Hash password;
+:Tạo user record;
+:Lưu vào database;
+:Tạo email verification token;
+:Gửi email xác thực;
+:Return SUCCESS;
+stop
+@enduml
+

@@ -1,0 +1,31 @@
+﻿@startuml Activity Diagram - Xử lý hoàn tiền 
+!theme plain
+title Activity Diagram - Xử lý hoàn tiền 
+
+|Admin|
+start
+:Xử lý hoàn tiền;
+:Chọn booking cần hoàn tiền;
+:Kiểm tra booking đã được duyệt hủy?;
+if (Chưa được duyệt hủy?) then (có)
+    :Hiển thị lỗi;
+    stop
+endif
+:Kiểm tra chính sách hoàn tiền;
+:Tính số tiền hoàn lại;
+:Nhập số tiền hoàn lại;
+:Xác nhận hoàn tiền;
+|System|
+:Kiểm tra quyền Admin;
+:Kiểm tra số tiền hoàn lại ≤ số tiền đã trả;
+:Tạo refund record;
+:Cập nhật payment status = refunded;
+:Cập nhật booking payment status;
+:Hoàn tiền qua Stripe (nếu thanh toán online);
+:Hoàn tiền thủ công (nếu thanh toán tiền mặt/chuyển khoản);
+|System|
+:Gửi email xác nhận hoàn tiền;
+|Admin|
+:Thành công;
+stop
+@enduml

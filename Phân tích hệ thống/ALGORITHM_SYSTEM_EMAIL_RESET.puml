@@ -1,0 +1,13 @@
+﻿@startuml Algorithm - Xác nhận đặt lại mật khẩu
+!theme plain
+title Sơ đồ thuật toán - Xác nhận đặt lại mật khẩu
+
+start
+:Input: userId;
+:Sau khi đặt lại mật khẩu thành công;
+:Render email template xác nhận;
+:Gửi email thông báo đã đặt lại mật khẩu (async);
+:Return SUCCESS;
+stop
+@enduml
+

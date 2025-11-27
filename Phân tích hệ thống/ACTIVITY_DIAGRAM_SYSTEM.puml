@@ -1,0 +1,25 @@
+﻿@startuml Activity Diagram - System Automation & Integrations (Tổng hợp)
+!theme plain
+
+
+|System|
+start
+if (Email automation?) then
+    :Gửi email xác nhận đăng ký;
+    :Gửi OTP quên mật khẩu;
+    :Xác nhận đặt lại mật khẩu;
+    :Gửi email hóa đơn;
+elseif (Notification automation?) then
+    :Thông báo đặt phòng;
+    :Thông báo payment;
+    :Thông báo đặt đoàn;
+elseif (Stripe payment?) then
+    :Xử lý thanh toán Stripe;
+elseif (Status automation?) then
+    :Cập nhật trạng thái tự động;
+elseif (Scheduler?) then
+    :Lên lịch tác vụ;
+endif
+stop
+@enduml
+

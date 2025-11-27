@@ -1,0 +1,18 @@
+﻿@startuml Algorithm - Báo cáo tài chính
+!theme plain
+title Sơ đồ thuật toán - Báo cáo tài chính
+
+start
+:Input: period, filters (channel, roomType), userId;
+:Kiểm tra quyền Admin;
+:Lấy payments trong khoảng thời gian;
+:Tính tổng doanh thu;
+:Tính tổng chi phí (nếu có);
+:Tính lợi nhuận (revenue - cost);
+:Phân loại theo kênh (direct, OTA, etc.);
+:Phân loại theo loại phòng;
+:Tạo bảng tổng hợp;
+:Return báo cáo tài chính;
+stop
+@enduml
+

@@ -1,0 +1,16 @@
+﻿@startuml Algorithm - Thông báo payment
+!theme plain
+title Sơ đồ thuật toán - Thông báo payment
+
+start
+:Input: paymentId, status (success, failed, refunded);
+:Lấy thông tin payment và booking;
+:Tạo notification record;
+:Lưu vào database;
+:Phát event 'payment:notification' qua Socket.IO;
+:Broadcast đến relevant users;
+:Cập nhật unreadCount;
+:Return SUCCESS;
+stop
+@enduml
+

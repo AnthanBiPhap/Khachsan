@@ -1,0 +1,34 @@
+﻿@startuml Algorithm - Chat với staff/admin
+!theme plain
+title Sơ đồ thuật toán - Chat với staff/admin
+
+start
+:Input: userId (Customer);
+:Kiểm tra đã có conversation?;
+if (Đã có?) then (Có)
+ :Lấy conversation hiện tại;
+else
+ :Tìm staff active;
+ if (Có staff online?) then (Có)
+ :Gán staff cho conversation;
+ else
+ if (Fallback admin = true?) then (Có)
+ :Tìm admin online;
+ if (Có admin?) then (Có)
+ :Gán admin;
+ else
+ :Conversation status = waiting;
+ endif
+ else
+ :Conversation status = waiting;
+ endif
+ endif
+ :Tạo conversation mới;
+ :Lưu vào database;
+endif
+:Kết nối Socket.IO;
+:Join room theo conversationId;
+:Return SUCCESS;
+stop
+@enduml
+

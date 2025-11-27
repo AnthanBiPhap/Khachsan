@@ -1,0 +1,20 @@
+﻿@startuml Algorithm - Gửi tin nhắn
+!theme plain
+title Sơ đồ thuật toán - Gửi tin nhắn
+
+start
+:Input: conversationId, userId, content, type;
+:Kiểm tra quyền trong conversation;
+if (Không có quyền?) then (Có)
+ :Return ERROR;
+ stop
+endif
+:Tạo message record;
+:Lưu vào database;
+:Cập nhật conversation (lastMessage, unreadCount);
+:Phát event 'message:new' qua Socket.IO;
+:Broadcast đến room conversationId;
+:Return SUCCESS;
+stop
+@enduml
+

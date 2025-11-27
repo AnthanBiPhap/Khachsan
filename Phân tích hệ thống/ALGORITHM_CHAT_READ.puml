@@ -1,0 +1,15 @@
+﻿@startuml Algorithm - Đánh dấu đã đọc
+!theme plain
+title Sơ đồ thuật toán - Đánh dấu đã đọc
+
+start
+:Input: conversationId, userId;
+:Cập nhật unreadCount = 0;
+:Cập nhật trạng thái tin nhắn (delivered → read);
+:Lưu lastReadAt;
+:Phát event 'conversation:read' qua Socket.IO;
+:Broadcast đến room conversationId;
+:Return SUCCESS;
+stop
+@enduml
+

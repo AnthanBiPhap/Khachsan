@@ -1,0 +1,33 @@
+@startuml Algorithm - AI Assistant & Suggestions (Tổng hợp)
+!theme plain
+title Sơ đồ thuật toán - AI Assistant & Suggestions (Tổng hợp)
+
+start
+:Input: action, userId, context, data;
+:Validate action;
+:Kiểm tra AI Assistant enabled?;
+if (Không enabled?) then (Có)
+    :Return ERROR: AI_NOT_ENABLED;
+    stop
+endif
+if (action = "suggestRoomService"?) then (Có)
+    :Gọi thuật toán Gợi ý phòng/dịch vụ;
+    :Input: userId, searchContext;
+    :Lấy user preferences;
+    :Lấy lịch sử bookings;
+    :Phân tích sở thích;
+    :So khớp với available rooms/services;
+    :Tính điểm relevance;
+    :Return: danh sách suggestions;
+elseif (action = "suggestChatResponse"?) then (Có)
+    :Gọi thuật toán Gợi ý phản hồi chat;
+    :Input: messageContent, conversationContext, bookingContext;
+    :Phân tích intent;
+    :Tìm kiếm trong knowledge base;
+    :Tạo gợi ý phản hồi;
+    :Return: danh sách suggested responses;
+endif
+:Return result;
+stop
+@enduml
+

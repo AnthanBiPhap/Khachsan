@@ -1,0 +1,40 @@
+﻿@startuml Activity Diagram - Quản lý Loại Phòng (Admin) - UC14
+!theme plain
+title Activity Diagram - Quản lý Loại Phòng (Admin) - UC14
+
+|Admin|
+start
+if (Tạo loại phòng?) then
+    :Tạo loại phòng mới;
+    :Điền thông tin loại phòng;
+    |System|
+    :Kiểm tra tên đã tồn tại?;
+    if (Đã tồn tại?) then (có)
+        |Admin|
+        :Hiển thị lỗi;
+        stop
+    endif
+    :Tạo loại phòng;
+    :Lưu vào database;
+elseif (Sửa loại phòng?) then
+    :Sửa loại phòng;
+    :Cập nhật thông tin;
+    |System|
+    :Kiểm tra có phòng đang sử dụng?;
+    :Lưu thay đổi;
+elseif (Xóa loại phòng?) then
+    :Xóa loại phòng;
+    :Xác nhận xóa;
+    |System|
+    :Kiểm tra có phòng đang sử dụng?;
+    if (Có phòng?) then (có)
+        |Admin|
+        :Hiển thị lỗi;
+        stop
+    endif
+    :Xóa mềm (soft delete);
+endif
+|Admin|
+:Thành công;
+stop
+@enduml

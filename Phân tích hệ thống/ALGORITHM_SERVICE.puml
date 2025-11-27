@@ -1,0 +1,60 @@
+@startuml Algorithm - Service Management (Tổng hợp)
+!theme plain
+title Sơ đồ thuật toán - Service Management (Tổng hợp)
+
+start
+:Input: action, serviceId, bookingId, data, filters;
+:Validate action;
+if (action = "listServices"?) then (Có)
+    :Gọi thuật toán Xem danh sách dịch vụ;
+    :Input: filters;
+    :Lấy danh sách services (status = active);
+    :Return: danh sách services;
+elseif (action = "serviceDetail"?) then (Có)
+    :Gọi thuật toán Xem chi tiết dịch vụ;
+    :Input: serviceId;
+    :Lấy chi tiết service;
+    :Return: service data;
+elseif (action = "bookService"?) then (Có)
+    :Gọi thuật toán Đặt dịch vụ;
+    :Input: serviceId, bookingId, schedule, quantity;
+    :Kiểm tra tính khả dụng;
+    :Tạo service booking;
+    :Return: serviceBookingId / ERROR;
+elseif (action = "viewBookings"?) then (Có)
+    :Gọi thuật toán Xem đặt dịch vụ;
+    :Input: bookingId hoặc filters;
+    :Lấy service bookings;
+    :Return: danh sách service bookings;
+elseif (action = "manageCatalog"?) then (Có)
+    :Kiểm tra quyền Admin;
+    :Gọi thuật toán Quản lý catalog;
+    :Input: operation, serviceData;
+    :Return: SUCCESS / ERROR;
+elseif (action = "manageServiceBooking"?) then (Có)
+    :Kiểm tra quyền Staff/Admin;
+    :Gọi thuật toán Quản lý đặt dịch vụ;
+    :Input: serviceBookingId, operation, data;
+    :Return: SUCCESS / ERROR;
+elseif (action = "updateStatus"?) then (Có)
+    :Kiểm tra quyền Staff/Admin;
+    :Gọi thuật toán Cập nhật trạng thái;
+    :Input: serviceBookingId, newStatus;
+    :Return: SUCCESS / ERROR;
+elseif (action = "cancel"?) then (Có)
+    :Kiểm tra quyền Staff/Admin;
+    :Gọi thuật toán Hủy dịch vụ;
+    :Input: serviceBookingId, reason;
+    :Xử lý hủy và hoàn tiền;
+    :Return: SUCCESS / ERROR;
+elseif (action = "invoice"?) then (Có)
+    :Kiểm tra quyền Staff/Admin;
+    :Gọi thuật toán Hạch toán;
+    :Input: serviceBookingId, invoiceId;
+    :Gắn service booking với invoice;
+    :Return: SUCCESS / ERROR;
+endif
+:Return result;
+stop
+@enduml
+

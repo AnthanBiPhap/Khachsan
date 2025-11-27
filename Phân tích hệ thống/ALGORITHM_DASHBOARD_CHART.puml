@@ -1,0 +1,22 @@
+﻿@startuml Algorithm - Xem biểu đồ
+!theme plain
+title Sơ đồ thuật toán - Xem biểu đồ
+
+start
+:Input: chartType (capacity/revenue/source), period, userId, role;
+:Kiểm tra quyền Staff/Admin;
+if (Biểu đồ công suất?) then (Có)
+ :Tính công suất theo ngày;
+ :Tạo dữ liệu biểu đồ;
+elseif (Biểu đồ doanh thu?) then (Có)
+ :Tính doanh thu theo ngày;
+ :Tạo dữ liệu biểu đồ;
+elseif (Biểu đồ nguồn kênh?) then (Có)
+ :Phân loại theo booking source;
+ :Tính số lượng theo từng nguồn;
+ :Tạo dữ liệu biểu đồ;
+endif
+:Return chart data;
+stop
+@enduml
+

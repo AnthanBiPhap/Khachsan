@@ -1,0 +1,18 @@
+﻿@startuml Algorithm - Cập nhật trạng thái payment
+!theme plain
+title Sơ đồ thuật toán - Cập nhật trạng thái payment
+
+start
+:Input: paymentId, newStatus (paid/failed/refunded/cancelled);
+:Validate status;
+:Lưu trạng thái cũ;
+:Cập nhật trạng thái mới;
+:Cập nhật booking payment status (nếu cần);
+:Cập nhật invoice status (nếu cần);
+:Lưu vào status history;
+:Ghi audit log;
+:Gửi thông báo (nếu cần);
+:Return SUCCESS;
+stop
+@enduml
+

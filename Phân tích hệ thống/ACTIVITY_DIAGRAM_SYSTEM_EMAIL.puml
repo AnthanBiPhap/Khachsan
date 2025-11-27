@@ -1,0 +1,33 @@
+﻿@startuml Activity Diagram - Email Automation (UC68, UC68A, UC68B, UC69)
+!theme plain
+title Activity Diagram - Email Automation (UC68, UC68A, UC68B, UC69)
+
+|System|
+start
+if (Gửi email xác nhận đăng ký?) then
+    :Gửi email xác nhận đăng ký;
+    :Tạo verification token (TTL: 24h);
+    :Lưu token vào database;
+    :Render email template với verification link;
+    :Gửi email (async);
+elseif (Gửi OTP?) then
+    :Gửi OTP quên mật khẩu;
+    :Tạo OTP 6 số (TTL: 10 phút);
+    :Lưu OTP vào database (hashed);
+    :Render email template với OTP;
+    :Gửi email (async);
+elseif (Xác nhận đặt lại mật khẩu?) then
+    :Xác nhận đặt lại mật khẩu;
+    :Sau khi đặt lại mật khẩu thành công;
+    :Render email template xác nhận;
+    :Gửi email (async);
+elseif (Gửi email hóa đơn?) then
+    :Gửi email hóa đơn;
+    :Lấy thông tin invoice và booking;
+    :Tạo PDF invoice (hoặc link);
+    :Render email template với chi tiết booking;
+    :Đính kèm PDF (hoặc gửi link);
+    :Gửi email (async);
+endif
+stop
+@enduml

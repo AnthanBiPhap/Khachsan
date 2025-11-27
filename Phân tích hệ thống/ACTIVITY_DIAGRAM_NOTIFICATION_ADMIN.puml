@@ -1,0 +1,26 @@
+﻿@startuml Activity Diagram - Quản lý thông báo (Admin) - UC56C, UC57
+!theme plain
+title Activity Diagram - Quản lý thông báo (Admin) - UC56C, UC57
+
+|Admin|
+start
+if (Cấu hình kênh?) then
+    :Ưu tiên/Kênh thông báo;
+    :Cấu hình kênh gửi (in-app/email/SMS);
+    :Cấu hình ưu tiên cho từng loại;
+    |System|
+    :Lưu cấu hình kênh;
+    :Lưu cấu hình ưu tiên;
+elseif (Quản lý template?) then
+    :Quản lý thông báo;
+    :Quản lý template thông báo;
+    :Cấu hình TTL;
+    :Cấu hình retry policy;
+    :Bật/tắt từng loại thông báo;
+    |System|
+    :Lưu cấu hình template;
+    :Lưu cấu hình TTL/retry;
+    :Cập nhật enabled status;
+endif
+stop
+@enduml

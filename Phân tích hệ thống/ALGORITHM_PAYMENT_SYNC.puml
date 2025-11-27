@@ -1,0 +1,24 @@
+﻿@startuml Algorithm - Đồng bộ payment với booking
+!theme plain
+title Sơ đồ thuật toán - Đồng bộ payment với booking
+
+start
+:Input: scope (all/dateRange/bookingId);
+:Lấy danh sách bookings cần đồng bộ;
+while (Chưa xử lý hết bookings?) is (Có)
+ :booking = next booking;
+ :Tính tổng số tiền đã thanh toán;
+ :So sánh với tổng giá booking;
+ if (Đã trả đủ?) then (Có)
+ :Cập nhật booking.payment_status = paid;
+ elseif (Trả một phần?) then (Có)
+ :Cập nhật booking.payment_status = partially_paid;
+ else
+ :Cập nhật booking.payment_status = pending;
+ endif
+ :Sửa lỗi không nhất quán (nếu có);
+endwhile
+:Return kết quả đồng bộ;
+stop
+@enduml
+

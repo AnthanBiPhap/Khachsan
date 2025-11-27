@@ -1,0 +1,26 @@
+﻿@startuml Activity Diagram - Gửi tin nhắn & Real-time (UC51, UC52)
+!theme plain
+title Activity Diagram - Gửi tin nhắn & Real-time (UC51, UC52)
+
+|User|
+start
+if (Gửi tin nhắn?) then
+    :Gửi tin nhắn;
+    :Nhập nội dung tin nhắn;
+    :Gửi qua Socket.IO emit;
+    |Socket.IO Server|
+    :Nhận event 'message:send';
+    :Xác thực quyền trong conversation;
+    :Tạo message record;
+    :Lưu vào database;
+    :Cập nhật conversation (lastMessage, unreadCount);
+    :Phát event 'message:new' đến room;
+    |User|
+    :Nhận real-time qua Socket.IO;
+    :Tự động update UI;
+elseif (Mất kết nối?) then
+    :Kích hoạt polling fallback;
+    :Poll API mỗi 5-10 giây;
+endif
+stop
+@enduml

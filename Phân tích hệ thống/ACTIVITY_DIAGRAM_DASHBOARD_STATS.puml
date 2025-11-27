@@ -1,0 +1,31 @@
+﻿@startuml Activity Diagram - Xem thống kê & Biểu đồ (UC63, UC64)
+!theme plain
+title Activity Diagram - Xem thống kê & Biểu đồ (UC63, UC64)
+
+|Staff/Admin|
+start
+if (Xem thống kê?) then
+    :Xem thống kê;
+    :Chọn period (day/week/month);
+    |System|
+    :Lấy bookings trong khoảng thời gian;
+    :Tính số đặt phòng, số hủy, doanh thu;
+    :Tính tỷ lệ hủy và công suất;
+    :Trả về thống kê;
+elseif (Xem biểu đồ?) then
+    :Xem biểu đồ;
+    :Chọn chartType (capacity/revenue/source);
+    |System|
+    if (Biểu đồ công suất?) then (có)
+        :Tính công suất theo ngày;
+    elseif (Biểu đồ doanh thu?) then (có)
+        :Tính doanh thu theo ngày;
+    elseif (Biểu đồ nguồn kênh?) then (có)
+        :Phân loại theo booking source;
+        :Tính số lượng theo từng nguồn;
+    endif
+    :Tạo dữ liệu biểu đồ;
+    :Trả về chart data;
+endif
+stop
+@enduml

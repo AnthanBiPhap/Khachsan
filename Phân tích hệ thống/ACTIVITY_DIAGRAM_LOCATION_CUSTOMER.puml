@@ -1,0 +1,28 @@
+﻿@startuml Activity Diagram - Xem và tìm kiếm địa điểm (Customer) - UC58, UC59, UC60
+!theme plain
+title Activity Diagram - Xem và tìm kiếm địa điểm (Customer) - UC58, UC59, UC60
+
+|Customer|
+start
+if (Xem danh sách?) then
+    :Xem danh sách địa điểm;
+    |System|
+    :Lấy danh sách địa điểm (status = active);
+    :Trả về danh sách;
+elseif (Tìm kiếm?) then
+    :Tìm kiếm địa điểm;
+    :Nhập từ khóa/bộ lọc;
+    |System|
+    :Tìm kiếm theo tiêu chí;
+    :Tính khoảng cách;
+    :Trả về kết quả;
+elseif (Xem chi tiết?) then
+    :Xem chi tiết địa điểm;
+    :Chọn địa điểm;
+    |System|
+    :Lấy chi tiết địa điểm;
+    :Lấy gợi ý di chuyển;
+    :Trả về chi tiết;
+endif
+stop
+@enduml

@@ -1,0 +1,20 @@
+﻿@startuml Algorithm - Đánh dấu đã đọc
+!theme plain
+title Sơ đồ thuật toán - Đánh dấu đã đọc
+
+start
+:Input: notificationId(s), userId;
+if (Mark single?) then (Có)
+ :Cập nhật status = 'read';
+ :Lưu readAt timestamp;
+else
+ :Cập nhật tất cả notificationId(s) = 'read';
+ :Lưu readAt = now;
+endif
+:Giảm unreadCount;
+:Phát event 'notification:read' qua Socket.IO;
+:Broadcast đến user;
+:Return SUCCESS;
+stop
+@enduml
+

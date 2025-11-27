@@ -1,0 +1,17 @@
+﻿@startuml Algorithm - Thông báo đặt phòng
+!theme plain
+title Sơ đồ thuật toán - Thông báo đặt phòng
+
+start
+:Input: bookingId, eventType (new, update);
+:Lấy thông tin booking;
+:Lấy danh sách Staff/Admin online;
+:Tạo notification record;
+:Lưu vào database;
+:Phát event 'booking:notification' qua Socket.IO;
+:Broadcast đến Staff/Admin rooms;
+:Cập nhật unreadCount;
+:Return SUCCESS;
+stop
+@enduml
+

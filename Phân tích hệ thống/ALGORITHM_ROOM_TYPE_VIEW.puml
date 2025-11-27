@@ -1,0 +1,13 @@
+﻿@startuml Algorithm - Xem loại phòng
+!theme plain
+title Sơ đồ thuật toán - Xem loại phòng
+
+start
+:Lấy danh sách loại phòng từ database;
+:Lọc theo status = active;
+:Lấy thông tin liên quan (giá, tiện nghi, mô tả);
+:Sắp xếp kết quả;
+:Return danh sách loại phòng;
+stop
+@enduml
+

@@ -1,0 +1,46 @@
+﻿@startuml Activity Diagram - Thanh toán online & Xem lịch sử
+!theme plain
+title Activity Diagram - Thanh toán online & Xem lịch sử 
+
+|Customer|
+start
+if (Thanh toán online?) then
+    :Thanh toán online Stripe;
+    :Xem chi tiết booking;
+    :Xác nhận thanh toán;
+    |System|
+    :Tạo payment record (status = pending);
+    :Tạo Stripe Checkout session;
+    :Trả về Stripe URL;
+    |Customer|
+    :Chuyển đến Stripe Checkout;
+    :Nhập thông tin thẻ;
+    |Stripe|
+    :Xử lý thanh toán;
+    if (Thành công?) then (có)
+        |System (Webhook)|
+        :Nhận Stripe webhook;
+        :Xác thực signature;
+        |System|
+        :Cập nhật payment status = paid;
+        :Cập nhật booking payment status;
+        :Tạo invoice (nếu cần);
+        |System|
+        :Gửi email xác nhận;
+        :Gửi hóa đơn;
+        |Customer|
+        :Thanh toán thành công;
+    else
+        |System|
+        :Cập nhật payment status = failed;
+        |Customer|
+        :Thanh toán thất bại;
+    endif
+elseif (Xem lịch sử?) then
+    :Xem lịch sử thanh toán;
+    |System|
+    :Lấy danh sách payments của customer;
+    :Trả về danh sách;
+endif
+stop
+@enduml

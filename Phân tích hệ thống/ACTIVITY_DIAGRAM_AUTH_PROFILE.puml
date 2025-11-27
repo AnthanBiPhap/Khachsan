@@ -1,0 +1,27 @@
+﻿@startuml Activity Diagram - Quản lý thông tin cá nhân  & Đổi mật khẩu 
+!theme plain
+title Activity Diagram - Quản lý thông tin cá nhân  & Đổi mật khẩu 
+
+|User|
+start
+if (Cập nhật thông tin?) then
+    :Cập nhật thông tin;
+    |System|
+    :Lưu thay đổi;
+elseif (Đổi mật khẩu?) then
+    :Nhập mật khẩu cũ/mới;
+    |System|
+    :Kiểm tra mật khẩu cũ;
+    if (Mật khẩu cũ sai?) then (có)
+        |User|
+        :Hiển thị lỗi;
+        stop
+    endif
+    :Hash mật khẩu mới;
+    :Cập nhật mật khẩu;
+endif
+|User|
+:Thành công;
+stop
+@enduml
+

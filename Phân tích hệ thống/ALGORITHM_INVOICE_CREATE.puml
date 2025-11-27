@@ -1,0 +1,29 @@
+﻿@startuml Algorithm - Tạo hóa đơn
+!theme plain
+title Sơ đồ thuật toán - Tạo hóa đơn
+
+start
+:Input: bookingId, lineItems, staffId;
+:Kiểm tra booking hợp lệ?;
+:Kiểm tra đã có invoice?;
+if (Đã có invoice?) then (Có)
+ :Return ERROR;
+ stop
+endif
+:Tính giá phòng;
+:Tính giá dịch vụ;
+:Tính phụ phí;
+:Tính tổng tiền;
+:Tạo invoice (status = draft);
+:Tạo line items;
+:Lưu vào database;
+if (Chốt hóa đơn?) then (Có)
+ :Cập nhật status = completed;
+ :Khóa hóa đơn (không cho sửa);
+ :Gửi email hóa đơn;
+endif
+:Ghi audit log;
+:Return SUCCESS;
+stop
+@enduml
+

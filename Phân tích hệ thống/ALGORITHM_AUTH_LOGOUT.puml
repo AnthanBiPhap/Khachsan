@@ -1,0 +1,18 @@
+﻿@startuml Algorithm - Đăng xuất
+!theme plain
+title Sơ đồ thuật toán - Đăng xuất
+
+start
+:Input: JWT token;
+:Verify token;
+if (Token không hợp lệ?) then (Có)
+ :Return ERROR;
+ stop
+endif
+:Xóa token khỏi whitelist;
+:Ngắt Socket.IO;
+:Xóa token khỏi client;
+:Return SUCCESS;
+stop
+@enduml
+

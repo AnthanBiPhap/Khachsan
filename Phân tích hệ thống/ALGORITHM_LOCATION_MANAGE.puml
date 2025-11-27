@@ -1,0 +1,31 @@
+﻿@startuml Algorithm - Quản lý địa điểm
+!theme plain
+title Sơ đồ thuật toán - Quản lý địa điểm
+
+start
+if (Tạo mới?) then
+ :Input: name, description, images, location, openingHours, type;
+ :Kiểm tra quyền Admin;
+ :Tạo location record;
+ :Lưu vào database;
+elseif (Sửa?) then
+ :Input: locationId, fields to update;
+ :Kiểm tra quyền Admin;
+ :Lấy location từ database;
+ :Cập nhật fields;
+ :Lưu vào database;
+elseif (Xóa?) then
+ :Input: locationId;
+ :Kiểm tra quyền Admin;
+ :Xóa location (soft delete);
+ :Lưu vào database;
+elseif (Bật/tắt?) then
+ :Input: locationId, enabled (true/false);
+ :Kiểm tra quyền Admin;
+ :Cập nhật enabled status;
+ :Lưu vào database;
+endif
+:Return SUCCESS;
+stop
+@enduml
+

@@ -1,0 +1,27 @@
+﻿@startuml Activity Diagram - Service Management (Tổng hợp)
+!theme plain
+
+
+|Customer|
+start
+if (Xem danh sách/chi tiết?) then
+    :Xem danh sách/chi tiết dịch vụ ;
+elseif (Đặt dịch vụ?) then
+    :Đặt dịch vụ;
+    |System|
+    :Kiểm tra tính khả dụng;
+    :Tạo service booking;
+elseif (Xem đặt dịch vụ?) then
+    :Xem đặt dịch vụ của mình;
+endif
+|Admin|
+if (Quản lý catalog?) then
+    :Quản lý dịch vụ catalog;
+endif
+|Staff/Admin|
+if (Quản lý đặt dịch vụ?) then
+    :Quản lý đặt dịch vụ ;
+endif
+stop
+@enduml
+

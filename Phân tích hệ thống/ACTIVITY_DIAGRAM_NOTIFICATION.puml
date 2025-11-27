@@ -1,0 +1,31 @@
+﻿@startuml Activity Diagram - Notification Management (Tổng hợp)
+!theme plain
+
+
+|User|
+start
+if (Xem thông báo?) then
+    :Xem thông báo;
+elseif (Đếm chưa đọc?) then
+    :Đếm thông báo chưa đọc;
+elseif (Đánh dấu đã đọc?) then
+    :Đánh dấu đã đọc;
+elseif (Nhận real-time?) then
+    :Realtime notifications;
+endif
+|Staff/Admin|
+if (Gửi thủ công?) then
+    :Gửi thông báo thủ công;
+endif
+|System|
+if (Gửi tự động?) then
+    :Gửi thông báo hệ thống;
+endif
+|Admin|
+if (Quản lý?) then
+    :Ưu tiên/Kênh;
+    :Quản lý thông báo;
+endif
+stop
+@enduml
+

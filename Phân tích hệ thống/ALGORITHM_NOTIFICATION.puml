@@ -1,0 +1,59 @@
+@startuml Algorithm - Notification Management (Tổng hợp)
+!theme plain
+title Sơ đồ thuật toán - Notification Management (Tổng hợp)
+
+start
+:Input: action, notificationId, data, filters;
+:Validate action;
+if (action = "view"?) then (Có)
+    :Gọi thuật toán Xem thông báo;
+    :Input: filters, pagination;
+    :Lấy notifications từ DB;
+    :Áp dụng filters;
+    :Return: danh sách notifications;
+elseif (action = "unreadCount"?) then (Có)
+    :Gọi thuật toán Đếm chưa đọc;
+    :Input: userId;
+    :Đếm notifications (status = unread);
+    :Return: totalUnreadCount;
+elseif (action = "markRead"?) then (Có)
+    :Gọi thuật toán Đánh dấu đã đọc;
+    :Input: notificationId hoặc "all";
+    :Cập nhật status = read;
+    :Return: SUCCESS;
+elseif (action = "sendManual"?) then (Có)
+    :Kiểm tra quyền Staff/Admin;
+    :Gọi thuật toán Gửi thủ công;
+    :Input: recipients, content, priority, channels;
+    :Tạo notifications;
+    :Phát real-time;
+    :Return: SUCCESS / ERROR;
+elseif (action = "sendAutomatic"?) then (Có)
+    :Gọi thuật toán Gửi tự động;
+    :Input: eventType, context;
+    :Tìm template;
+    :Xác định recipients;
+    :Tạo và gửi notifications;
+    :Return: SUCCESS;
+elseif (action = "realtime"?) then (Có)
+    :Gọi thuật toán Real-time;
+    :Input: userId, socketId;
+    :Join Socket.IO room;
+    :Lắng nghe notification events;
+    :Return: connection status;
+elseif (action = "configureChannel"?) then (Có)
+    :Kiểm tra quyền Admin;
+    :Gọi thuật toán Ưu tiên/Kênh;
+    :Input: configType, configData;
+    :Lưu cấu hình;
+    :Return: SUCCESS;
+elseif (action = "manageTemplates"?) then (Có)
+    :Kiểm tra quyền Admin;
+    :Gọi thuật toán Quản lý thông báo;
+    :Input: operation, templateData;
+    :Return: SUCCESS / ERROR;
+endif
+:Return result;
+stop
+@enduml
+

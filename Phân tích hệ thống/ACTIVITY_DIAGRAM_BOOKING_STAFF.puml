@@ -1,0 +1,31 @@
+﻿@startuml Activity Diagram - Quản lý Bookings (Staff/Admin) - UC20, UC21, UC22
+!theme plain
+title Activity Diagram - Quản lý Bookings (Staff/Admin) - UC20, UC21, UC22
+
+|Staff/Admin|
+start
+if (Xem danh sách?) then
+    :Xem danh sách đặt phòng;
+    :Nhập tiêu chí lọc;
+    |System|
+    :Lấy bookings từ database;
+    :Áp dụng bộ lọc;
+    :Phân trang;
+    :Trả về danh sách;
+elseif (Xem chi tiết?) then
+    :Xem chi tiết đặt phòng;
+    :Chọn booking;
+    |System|
+    :Lấy chi tiết booking;
+    :Lấy thông tin phòng, khách, payments, invoice;
+    :Trả về chi tiết;
+elseif (Cập nhật trạng thái?) then
+    :Cập nhật trạng thái;
+    :Chọn trạng thái mới;
+    |System|
+    :Cập nhật status;
+    :Workflow: pending → confirmed → checked_in → checked_out;
+    :Ghi audit log;
+endif
+stop
+@enduml
