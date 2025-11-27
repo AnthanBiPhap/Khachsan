@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { DatePicker, Input, InputNumber, Button, message, Card, Space, Upload, Tabs, Tag, Steps, Divider, Alert, Empty, Descriptions, Form, Row, Col, Table, Modal } from 'antd';
+import { DatePicker, Input, InputNumber, Button, message, Card, Space, Upload, Tabs, Tag, Steps, Divider, Alert, Empty, Descriptions, Form, Row, Col, Table, Modal, Skeleton } from 'antd';
 import dayjs from 'dayjs';
 import type { UploadProps } from 'antd';
 import { DownloadOutlined, UploadOutlined, CopyOutlined, ClockCircleOutlined, EyeOutlined } from '@ant-design/icons';
@@ -40,6 +40,7 @@ export default function GroupBookingPage() {
   const [statusNote, setStatusNote] = useState<string>("");
   const [statusRejectedAt, setStatusRejectedAt] = useState<string | null>(null);
   const [groupDetail, setGroupDetail] = useState<GroupBooking | null>(null);
+  const [isInitializing, setIsInitializing] = useState<boolean>(true);
 
   // Form state
   const [requesterName, setRequesterName] = useState("");
@@ -163,50 +164,64 @@ export default function GroupBookingPage() {
     }
   };
 
-  // Đọc requestId từ URL query parameter (ưu tiên cao nhất)
+  // Đọc requestId từ URL query parameter hoặc localStorage (chỉ chạy 1 lần khi mount)
   useEffect(() => {
-    const urlRequestId = searchParams.get('requestId');
-    if (urlRequestId) {
-      setRequestId(urlRequestId);
-      setCreatedId(urlRequestId);
-      // Lưu vào localStorage nếu có user
-      if (user?._id) {
-        localStorage.setItem('group_booking_request_id', urlRequestId);
-        localStorage.setItem('group_booking_user_id', user._id);
+    const initializeRequest = async () => {
+      setIsInitializing(true);
+      
+      // Ưu tiên requestId từ URL
+      const urlRequestId = searchParams.get('requestId');
+      if (urlRequestId) {
+        // Set state đồng bộ để tránh nhiều re-render
+        setRequestId(urlRequestId);
+        setCreatedId(urlRequestId);
+        // Lưu vào localStorage nếu có user
+        if (user?._id) {
+          localStorage.setItem('group_booking_request_id', urlRequestId);
+          localStorage.setItem('group_booking_user_id', user._id);
+        }
+        // Fetch status ngay lập tức
+        try {
+          await fetchStatus(urlRequestId);
+        } finally {
+          setIsInitializing(false);
+        }
+        return;
       }
-      // Fetch status ngay lập tức
-      fetchStatus(urlRequestId);
-      return; // Không cần restore từ localStorage nữa
-    }
+      
+      // Nếu không có từ URL, thử restore từ localStorage
+      if (user?._id) {
+        const savedId = typeof window !== 'undefined' ? localStorage.getItem('group_booking_request_id') : null;
+        const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('group_booking_user_id') : null;
+        
+        // Clear if saved request doesn't belong to current user
+        if (savedUserId && savedUserId !== user._id) {
+          localStorage.removeItem('group_booking_request_id');
+          localStorage.removeItem('group_booking_user_id');
+          setIsInitializing(false);
+          return;
+        }
+        
+        // Restore if belongs to current user
+        if (savedId && savedUserId === user._id) {
+          // Set state đồng bộ để tránh nhiều re-render
+          setRequestId(savedId);
+          setCreatedId(savedId);
+          try {
+            await fetchStatus(savedId);
+          } finally {
+            setIsInitializing(false);
+          }
+          return;
+        }
+      }
+      
+      setIsInitializing(false);
+    };
+    
+    initializeRequest();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, user?._id]);
-
-  // Restore existing request from localStorage on mount (only if belongs to current user)
-  // Chỉ restore nếu không có requestId từ URL
-  useEffect(() => {
-    if (!user?._id) return;
-    // Nếu đã có requestId từ URL thì không restore từ localStorage
-    const urlRequestId = searchParams.get('requestId');
-    if (urlRequestId) return;
-    
-    const savedId = typeof window !== 'undefined' ? localStorage.getItem('group_booking_request_id') : null;
-    const savedUserId = typeof window !== 'undefined' ? localStorage.getItem('group_booking_user_id') : null;
-    
-    // Clear if saved request doesn't belong to current user
-    if (savedUserId && savedUserId !== user._id) {
-      localStorage.removeItem('group_booking_request_id');
-      localStorage.removeItem('group_booking_user_id');
-      return;
-    }
-    
-    // Restore if belongs to current user
-    if (savedId && savedUserId === user._id) {
-      setRequestId(savedId);
-      setCreatedId(savedId);
-      fetchStatus(savedId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?._id, searchParams]);
 
   // Auto poll status every 15s when we have a requestId
   useEffect(() => {
@@ -418,6 +433,17 @@ export default function GroupBookingPage() {
       message.error(e?.message || 'Không thể thanh toán');
     }
   };
+
+  // Hiển thị skeleton khi đang khởi tạo để tránh flicker
+  if (isInitializing) {
+    return (
+      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '16px' }}>
+        <Card title={<span>Đặt phòng theo tour <Tag color="geekblue">Group Booking</Tag></span>}>
+          <Skeleton active paragraph={{ rows: 8 }} />
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: 1000, margin: '0 auto', padding: '16px' }}>
@@ -911,12 +937,18 @@ export default function GroupBookingPage() {
                                 setQuoteAmount(null);
                                 setPaymentLink('');
                                 setStatusNote('');
+                                setStatusRejectedAt(null);
                                 setLastUpdated('');
-                                message.success('Đã xóa mã yêu cầu đã lưu. Trang sẽ được tải lại...', 1);
-                                // Tự động reload trang sau 1 giây
-                                setTimeout(() => {
-                                  window.location.reload();
-                                }, 1000);
+                                // Xóa toàn bộ thông tin form ở phần 1
+                                setRequesterName('');
+                                setRequesterPhone('');
+                                setRequesterEmail('');
+                                setCheckIn(null);
+                                setCheckOut(null);
+                                setPeopleCount(undefined);
+                                setRoomCount(undefined);
+                                setNotes('');
+                                message.success('Đã xóa mã yêu cầu và thông tin form.');
                               }}
                             >
                               Xóa mã lưu
