@@ -76,6 +76,21 @@ export default function GroupBookingPage() {
       return;
     }
 
+    // Validate dates - không cho phép đặt ngày quá khứ
+    const today = dayjs().startOf('day');
+    if (checkIn && checkIn.startOf('day') < today) {
+      message.warning('Ngày nhận phòng không thể là ngày quá khứ. Vui lòng chọn ngày từ hôm nay trở đi.');
+      return;
+    }
+    if (checkOut && checkOut.startOf('day') < today) {
+      message.warning('Ngày trả phòng không thể là ngày quá khứ. Vui lòng chọn ngày từ hôm nay trở đi.');
+      return;
+    }
+    if (checkIn && checkOut && checkOut.startOf('day') <= checkIn.startOf('day')) {
+      message.warning('Ngày trả phòng phải sau ngày nhận phòng.');
+      return;
+    }
+
     // Set loading state ngay lập tức để disable nút
     setLoadingCreate(true);
     
@@ -115,7 +130,7 @@ export default function GroupBookingPage() {
         localStorage.setItem('group_booking_request_id', id);
         localStorage.setItem('group_booking_user_id', user._id);
       }
-      message.success('Gửi yêu cầu thành công! Chờ admin duyệt.');
+      message.success('Yêu cầu đặt phòng của bạn đã được gửi thành công. Vui lòng chờ admin kiểm tra phòng trống và phản hồi.');
       // fetch initial status
       await fetchStatus(id);
     } catch (e: any) {
@@ -474,7 +489,7 @@ export default function GroupBookingPage() {
                     type="info"
                     showIcon
                     message="Điền thông tin liên hệ và thời gian lưu trú"
-                    description="Chúng tôi sẽ kiểm tra phòng trống và liên hệ khi được duyệt."
+                    description="⚠️ Lưu ý: Đây chỉ là yêu cầu đặt phòng, chưa phải đặt phòng thành công. Admin sẽ kiểm tra phòng trống và phản hồi. Yêu cầu có thể bị từ chối nếu không đủ phòng trong khoảng thời gian bạn chọn."
                     style={{ marginBottom: 24 }}
                   />
                   
@@ -551,6 +566,10 @@ export default function GroupBookingPage() {
                               onChange={setCheckIn}
                               style={{ width: '100%' }}
                               format="DD/MM/YYYY"
+                              disabledDate={(current) => {
+                                // Disable past dates (before today)
+                                return current && current < dayjs().startOf('day');
+                              }}
                             />
                           </Col>
                           <Col xs={24} sm={12}>
@@ -561,6 +580,14 @@ export default function GroupBookingPage() {
                               onChange={setCheckOut}
                               style={{ width: '100%' }}
                               format="DD/MM/YYYY"
+                              disabledDate={(current) => {
+                                // Disable past dates and dates before check-in
+                                if (!current) return false;
+                                const today = dayjs().startOf('day');
+                                if (current < today) return true;
+                                if (checkIn && current < checkIn.startOf('day')) return true;
+                                return false;
+                              }}
                             />
                           </Col>
                         </Row>
@@ -639,7 +666,7 @@ export default function GroupBookingPage() {
                     </Button>
                     {createdId && (
                       <div style={{ marginTop: 12, color: '#8c8c8c', fontSize: 14 }}>
-                        Bạn đã gửi yêu cầu thành công. Vui lòng kiểm tra thông tin ở phía trên.
+                        Yêu cầu đặt phòng của bạn đã được gửi. Vui lòng chờ admin kiểm tra phòng trống và phản hồi. Bạn có thể theo dõi trạng thái ở phía trên.
                       </div>
                     )}
                   </div>
@@ -648,18 +675,29 @@ export default function GroupBookingPage() {
                     <Card 
                       style={{ 
                         marginTop: 24,
-                        background: 'linear-gradient(135deg, #f6ffed 0%, #e6f7ff 100%)',
-                        border: '1px solid #52c41a',
-                        boxShadow: '0 2px 8px rgba(82, 196, 26, 0.15)'
+                        background: 'linear-gradient(135deg, #e6f7ff 0%, #f0f9ff 100%)',
+                        border: '1px solid #1890ff',
+                        boxShadow: '0 2px 8px rgba(24, 144, 255, 0.15)'
                       }}
                     >
                       <div style={{ padding: '8px 0' }}>
                         <Alert
-                          type="success"
+                          type="info"
                           showIcon
-                          message={<span style={{ fontSize: 16, fontWeight: 600 }}>Yêu cầu đã được gửi thành công!</span>}
+                          message={<span style={{ fontSize: 16, fontWeight: 600 }}>Yêu cầu đặt phòng của bạn đã được gửi</span>}
                           description={
                             <div style={{ marginTop: 16 }}>
+                              <div style={{ 
+                                marginBottom: 12, 
+                                padding: 12, 
+                                background: '#fff7e6', 
+                                borderRadius: 6,
+                                border: '1px solid #ffd591'
+                              }}>
+                                <div style={{ fontSize: 13, color: '#d46b08', lineHeight: 1.6 }}>
+                                  ⚠️ <strong>Lưu ý:</strong> Đây chỉ là yêu cầu đặt phòng, <strong>chưa phải đặt phòng thành công</strong>. Vui lòng chờ admin kiểm tra phòng trống trong khoảng thời gian bạn chọn. Yêu cầu có thể bị từ chối nếu không đủ phòng.
+                                </div>
+                              </div>
                               <Descriptions 
                                 bordered 
                                 column={1} 
@@ -674,7 +712,7 @@ export default function GroupBookingPage() {
                                 <Descriptions.Item label="Mã yêu cầu">
                                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                     <Tag 
-                                      color="success" 
+                                      color="processing" 
                                       style={{ 
                                         fontSize: 15, 
                                         padding: '6px 16px',
@@ -763,7 +801,7 @@ export default function GroupBookingPage() {
                                     color: '#595959',
                                     lineHeight: 1.6
                                   }}>
-                                    Mã yêu cầu đã được lưu tự động trên trình duyệt của bạn. Bạn có thể tải lại trang hoặc đóng trình duyệt và quay lại sau, hệ thống vẫn sẽ theo dõi trạng thái đặt phòng của bạn.
+                                    Mã yêu cầu đã được lưu tự động trên trình duyệt của bạn. Bạn có thể tải lại trang hoặc đóng trình duyệt và quay lại sau, hệ thống vẫn sẽ theo dõi trạng thái yêu cầu của bạn. Vui lòng chờ admin kiểm tra phòng trống và phản hồi trong thời gian sớm nhất.
                                   </div>
                                 </div>
                               </div>
