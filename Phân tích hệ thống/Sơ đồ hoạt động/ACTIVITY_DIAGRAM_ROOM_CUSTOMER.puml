@@ -1,0 +1,26 @@
+@startuml Activity_Room_Customer
+!theme plain
+
+|Customer|
+start
+:Xem danh sách phòng với bộ lọc\nhoặc Tìm kiếm phòng\nhoặc Xem chi tiết phòng;
+
+|System|
+if (Tìm kiếm phòng?) then (có)
+    :Kiểm tra tính khả dụng dựa trên bookings;
+    :Lọc phòng theo điều kiện;
+    if (Có phòng khả dụng?) then (có)
+        :result = "SUCCESS - Danh sách phòng khả dụng";
+    else (không)
+        :result = "ERROR - Không có phòng";
+    endif
+else (không)
+    :Lấy danh sách hoặc chi tiết phòng;
+    :result = "SUCCESS";
+endif
+
+|Customer|
+:Hiển thị kết quả;
+stop
+
+@enduml

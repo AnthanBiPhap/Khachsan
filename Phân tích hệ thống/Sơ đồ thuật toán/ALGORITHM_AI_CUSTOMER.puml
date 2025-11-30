@@ -1,0 +1,36 @@
+@startuml Algorithm_AI_Customer
+!theme plain
+
+skinparam defaultFontSize 14
+skinparam activityFontSize 14
+skinparam noteFontSize 14
+skinparam arrowFontSize 14
+
+start
+:Input: action, question, userId;
+
+:Validate action;
+
+if (action = "tuVanAI"?) then (có)
+    :Gửi câu hỏi đến Groq API;
+    if (API thành công?) then (có)
+        :Nhận phản hồi từ AI;
+        :result = "SUCCESS";
+    else (không)
+        :Sử dụng fallback response;
+        :result = "SUCCESS";
+    endif
+elseif (action = "goiYCaNhanHoa"?) then (có)
+    :Phân tích sở thích và lịch sử đặt phòng;
+    :Gợi ý phòng/dịch vụ phù hợp;
+    :result = "SUCCESS";
+else (không)
+    :result = "ERROR - Action không hợp lệ";
+endif
+
+:Return result;
+
+stop
+
+@enduml
+

@@ -1,0 +1,38 @@
+@startuml Activity_Room_Admin
+!theme plain
+
+|Admin|
+start
+:Quản lý phòng\n(Tạo/Sửa/Xóa/Cập nhật trạng thái);
+
+|System|
+if (Tạo phòng?) then (có)
+    :Kiểm tra roomNumber đã tồn tại?;
+    if (Đã tồn tại?) then (có)
+        :result = "ERROR - Số phòng đã tồn tại";
+    else (không)
+        :Tạo phòng mới;
+        :result = "SUCCESS";
+    endif
+elseif (Xóa phòng?) then (có)
+    :Kiểm tra có booking active?;
+    if (Có booking?) then (có)
+        :result = "ERROR - Không thể xóa";
+    else (không)
+        :Soft delete phòng;
+        :result = "SUCCESS";
+    endif
+elseif (Cập nhật trạng thái?) then (có)
+    :Kiểm tra điều kiện thay đổi trạng thái;
+    :Cập nhật trạng thái;
+    :result = "SUCCESS";
+else (không)
+    :Cập nhật thông tin phòng;
+    :result = "SUCCESS";
+endif
+
+|Admin|
+:Hiển thị kết quả;
+stop
+
+@enduml

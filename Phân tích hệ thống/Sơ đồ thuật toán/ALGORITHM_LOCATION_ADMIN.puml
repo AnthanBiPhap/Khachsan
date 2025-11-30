@@ -1,0 +1,32 @@
+@startuml Algorithm_Location_Admin
+!theme plain
+
+skinparam defaultFontSize 14
+skinparam activityFontSize 14
+skinparam noteFontSize 14
+skinparam arrowFontSize 14
+
+start
+:Input: action, locationData, locationId;
+
+:Validate action;
+
+if (action = "taoDiaDiem"?) then (có)
+    :Tạo địa điểm mới với thông tin từ locationData;
+    :Lưu vào database;
+    :result = "SUCCESS";
+elseif (action = "suaDiaDiem"?) then (có)
+    :Tìm địa điểm theo locationId;
+    :Cập nhật thông tin địa điểm;
+    :Lưu vào database;
+    :result = "SUCCESS";
+else (không)
+    :result = "ERROR - Action không hợp lệ";
+endif
+
+:Return result;
+
+stop
+
+@enduml
+

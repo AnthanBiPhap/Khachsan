@@ -1,0 +1,33 @@
+@startuml Algorithm_Service_Admin
+!theme plain
+
+skinparam defaultFontSize 14
+skinparam activityFontSize 14
+skinparam noteFontSize 14
+skinparam arrowFontSize 14
+
+start
+:Input: action, serviceData, serviceId;
+
+:Validate action;
+
+if (action = "taoDichVu"?) then (có)
+    :Tạo dịch vụ mới với thông tin từ serviceData;
+    :Lưu vào database;
+    :result = "SUCCESS";
+elseif (action = "capNhatTrangThai"?) then (có)
+    :Tìm service booking theo ID;
+    :Cập nhật trạng thái service booking;
+    :Đồng bộ chi phí vào invoice;
+    :Lưu vào database;
+    :result = "SUCCESS";
+else (không)
+    :result = "ERROR - Action không hợp lệ";
+endif
+
+:Return result;
+
+stop
+
+@enduml
+

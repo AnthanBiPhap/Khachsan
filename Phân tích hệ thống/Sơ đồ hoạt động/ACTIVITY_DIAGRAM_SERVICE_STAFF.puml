@@ -1,0 +1,23 @@
+@startuml Activity_Service_Staff
+!theme plain
+
+|Staff|
+start
+:Quản lý service bookings\n(Xem/Cập nhật trạng thái);
+
+|System|
+if (Cập nhật trạng thái?) then (có)
+    :Cập nhật trạng thái dịch vụ;
+    :Chi phí tự động đồng bộ vào invoice;
+    :result = "SUCCESS";
+else (không)
+    :Lấy danh sách service bookings;
+    :result = "SUCCESS";
+endif
+
+|Staff|
+:Hiển thị kết quả;
+stop
+
+@enduml
+

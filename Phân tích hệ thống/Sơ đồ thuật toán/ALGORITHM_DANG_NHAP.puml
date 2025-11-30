@@ -1,6 +1,11 @@
 @startuml Algorithm_Dang_Nhap
 !theme plain
 
+skinparam defaultFontSize 14
+skinparam activityFontSize 14
+skinparam noteFontSize 14
+skinparam arrowFontSize 14
+
 start
 :Input: email, password;
 
@@ -21,7 +26,7 @@ else (không)
             else (không)
                 :Tạo access token\nhết hạn 24 giờ;
                 :Tạo refresh token\nhết hạn 365 ngày;
-                :result = "SUCCESS - Đăng nhập thành công\n+ accessToken + refreshToken";
+                :result = "SUCCESS - Đăng nhập thành công\n+ accessToken\n+ refreshToken";
             endif
         endif
     endif

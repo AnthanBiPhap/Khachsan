@@ -1,0 +1,35 @@
+@startuml Algorithm_Payment_Admin
+!theme plain
+
+skinparam defaultFontSize 14
+skinparam activityFontSize 14
+skinparam noteFontSize 14
+skinparam arrowFontSize 14
+
+start
+:Input: action, bookingId, paymentData;
+
+:Validate action;
+
+if (action = "ghiNhanThanhToan"?) then (có)
+    :Tìm booking theo bookingId;
+    :Tạo payment record\nvới thông tin giao dịch;
+    :Cập nhật trạng thái thanh toán;
+    :Lưu vào database;
+    :result = "SUCCESS";
+elseif (action = "taoHoaDon"?) then (có)
+    :Tìm booking theo bookingId;
+    :Tạo invoice từ booking;
+    :Tính toán tổng tiền;
+    :Lưu vào database;
+    :result = "SUCCESS";
+else (không)
+    :result = "ERROR - Action không hợp lệ";
+endif
+
+:Return result;
+
+stop
+
+@enduml
+

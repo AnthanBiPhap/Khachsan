@@ -1,0 +1,32 @@
+@startuml Activity_Location_Admin
+!theme plain
+
+|Admin|
+start
+:Quản lý địa điểm\n(Tạo/Sửa/Xóa/Bật/tắt hiển thị);
+
+|System|
+if (Tạo địa điểm?) then (có)
+    :Tạo địa điểm mới;
+    :Lưu vào database;
+    :result = "SUCCESS";
+elseif (Sửa địa điểm?) then (có)
+    :Cập nhật thông tin địa điểm;
+    :result = "SUCCESS";
+elseif (Xóa địa điểm?) then (có)
+    :Xóa địa điểm;
+    :result = "SUCCESS";
+elseif (Bật/tắt hiển thị?) then (có)
+    :Cập nhật status active/hidden;
+    :result = "SUCCESS";
+else (không)
+    :Lấy danh sách địa điểm;
+    :result = "SUCCESS";
+endif
+
+|Admin|
+:Hiển thị kết quả;
+stop
+
+@enduml
+

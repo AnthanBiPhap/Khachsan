@@ -1,0 +1,29 @@
+@startuml Algorithm_Room_Staff
+!theme plain
+
+skinparam defaultFontSize 14
+skinparam activityFontSize 14
+skinparam noteFontSize 14
+skinparam arrowFontSize 14
+
+start
+:Input: action, roomId;
+
+:Validate action;
+
+if (action = "xemDanhSach"?) then (có)
+    :Lấy danh sách phòng;
+    :result = "SUCCESS - Danh sách phòng";
+elseif (action = "xemChiTiet"?) then (có)
+    :Lấy thông tin phòng;
+    :result = "SUCCESS - Chi tiết phòng";
+else (không)
+    :result = "ERROR - Action không hợp lệ";
+endif
+
+:Return result;
+
+stop
+
+@enduml
+

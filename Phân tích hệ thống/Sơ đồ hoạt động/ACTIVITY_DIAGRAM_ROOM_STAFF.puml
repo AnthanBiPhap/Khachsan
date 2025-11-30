@@ -1,0 +1,16 @@
+@startuml Activity_Room_Staff
+!theme plain
+
+|Staff|
+start
+:Xem danh sách phòng\nhoặc Xem chi tiết phòng;
+
+|System|
+:Lấy danh sách hoặc chi tiết phòng;
+:result = "SUCCESS";
+
+|Staff|
+:Hiển thị kết quả (read-only);
+stop
+
+@enduml

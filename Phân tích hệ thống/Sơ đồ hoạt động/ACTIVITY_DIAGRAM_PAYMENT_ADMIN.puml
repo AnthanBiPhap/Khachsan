@@ -1,0 +1,37 @@
+@startuml Activity_Payment_Admin
+!theme plain
+
+|Admin/Staff|
+start
+:Quản lý thanh toán\n(Ghi nhận thanh toán/Quản lý payment/Xử lý hoàn tiền/Tạo hóa đơn/Xuất PDF);
+
+|System|
+if (Ghi nhận thanh toán?) then (có)
+    :Tạo payment record\ntiền mặt hoặc chuyển khoản;
+    :Cập nhật trạng thái booking;
+    :result = "SUCCESS";
+elseif (Cập nhật trạng thái thanh toán?) then (có)
+    :Cập nhật trạng thái payment;
+    :result = "SUCCESS";
+elseif (Xử lý hoàn tiền?) then (có)
+    :Kiểm tra điều kiện hoàn tiền;
+    :Tạo payment record refund;
+    :Cập nhật trạng thái booking;
+    :result = "SUCCESS";
+elseif (Tạo hóa đơn?) then (có)
+    :Tạo invoice từ booking;
+    :result = "SUCCESS";
+elseif (Xuất PDF?) then (có)
+    :Tạo file PDF hóa đơn;
+    :result = "SUCCESS";
+else (không)
+    :Lấy danh sách payment;
+    :result = "SUCCESS";
+endif
+
+|Admin/Staff|
+:Hiển thị kết quả;
+stop
+
+@enduml
+

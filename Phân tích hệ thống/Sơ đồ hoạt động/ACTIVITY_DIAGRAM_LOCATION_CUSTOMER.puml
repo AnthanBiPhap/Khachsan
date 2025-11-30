@@ -1,0 +1,22 @@
+@startuml Activity_Location_Customer
+!theme plain
+
+|Customer|
+start
+:Duyệt danh sách địa điểm với bộ lọc\nhoặc Xem chi tiết địa điểm;
+
+|System|
+if (Xem chi tiết?) then (có)
+    :Lấy thông tin địa điểm\n(mô tả, hình ảnh, vị trí bản đồ, thời gian mở cửa);
+    :result = "SUCCESS - Chi tiết địa điểm";
+else (không)
+    :Lấy danh sách địa điểm\náp dụng bộ lọc loại và khoảng cách;
+    :result = "SUCCESS - Danh sách địa điểm";
+endif
+
+|Customer|
+:Hiển thị kết quả;
+stop
+
+@enduml
+

@@ -1,0 +1,36 @@
+@startuml Activity_Payment_Customer
+!theme plain
+
+|Customer|
+start
+:Thanh toán online qua Stripe\nhoặc Xem lịch sử thanh toán\nhoặc Xem hóa đơn\nhoặc Xuất hóa đơn PDF;
+
+|System|
+if (Thanh toán online?) then (có)
+    :Tạo Stripe checkout session;
+    :Redirect đến trang thanh toán Stripe;
+    if (Thanh toán thành công?) then (có)
+        :Tạo booking;
+        :Tạo invoice;
+        :Tạo payment record;
+        :result = "SUCCESS - Thanh toán thành công";
+    else (không)
+        :result = "ERROR - Thanh toán thất bại";
+    endif
+elseif (Xem hóa đơn?) then (có)
+    :Lấy thông tin hóa đơn;
+    :result = "SUCCESS - Chi tiết hóa đơn";
+elseif (Xuất PDF?) then (có)
+    :Tạo file PDF hóa đơn;
+    :result = "SUCCESS - File PDF";
+else (không)
+    :Lấy lịch sử thanh toán;
+    :result = "SUCCESS - Lịch sử thanh toán";
+endif
+
+|Customer|
+:Hiển thị kết quả;
+stop
+
+@enduml
+

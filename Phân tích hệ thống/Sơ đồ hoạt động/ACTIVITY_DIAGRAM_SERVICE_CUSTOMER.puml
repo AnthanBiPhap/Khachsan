@@ -1,0 +1,29 @@
+@startuml Activity_Service_Customer
+!theme plain
+
+|Customer|
+start
+:Xem danh sách dịch vụ với bộ lọc\nhoặc Xem chi tiết dịch vụ\nhoặc Đặt dịch vụ kèm booking\nhoặc Xem danh sách dịch vụ đã đặt;
+
+|System|
+if (Xem danh sách?) then (có)
+    :Lấy danh sách dịch vụ\náp dụng bộ lọc loại và giá;
+    :result = "SUCCESS - Danh sách dịch vụ";
+elseif (Xem chi tiết?) then (có)
+    :Lấy thông tin dịch vụ\n(mô tả, giá cả, thời gian phục vụ);
+    :result = "SUCCESS - Chi tiết dịch vụ";
+elseif (Đặt dịch vụ?) then (có)
+    :Tạo service booking;
+    :Chi phí dịch vụ tự động đồng bộ vào invoice;
+    :result = "SUCCESS - Đặt dịch vụ thành công";
+else (không)
+    :Lấy danh sách dịch vụ đã đặt;
+    :result = "SUCCESS - Danh sách dịch vụ đã đặt";
+endif
+
+|Customer|
+:Hiển thị kết quả;
+stop
+
+@enduml
+

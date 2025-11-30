@@ -1,0 +1,27 @@
+@startuml Activity_ImportExport_Customer
+!theme plain
+
+|Customer|
+start
+:Tải template Excel\nhoặc Import file Excel danh sách thành viên\nhoặc Export danh sách thành viên;
+
+|System|
+if (Tải template?) then (có)
+    :Tạo Excel template từ group booking;
+    :result = "SUCCESS - File template";
+elseif (Import file Excel?) then (có)
+    :Đọc và validate file Excel;
+    :Cập nhật members vào group booking;
+    :result = "SUCCESS - Import thành công";
+else (không)
+    :Lấy danh sách members từ group booking;
+    :Tạo Excel file;
+    :result = "SUCCESS - File Excel";
+endif
+
+|Customer|
+:Hiển thị kết quả;
+stop
+
+@enduml
+

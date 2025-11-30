@@ -1,0 +1,33 @@
+@startuml Activity_Booking_Staff
+!theme plain
+
+|Staff|
+start
+:Quản lý booking\n(Xem/Cập nhật trạng thái/Check-in/Check-out/Duyệt nhóm);
+
+|System|
+if (Cập nhật trạng thái?) then (có)
+    :Cập nhật trạng thái\n(pending, confirmed, checked_in, checked_out, cancelled);
+    :result = "SUCCESS";
+elseif (Check-in/Check-out?) then (có)
+    :Cập nhật trạng thái booking và phòng;
+    :result = "SUCCESS";
+elseif (Gia hạn check-out?) then (có)
+    :Cập nhật thời gian check-out;
+    :Tính toán chi phí phát sinh;
+    :result = "SUCCESS";
+elseif (Duyệt đặt phòng nhóm?) then (có)
+    :Phân bổ phòng;
+    :Tạo báo giá;
+    :result = "SUCCESS";
+else (không)
+    :Lấy danh sách hoặc chi tiết booking;
+    :result = "SUCCESS";
+endif
+
+|Staff|
+:Hiển thị kết quả;
+stop
+
+@enduml
+

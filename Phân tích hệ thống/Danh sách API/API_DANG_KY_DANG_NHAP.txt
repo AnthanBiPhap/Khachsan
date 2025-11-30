@@ -1,0 +1,15 @@
+STT	Phương thức HTTP	Đường dẫn API
+1	POST	/api/v1/users
+2	GET	/api/v1/auth/verify-email
+3	POST	/api/v1/auth/login
+4	GET	/api/v1/auth/get-profile
+5	POST	/api/v1/auth/forgot-password
+6	POST	/api/v1/auth/verify-otp
+7	POST	/api/v1/auth/reset-password
+8	GET	/api/v1/users
+9	GET	/api/v1/users/deleted
+10	GET	/api/v1/users/:id
+11	POST	/api/v1/users
+12	PUT	/api/v1/users/:id
+13	DELETE	/api/v1/users/:id
+
