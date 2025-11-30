@@ -1,0 +1,49 @@
+@startuml Booking_Admin
+!theme plain
+
+actor Admin
+participant "Frontend\nAdmin/src/pages/BookingPage/BookingPage.tsx\nAdmin/src/pages/GroupBookingsPage/GroupBookingsPage.tsx" as Frontend
+participant "Backend API\n/src/controllers/bookings.controller.ts\n/src/controllers/groupBookings.controller.ts" as API
+database "MongoDB\n(Collection: bookings, groupBookings)" as DB
+
+Admin -> Frontend: Xem danh sách/lịch sử booking
+Frontend -> API: (bộ lọc, phân trang)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Query bookings
+DB --> API: Danh sách bookings
+
+API --> Frontend: Danh sách bookings
+Frontend --> Admin: Hiển thị danh sách
+
+Admin -> Frontend: Check-in/Check-out/Gia hạn check-out
+Frontend -> API: (bookingId, action, extendHours)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Cập nhật booking\n(status hoặc checkOut date)
+DB --> API: Updated
+
+API --> Frontend: Success
+Frontend --> Admin: Hiển thị thành công
+
+Admin -> Frontend: Duyệt đặt phòng nhóm/Phân bổ phòng
+Frontend -> API: (groupBookingId, allocatedRooms)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Cập nhật group booking\n(status: approved, allocatedRooms)
+DB --> API: Updated
+
+API --> Frontend: Success
+Frontend --> Admin: Hiển thị thành công
+
+Admin -> Frontend: Cập nhật trạng thái/Quản lý thông tin khách
+Frontend -> API: (bookingId, status/guestInfo)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Cập nhật booking
+DB --> API: Updated
+
+API --> Frontend: Success
+Frontend --> Admin: Hiển thị thành công
+@enduml
+

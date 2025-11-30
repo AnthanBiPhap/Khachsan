@@ -1,0 +1,23 @@
+@startuml Activity_Dang_Ky
+!theme plain
+
+|Customer|
+start
+:Điền form đăng ký\n(email, mật khẩu, số điện thoại);
+
+|System|
+:Kiểm tra email đã tồn tại?;
+if (Email đã tồn tại?) then (có)
+    :result = "ERROR - Email đã được sử dụng";
+else (không)
+    :Validate mật khẩu;
+    :Tạo tài khoản;
+    :Gửi email xác thực\nlink kích hoạt, hiệu lực 24 giờ;
+    :result = "SUCCESS - Đăng ký thành công";
+endif
+
+|Customer|
+:Hiển thị kết quả;
+stop
+
+@enduml

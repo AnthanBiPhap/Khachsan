@@ -1,0 +1,24 @@
+@startuml Location_Customer
+!theme plain
+
+actor Customer
+participant "Frontend\n/app/explore/explore-locations.tsx\n/app/location-detail/[id]/page.tsx" as Frontend
+participant "Backend API\n/src/controllers/locations.controller.ts" as API
+database "MongoDB\n(Collection: locations)" as DB
+
+Customer -> Frontend: Duyệt danh sách địa điểm
+Frontend -> API: GET /locations\n(bộ lọc: loại, khoảng cách)
+API -> DB: Query locations với filters
+DB --> API: Danh sách địa điểm
+API --> Frontend: Danh sách địa điểm
+Frontend --> Customer: Hiển thị danh sách
+
+Customer -> Frontend: Xem chi tiết địa điểm
+Frontend -> API: GET /locations/:id
+API -> DB: Lấy thông tin địa điểm
+DB --> API: Chi tiết địa điểm
+API --> Frontend: Chi tiết địa điểm\n(mô tả, hình ảnh, vị trí bản đồ, thời gian mở cửa)
+Frontend --> Customer: Hiển thị chi tiết
+
+@enduml
+

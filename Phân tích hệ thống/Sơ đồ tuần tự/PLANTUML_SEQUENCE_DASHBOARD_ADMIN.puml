@@ -1,0 +1,30 @@
+@startuml Dashboard_Admin
+!theme plain
+
+actor Admin
+participant "Frontend\n/src/pages/Dashboard.tsx" as Frontend
+participant "Backend API\n/src/controllers/bookings.controller.ts\n/src/controllers/rooms.controller.ts\n/src/controllers/invoices.controller.ts" as API
+database "MongoDB\n(Collection: bookings, rooms, serviceBookings, invoices)" as DB
+
+Admin -> Frontend: Xem dashboard tổng quan
+Frontend -> API: GET /bookings\nGET /rooms\nGET /serviceBookings\nGET /invoices
+API -> DB: Query dữ liệu
+DB --> API: Dữ liệu bookings, rooms, invoices
+API --> Frontend: Dữ liệu thống kê
+Frontend -> Frontend: Tính toán thống kê\n(biểu đồ, số liệu)
+Frontend --> Admin: Hiển thị dashboard\n(biểu đồ, thống kê)
+
+Admin -> Frontend: Xem báo cáo chi tiết\n(bộ lọc: ngày/tuần/tháng)
+Frontend -> API: Query với filters
+API -> DB: Query với filters
+DB --> API: Dữ liệu đã lọc
+API --> Frontend: Dữ liệu báo cáo
+Frontend -> Frontend: Tính toán và format
+Frontend --> Admin: Hiển thị báo cáo
+
+Admin -> Frontend: Xuất báo cáo Excel/PDF
+Frontend -> Frontend: Tạo file Excel/PDF\ntừ dữ liệu đã lấy
+Frontend --> Admin: Download file
+
+@enduml
+

@@ -1,0 +1,34 @@
+@startuml ImportExport_Customer
+!theme plain
+
+actor Customer
+participant "Frontend\n/app/group-booking/page.tsx" as Frontend
+participant "Backend API\n/src/controllers/groupBookings.controller.ts" as API
+database "MongoDB\n(Collection: groupBookings)" as DB
+
+Customer -> Frontend: Tải template Excel
+Frontend -> API: GET /group-bookings/:id/template
+API -> DB: Lấy thông tin group booking
+DB --> API: Group booking data
+API -> API: Tạo Excel template
+API --> Frontend: Excel file template
+Frontend --> Customer: Download template
+
+Customer -> Frontend: Import file Excel danh sách thành viên
+Frontend -> API: POST /group-bookings/:id/upload\n(file Excel)
+API -> API: Đọc và validate file Excel
+API -> DB: Cập nhật members vào group booking
+DB --> API: Group booking updated
+API --> Frontend: Success
+Frontend --> Customer: Hiển thị thành công
+
+Customer -> Frontend: Export danh sách thành viên
+Frontend -> API: GET /group-bookings/:id/members.xlsx
+API -> DB: Lấy danh sách members
+DB --> API: Members data
+API -> API: Tạo Excel file
+API --> Frontend: Excel file
+Frontend --> Customer: Download file
+
+@enduml
+

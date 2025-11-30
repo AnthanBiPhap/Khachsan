@@ -1,0 +1,49 @@
+@startuml Booking_Customer
+!theme plain
+
+actor Customer
+participant "Frontend\n/app/rooms/[id]/page.tsx\n/app/my-bookings/page.tsx\n/app/group-booking/page.tsx" as Frontend
+participant "Backend API\n/src/controllers/bookings.controller.ts\n/src/controllers/groupBookings.controller.ts" as API
+database "MongoDB\n(Collection: bookings, groupBookings)" as DB
+
+Customer -> Frontend: Đặt phòng cá nhân\n(chọn phòng, ngày, số khách)
+Frontend -> API: (roomId, checkIn, checkOut, guests)
+
+API -> DB: Kiểm tra tính khả dụng
+DB --> API: Phòng khả dụng
+
+API -> API: Tính toán tổng giá
+API -> DB: Tạo booking
+DB --> API: Booking created
+
+API --> Frontend: Success + booking data
+Frontend --> Customer: Chuyển đến thanh toán
+
+Customer -> Frontend: Đặt phòng nhóm\n(số người, số phòng, ngày)
+Frontend -> API: (numberOfGuests, numberOfRooms, checkIn, checkOut)
+
+API -> DB: Tạo group booking\n(status: pending_approval)
+DB --> API: Group booking created
+
+API --> Frontend: Success
+Frontend --> Customer: Hiển thị trạng thái chờ duyệt
+
+Customer -> Frontend: Upload thông tin thành viên\n(file Excel)
+Frontend -> API: (groupBookingId, file)
+
+API -> DB: Cập nhật group booking\n(status: info_uploaded)
+DB --> API: Updated
+
+API --> Frontend: Success
+Frontend --> Customer: Chờ báo giá
+
+Customer -> Frontend: Xem danh sách booking/Hủy booking
+Frontend -> API: (customerId/bookingId)
+
+API -> DB: Query bookings hoặc Cập nhật booking
+DB --> API: Danh sách bookings hoặc Updated
+
+API --> Frontend: Danh sách bookings hoặc Success
+Frontend --> Customer: Hiển thị danh sách hoặc thành công
+@enduml
+

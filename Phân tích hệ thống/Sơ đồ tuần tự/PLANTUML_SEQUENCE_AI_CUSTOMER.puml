@@ -1,0 +1,23 @@
+@startuml AI_Customer
+!theme plain
+
+actor Customer
+participant "Frontend\n/components/ui/ai-chat-bubble.tsx" as Frontend
+participant "API Route\n/app/api/ai-chat/route.ts" as API
+participant "Groq API\nhttps://api.groq.com" as Groq
+
+Customer -> Frontend: Hỏi về phòng/dịch vụ/địa điểm
+Frontend -> API: POST /api/ai-chat\n(message, locationInfo, userPreferences)
+API -> Groq: POST /openai/v1/chat/completions\n(prompt với context Đà Nẵng)
+Groq --> API: AI response
+API --> Frontend: Câu trả lời từ AI
+Frontend --> Customer: Hiển thị gợi ý
+
+alt Groq API lỗi
+    API -> API: Fallback response
+    API --> Frontend: Câu trả lời dự phòng
+    Frontend --> Customer: Hiển thị gợi ý dự phòng
+end
+
+@enduml
+

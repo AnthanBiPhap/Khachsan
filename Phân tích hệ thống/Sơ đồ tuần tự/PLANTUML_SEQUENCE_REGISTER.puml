@@ -1,0 +1,37 @@
+@startuml UC1_Register
+!theme plain
+
+
+actor Customer
+participant "Frontend\n/app/auth/register/page.tsx" as Frontend
+participant "Backend API\n/src/controllers/users.controller.ts" as API
+participant "Email Service\n/src/services/email.service.ts" as Email
+database "MongoDB\n(Collection: users)" as DB
+
+Customer -> Frontend: Điền form đăng ký
+Customer -> Frontend: Submit form
+
+Frontend -> API: (email, password, fullName, phoneNumber)
+
+API -> API: Validate dữ liệu
+API -> DB: Kiểm tra email đã tồn tại?
+
+alt Email đã tồn tại
+    DB --> API: Email exists
+    API --> Frontend: Error: Email đã được sử dụng
+    Frontend --> Customer: Hiển thị lỗi
+else Email chưa tồn tại
+    DB --> API: Email không tồn tại
+    API -> API: Hash password (bcrypt)
+    API -> DB: Tạo user mới\n(status: pending, emailVerified: false)
+    DB --> API: User created
+    
+    API -> API: Tạo email verification token
+    API -> Email: Gửi email xác thực\n(link verification)
+    Email --> Customer: Email xác thực
+    
+    API --> Frontend: Success: Đăng ký thành công
+    Frontend --> Customer: Hiển thị thông báo\n"Vui lòng kiểm tra email"
+end
+@enduml
+

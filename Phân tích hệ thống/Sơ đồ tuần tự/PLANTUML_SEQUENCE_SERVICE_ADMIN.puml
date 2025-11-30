@@ -1,0 +1,32 @@
+@startuml Service_Admin
+!theme plain
+
+actor Admin
+participant "Frontend\nAdmin/src/pages/ServicesPage/ServicesPage.tsx\nAdmin/src/pages/ServiceBookingsPage/ServiceBookingsPage.tsx" as Frontend
+participant "Backend API\n/src/controllers/services.controller.ts\n/src/controllers/serviceBookings.controller.ts" as API
+database "MongoDB\n(Collection: services, serviceBookings)" as DB
+
+Admin -> Frontend: Quản lý catalog dịch vụ\n(Tạo/Sửa/Xóa dịch vụ)
+Frontend -> API: (serviceId, serviceData)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Tạo/Cập nhật/Xóa service
+DB --> API: Service created/updated/deleted
+
+API --> Frontend: Success
+Frontend --> Admin: Hiển thị thành công
+
+Admin -> Frontend: Quản lý service bookings/Cập nhật trạng thái
+Frontend -> API: (serviceBookingId, status)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Cập nhật service booking status
+DB --> API: Updated
+
+API -> DB: Đồng bộ chi phí vào invoice
+DB --> API: Invoice updated
+
+API --> Frontend: Success
+Frontend --> Admin: Hiển thị thành công
+@enduml
+

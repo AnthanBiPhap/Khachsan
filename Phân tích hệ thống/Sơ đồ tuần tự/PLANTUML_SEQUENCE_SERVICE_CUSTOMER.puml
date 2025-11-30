@@ -1,0 +1,39 @@
+@startuml Service_Customer
+!theme plain
+
+actor Customer
+participant "Frontend\n/app/rooms/[id]/page.tsx\n/components/booking-services.tsx\n/app/my-bookings/page.tsx" as Frontend
+participant "Backend API\n/src/controllers/services.controller.ts\n/src/controllers/serviceBookings.controller.ts" as API
+database "MongoDB\n(Collection: services, serviceBookings)" as DB
+
+Customer -> Frontend: Xem danh sách/Xem chi tiết dịch vụ
+Frontend -> API: (bộ lọc: loại, giá) hoặc (serviceId)
+
+API -> DB: Query services
+DB --> API: Danh sách hoặc chi tiết dịch vụ
+
+API --> Frontend: Danh sách hoặc chi tiết dịch vụ
+Frontend --> Customer: Hiển thị
+
+Customer -> Frontend: Đặt dịch vụ kèm booking
+Frontend -> API: (bookingId, serviceId, quantity, scheduledTime)
+
+API -> DB: Tạo service booking
+DB --> API: Service booking created
+
+API -> DB: Cập nhật invoice\n(chi phí dịch vụ tự động đồng bộ)
+DB --> API: Invoice updated
+
+API --> Frontend: Success
+Frontend --> Customer: Hiển thị thành công
+
+Customer -> Frontend: Xem danh sách dịch vụ đã đặt
+Frontend -> API: (customerId)
+
+API -> DB: Query service bookings theo customerId
+DB --> API: Danh sách service bookings
+
+API --> Frontend: Danh sách service bookings
+Frontend --> Customer: Hiển thị danh sách
+@enduml
+

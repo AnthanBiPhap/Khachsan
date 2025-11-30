@@ -1,0 +1,36 @@
+@startuml Activity_Dang_Nhap
+!theme plain
+
+|User|
+start
+:Điền form đăng nhập\n(email, mật khẩu);
+
+|System|
+:Tìm user theo email trong database;
+if (User không tồn tại?) then (có)
+    :result = "ERROR - Email hoặc mật khẩu sai";
+else (không)
+    if (Tài khoản bị khóa?) then (có)
+        :result = "ERROR - Tài khoản đã bị khóa";
+    else (không)
+        if (Customer và email chưa xác thực?) then (có)
+            :result = "ERROR - Vui lòng xác thực email";
+        else (không)
+            :So sánh mật khẩu với bcrypt;
+            if (Mật khẩu sai?) then (có)
+                :result = "ERROR - Email hoặc mật khẩu sai";
+            else (không)
+                :Tạo access token\nhết hạn 24 giờ;
+                :Tạo refresh token\nhết hạn 365 ngày;
+                :result = "SUCCESS - Đăng nhập thành công\n+ accessToken + refreshToken";
+            endif
+        endif
+    endif
+endif
+
+|User|
+:Hiển thị kết quả;
+stop
+
+@enduml
+

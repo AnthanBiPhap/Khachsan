@@ -1,0 +1,29 @@
+@startuml Algorithm_Dang_Ky
+!theme plain
+
+start
+:Input: email, password, phoneNumber, fullName;
+
+:Validate mật khẩu\ntối thiểu 6 ký tự;
+
+if (Mật khẩu không hợp lệ?) then (có)
+    :result = "ERROR - Mật khẩu không hợp lệ";
+else (không)
+    :Kiểm tra email đã tồn tại trong database;
+    if (Email đã tồn tại?) then (có)
+        :result = "ERROR - Email đã được sử dụng";
+    else (không)
+        :Hash mật khẩu bcrypt;
+        :Tạo email verification token\nhiệu lực 24 giờ;
+        :Tạo tài khoản mới\nstatus: pending, emailVerified: false;
+        :Lưu vào database;
+        :Gửi email xác thực\nvới link kích hoạt;
+        :result = "SUCCESS - Đăng ký thành công";
+    endif
+endif
+
+:Return result;
+
+stop
+
+@enduml

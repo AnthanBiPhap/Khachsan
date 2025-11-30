@@ -1,0 +1,64 @@
+@startuml Payment_Admin
+!theme plain
+
+actor Admin
+participant "Frontend\nAdmin/src/pages/PaymentPage/PaymentsPage.tsx\nAdmin/src/pages/InvoicesPage/InvoicesPage.tsx" as Frontend
+participant "Backend API\n/src/controllers/payments.controller.ts\n/src/controllers/invoices.controller.ts" as API
+database "MongoDB\n(Collection: payments, invoices, bookings)" as DB
+
+Admin -> Frontend: Ghi nhận thanh toán tiền mặt/chuyển khoản
+Frontend -> API: (bookingId, amount, paymentMethod, transactionInfo)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Tạo payment record
+DB --> API: Payment created
+
+API -> DB: Cập nhật booking paymentStatus
+DB --> API: Updated
+
+API --> Frontend: Success
+Frontend --> Admin: Hiển thị thành công
+
+Admin -> Frontend: Quản lý payment/Cập nhật trạng thái
+Frontend -> API: (paymentId, status)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Cập nhật payment status
+DB --> API: Updated
+
+API --> Frontend: Success
+Frontend --> Admin: Hiển thị thành công
+
+Admin -> Frontend: Xử lý hoàn tiền
+Frontend -> API: (paymentId, refundAmount)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Tạo payment record\n(type: refund)
+DB --> API: Refund created
+
+API --> Frontend: Success
+Frontend --> Admin: Hiển thị thành công
+
+Admin -> Frontend: Tạo hóa đơn từ booking
+Frontend -> API: (bookingId)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Tạo invoice từ booking
+DB --> API: Invoice created
+
+API --> Frontend: Success + invoice
+Frontend --> Admin: Hiển thị hóa đơn
+
+Admin -> Frontend: Xuất hóa đơn PDF
+Frontend -> API: (invoiceId)
+
+API -> API: Verify JWT + Check role = admin
+API -> DB: Query invoice
+DB --> API: Invoice data
+
+API -> API: Tạo PDF từ invoice
+API --> Frontend: PDF file
+
+Frontend --> Admin: Tải PDF
+@enduml
+

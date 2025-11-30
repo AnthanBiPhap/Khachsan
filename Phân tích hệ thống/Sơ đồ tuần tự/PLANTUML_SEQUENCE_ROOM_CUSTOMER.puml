@@ -1,0 +1,36 @@
+@startuml Room_Customer
+!theme plain
+
+actor Customer
+participant "Frontend\n/app/rooms/[id]/page.tsx" as Frontend
+participant "Backend API\n/src/controllers/rooms.controller.ts" as API
+database "MongoDB\n(Collection: rooms)" as DB
+
+Customer -> Frontend: Xem danh sách phòng
+Frontend -> API: (bộ lọc: loại phòng, giá, tiện nghi)
+
+API -> DB: Query rooms với filters
+DB --> API: Danh sách phòng
+
+API --> Frontend: Danh sách phòng
+Frontend --> Customer: Hiển thị danh sách
+
+Customer -> Frontend: Tìm kiếm phòng\n(check-in, check-out, số khách, loại phòng, giá)
+Frontend -> API: (checkIn, checkOut, guests, roomType, priceRange)
+
+API -> DB: Kiểm tra tính khả dụng\n(dựa trên bookings)
+DB --> API: Phòng còn trống
+
+API --> Frontend: Danh sách phòng khả dụng
+Frontend --> Customer: Hiển thị kết quả
+
+Customer -> Frontend: Xem chi tiết phòng
+Frontend -> API: (roomId)
+
+API -> DB: Lấy thông tin phòng\n(populate roomType)
+DB --> API: Chi tiết phòng
+
+API --> Frontend: Chi tiết phòng\n(mô tả, tiện nghi, hình ảnh, giá)
+Frontend --> Customer: Hiển thị chi tiết
+@enduml
+
