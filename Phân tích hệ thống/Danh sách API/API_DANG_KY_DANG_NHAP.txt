@@ -12,4 +12,3 @@ STT	Phương thức HTTP	Đường dẫn API
 11	POST	/api/v1/users
 12	PUT	/api/v1/users/:id
 13	DELETE	/api/v1/users/:id
-

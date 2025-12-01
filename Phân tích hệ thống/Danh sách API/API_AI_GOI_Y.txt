@@ -1,0 +1,3 @@
+STT	Phương thức HTTP	Đường dẫn API
+1	POST	/api/ai-chat
+

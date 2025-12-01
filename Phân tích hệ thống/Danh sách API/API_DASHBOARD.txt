@@ -1,0 +1,8 @@
+STT	Phương thức HTTP	Đường dẫn API
+1	GET	/api/v1/bookings
+2	GET	/api/v1/rooms
+3	GET	/api/v1/serviceBookings
+4	GET	/api/v1/invoices
+5	GET	/api/v1/payments/stats
+6	GET	/api/v1/users
+
