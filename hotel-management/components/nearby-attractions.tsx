@@ -46,8 +46,10 @@ export function NearbyAttractions() {
         console.log('🔍 Nearby attractions API response:', data)
         
         if (data.locations && Array.isArray(data.locations)) {
-          setLocations(data.locations)
-          console.log('🔍 Set locations:', data.locations.length)
+          // Chỉ lấy 3 địa điểm đầu tiên để hiển thị trên trang chủ
+          const topLocations = data.locations.slice(0, 3);
+          setLocations(topLocations)
+          console.log('🔍 Set locations (3 mới nhất):', topLocations.length)
         } else {
           console.log('⚠️ No locations in response')
         }
