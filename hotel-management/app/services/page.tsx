@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Star, Search, Award, Clock, Dumbbell, Flower2, Heart, Loader2, Sparkles, ArrowRight } from 'lucide-react';
+import { Star, Search, Award, Clock, Dumbbell, Flower2, Heart, Loader2, Sparkles, ArrowRight, Share2 } from 'lucide-react';
 import Image from 'next/image';
 import { Footer } from '@/components/footer';
 
@@ -232,21 +232,65 @@ export default function ServicesPage() {
                       </div>
                     )}
 
-                    <div className="flex gap-3 mt-auto pt-4 border-t border-gray-100">
-                      <Button
-                        variant="outline"
-                        className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 rounded-full font-medium"
-                        onClick={() => router.push(`/service-detail/${service._id}`)}
-                      >
-                        Xem chi tiết
-                      </Button>
-                      <Button
-                        className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                        onClick={() => router.push(`/service-detail/${service._id}`)}
-                      >
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        Đặt ngay
-                      </Button>
+                    <div className="mt-auto pt-4 border-t border-gray-100">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${service.status === "active" ? "bg-green-500" : "bg-red-500"}`}></div>
+                          <span className="text-xs font-medium text-gray-600">
+                            {service.status === "active" ? "Đang hoạt động" : "Tạm đóng"}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-500 hover:text-red-500 hover:bg-red-50 p-2 h-auto font-medium rounded-full"
+                            onClick={() => {
+                              // Thêm vào yêu thích
+                              console.log('Added to favorites:', service.name);
+                            }}
+                          >
+                            <Heart className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-gray-500 hover:text-blue-500 hover:bg-blue-50 p-2 h-auto font-medium rounded-full"
+                            onClick={() => {
+                              // Chia sẻ
+                              if (navigator.share) {
+                                navigator.share({
+                                  title: service.name,
+                                  text: service.description,
+                                  url: window.location.href
+                                });
+                              } else {
+                                // Fallback: copy to clipboard
+                                navigator.clipboard.writeText(window.location.href);
+                                alert('Đã sao chép link vào clipboard!');
+                              }
+                            }}
+                          >
+                            <Share2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex gap-3">
+                        <Button
+                          variant="outline"
+                          className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 rounded-full font-medium"
+                          onClick={() => router.push(`/service-detail/${service._id}`)}
+                        >
+                          Xem chi tiết
+                        </Button>
+                        <Button
+                          className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                          onClick={() => router.push(`/service-detail/${service._id}`)}
+                        >
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Đặt ngay
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

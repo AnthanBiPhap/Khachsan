@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Dumbbell, Clock, Heart, Flower2, Clock3, Clock4, Clock5, Clock6, Clock7, Clock8, Clock9, Clock10, Clock11, Clock12, Star, ArrowRight, Sparkles, Shield, Award, Phone, MessageCircle } from "lucide-react";
+import { Dumbbell, Clock, Heart, Flower2, Clock3, Clock4, Clock5, Clock6, Clock7, Clock8, Clock9, Clock10, Clock11, Clock12, Star, ArrowRight, Sparkles, Shield, Award, Phone, MessageCircle, Share2 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Skeleton } from "./ui/skeleton";
 
@@ -317,18 +317,62 @@ export function ServicesSection() {
                   </div>
                 )}
                 
-                <div className="flex gap-3 mt-auto pt-4 border-t border-gray-100">
-                  <Button
-                    variant="outline"
-                    className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 rounded-full font-medium"
-                    onClick={() => router.push(`/service-detail/${service._id}`)}
-                  >
-                    Xem chi tiết
-                  </Button>
-                  <Button className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Đặt ngay
-                  </Button>
+                <div className="mt-auto pt-4 border-t border-gray-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${service.status === "active" ? "bg-green-500" : "bg-red-500"}`}></div>
+                      <span className="text-xs font-medium text-gray-600">
+                        {service.status === "active" ? "Đang hoạt động" : "Tạm đóng"}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-gray-500 hover:text-red-500 hover:bg-red-50 p-2 h-auto font-medium rounded-full"
+                        onClick={() => {
+                          // Thêm vào yêu thích
+                          console.log('Added to favorites:', service.name);
+                        }}
+                      >
+                        <Heart className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-gray-500 hover:text-blue-500 hover:bg-blue-50 p-2 h-auto font-medium rounded-full"
+                        onClick={() => {
+                          // Chia sẻ
+                          if (navigator.share) {
+                            navigator.share({
+                              title: service.name,
+                              text: service.description,
+                              url: window.location.href
+                            });
+                          } else {
+                            // Fallback: copy to clipboard
+                            navigator.clipboard.writeText(window.location.href);
+                            alert('Đã sao chép link vào clipboard!');
+                          }
+                        }}
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      className="flex-1 border-blue-200 text-blue-700 hover:bg-blue-50 rounded-full font-medium"
+                      onClick={() => router.push(`/service-detail/${service._id}`)}
+                    >
+                      Xem chi tiết
+                    </Button>
+                    <Button className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-full font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Đặt ngay
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
