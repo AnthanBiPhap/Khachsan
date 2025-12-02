@@ -4,9 +4,12 @@ import Message from "../models/messages.model";
 import User from "../models/users.model";
 import socketService from "./socket.service";
 
-// Tìm hoặc tạo conversation giữa 2 users
+/**
+ * Tìm hoặc tạo conversation giữa 2 người dùng:
+ * Nếu đã có conversation thì trả về, nếu chưa có thì tạo mới
+ */
 const findOrCreateConversation = async (userId1: string, userId2: string) => {
-  // Tìm conversation hiện tại
+  // Tìm conversation hiện tại giữa 2 người dùng
   const existingConversation = await Conversation.findOne({
     "participants.userId": { $all: [userId1, userId2] },
     status: { $ne: "deleted" },
@@ -15,16 +18,18 @@ const findOrCreateConversation = async (userId1: string, userId2: string) => {
     .populate("lastMessage")
     .sort({ createdAt: -1 });
 
+  // Nếu đã có conversation thì trả về
   if (existingConversation) {
     return existingConversation;
   }
 
-  // Lấy thông tin users
+  // Lấy thông tin của 2 người dùng
   const [user1, user2] = await Promise.all([
     User.findById(userId1),
     User.findById(userId2),
   ]);
 
+  // Nếu không tìm thấy một trong hai người dùng thì báo lỗi
   if (!user1 || !user2) {
     throw createError(404, "User not found");
   }
@@ -55,7 +60,10 @@ const findOrCreateConversation = async (userId1: string, userId2: string) => {
   return newConversation;
 };
 
-// Lấy danh sách conversations của user
+/**
+ * Lấy danh sách conversations của người dùng với phân trang,
+ * sắp xếp theo thời gian tin nhắn cuối cùng
+ */
 const getConversations = async (userId: string, page: number = 1, limit: number = 20) => {
   const skip = (page - 1) * limit;
 
@@ -85,7 +93,10 @@ const getConversations = async (userId: string, page: number = 1, limit: number 
   };
 };
 
-// Lấy conversation cụ thể
+/**
+ * Lấy thông tin chi tiết của một conversation theo ID,
+ * kiểm tra người dùng có tham gia conversation không
+ */
 const getConversationById = async (conversationId: string, userId: string) => {
   const conversation = await Conversation.findOne({
     _id: conversationId,
@@ -95,29 +106,34 @@ const getConversationById = async (conversationId: string, userId: string) => {
     .populate("participants.userId", "fullName email phoneNumber role")
     .populate("lastMessage");
 
+  // Nếu không tìm thấy conversation thì báo lỗi
   if (!conversation) {
-    throw createError(404, "Conversation not found");
+    throw createError(404, "Không tìm thấy cuộc trò chuyện");
   }
 
   return conversation;
 };
 
-// Lấy messages của conversation
+/**
+ * Lấy danh sách messages của conversation với phân trang,
+ * tự động đánh dấu messages là đã đọc khi người dùng xem
+ */
 const getMessages = async (
   conversationId: string,
   userId: string,
   page: number = 1,
   limit: number = 50
 ) => {
-  // Kiểm tra user có trong conversation không
+  // Kiểm tra người dùng có tham gia conversation không
   const conversation = await Conversation.findOne({
     _id: conversationId,
     "participants.userId": userId,
     status: { $ne: "deleted" },
   });
 
+  // Nếu không tìm thấy conversation thì báo lỗi
   if (!conversation) {
-    throw createError(404, "Conversation not found");
+    throw createError(404, "Không tìm thấy cuộc trò chuyện");
   }
 
   const skip = (page - 1) * limit;
@@ -133,7 +149,7 @@ const getMessages = async (
     .limit(limit)
     .lean();
 
-  // Đảo ngược để hiển thị từ cũ đến mới
+  // Đảo ngược thứ tự để hiển thị từ cũ đến mới
   messages.reverse();
 
   const total = await Message.countDocuments({
@@ -141,7 +157,7 @@ const getMessages = async (
     status: { $ne: "deleted" },
   });
 
-  // Mark messages as read
+  // Đánh dấu các messages là đã đọc
   await Message.updateMany(
     {
       conversationId,
@@ -161,19 +177,22 @@ const getMessages = async (
     }
   );
 
-  // Cập nhật lastReadAt của user trong conversation
+  // Cập nhật thời gian đọc cuối cùng của người dùng trong conversation
   const participant = conversation.participants.find(
     (p: any) => {
       const participantId = typeof p.userId === 'object' ? p.userId._id.toString() : p.userId.toString();
       return participantId === userId.toString();
     }
   );
+  // Nếu tìm thấy participant, cập nhật lastReadAt
   if (participant) {
     participant.lastReadAt = new Date();
   }
+  // Nếu chưa có unreadCount thì khởi tạo
   if (!conversation.unreadCount) {
     conversation.unreadCount = new Map();
   }
+  // Đặt số tin nhắn chưa đọc của người dùng về 0
   conversation.unreadCount.set(userId.toString(), 0);
   await conversation.save();
 
@@ -188,7 +207,10 @@ const getMessages = async (
   };
 };
 
-// Gửi message
+/**
+ * Gửi message trong conversation: tạo message mới, cập nhật conversation,
+ * tăng unread count cho người nhận và gửi thông báo qua WebSocket
+ */
 const sendMessage = async (
   conversationId: string,
   senderId: string,
@@ -197,18 +219,19 @@ const sendMessage = async (
   attachments: any[] = [],
   replyTo: string | undefined = undefined
 ) => {
-  // Kiểm tra conversation
+  // Kiểm tra conversation có tồn tại và người gửi có tham gia không
   const conversation = await Conversation.findOne({
     _id: conversationId,
     "participants.userId": senderId,
     status: { $ne: "deleted" },
   }).populate("participants.userId", "fullName email phoneNumber role");
 
+  // Nếu không tìm thấy conversation thì báo lỗi
   if (!conversation) {
-    throw createError(404, "Conversation not found");
+    throw createError(404, "Không tìm thấy cuộc trò chuyện");
   }
 
-  // Tạo message
+  // Tạo message mới
   const message = new Message({
     conversationId,
     senderId,
@@ -221,15 +244,16 @@ const sendMessage = async (
 
   await message.save();
   await message.populate("senderId", "fullName email phoneNumber role");
+  // Nếu có replyTo thì populate thông tin message được reply
   if (replyTo) {
     await message.populate("replyTo");
   }
 
-  // Cập nhật conversation
+  // Cập nhật thông tin conversation: lastMessage và lastMessageAt
   conversation.lastMessage = message._id;
   conversation.lastMessageAt = new Date();
 
-  // Tăng unread count cho người nhận
+  // Tìm người nhận và tăng unread count cho họ
   const receiver = conversation.participants.find(
     (p: any) => {
       const userId = typeof p.userId === 'object' ? p.userId._id.toString() : p.userId.toString();
@@ -237,18 +261,21 @@ const sendMessage = async (
     }
   );
 
+  // Nếu tìm thấy người nhận, tăng unread count
   if (receiver) {
     const receiverId = typeof receiver.userId === 'object' ? receiver.userId._id.toString() : receiver.userId.toString();
+    // Nếu chưa có unreadCount thì khởi tạo
     if (!conversation.unreadCount) {
       conversation.unreadCount = new Map();
     }
+    // Lấy số tin nhắn chưa đọc hiện tại và tăng lên 1
     const currentUnread = conversation.unreadCount.get(receiverId) || 0;
     conversation.unreadCount.set(receiverId, currentUnread + 1);
   }
 
   await conversation.save();
 
-  // Convert message thành plain object với đầy đủ thông tin
+  // Chuyển message thành plain object với đầy đủ thông tin
   const messageObj = message.toObject();
   
   // Đảm bảo senderId được populate đúng cách
@@ -278,17 +305,20 @@ const sendMessage = async (
   return message;
 };
 
-// Tạo conversation mới và gửi message đầu tiên
+/**
+ * Tạo conversation mới và gửi message đầu tiên:
+ * Tìm hoặc tạo conversation giữa 2 người dùng và gửi message khởi tạo
+ */
 const startConversation = async (
   userId1: string,
   userId2: string,
   content: string,
   messageType: string = "text"
 ) => {
-  // Tìm hoặc tạo conversation
+  // Tìm hoặc tạo conversation giữa 2 người dùng
   const conversation = await findOrCreateConversation(userId1, userId2);
 
-  // Gửi message đầu tiên
+  // Gửi message đầu tiên trong conversation
   const message = await sendMessage(
     conversation._id.toString(),
     userId1,
@@ -302,21 +332,27 @@ const startConversation = async (
   };
 };
 
-// Xóa message
+/**
+ * Xóa message: chỉ người gửi mới có thể xóa message của mình,
+ * gửi thông báo qua WebSocket khi xóa thành công
+ */
 const deleteMessage = async (messageId: string, userId: string) => {
+  // Tìm message và kiểm tra người dùng có phải người gửi không
   const message = await Message.findOne({
     _id: messageId,
     senderId: userId,
   });
 
+  // Nếu không tìm thấy message thì báo lỗi
   if (!message) {
     throw createError(404, "Message not found");
   }
 
+  // Đánh dấu message là đã xóa (soft delete)
   message.status = "deleted";
   await message.save();
 
-  // Gửi notification qua WebSocket
+  // Gửi thông báo xóa message qua WebSocket đến tất cả người trong conversation
   socketService.sendToRoom(`conversation:${message.conversationId}`, "message_deleted", {
     messageId: message._id.toString(),
     conversationId: message.conversationId.toString(),
@@ -325,7 +361,10 @@ const deleteMessage = async (messageId: string, userId: string) => {
   return message;
 };
 
-// Đánh dấu messages đã đọc
+/**
+ * Đánh dấu tất cả messages trong conversation là đã đọc:
+ * Cập nhật readBy cho các messages, lastReadAt cho participant và unreadCount
+ */
 const markMessagesAsRead = async (conversationId: string, userId: string) => {
   const conversation = await Conversation.findOne({
     _id: conversationId,
@@ -333,11 +372,12 @@ const markMessagesAsRead = async (conversationId: string, userId: string) => {
     status: { $ne: "deleted" },
   });
 
+  // Nếu không tìm thấy conversation thì báo lỗi
   if (!conversation) {
-    throw createError(404, "Conversation not found");
+    throw createError(404, "Không tìm thấy cuộc trò chuyện");
   }
 
-  // Cập nhật messages
+  // Cập nhật tất cả messages chưa đọc thành đã đọc
   await Message.updateMany(
     {
       conversationId,
@@ -357,23 +397,26 @@ const markMessagesAsRead = async (conversationId: string, userId: string) => {
     }
   );
 
-  // Cập nhật conversation
+  // Cập nhật thông tin conversation: lastReadAt và unreadCount
   const participant = conversation.participants.find(
     (p: any) => {
       const participantId = typeof p.userId === 'object' ? p.userId._id.toString() : p.userId.toString();
       return participantId === userId.toString();
     }
   );
+  // Nếu tìm thấy participant, cập nhật lastReadAt
   if (participant) {
     participant.lastReadAt = new Date();
   }
+  // Nếu chưa có unreadCount thì khởi tạo
   if (!conversation.unreadCount) {
     conversation.unreadCount = new Map();
   }
+  // Đặt số tin nhắn chưa đọc của người dùng về 0
   conversation.unreadCount.set(userId.toString(), 0);
   await conversation.save();
 
-  // Gửi notification qua WebSocket
+  // Gửi thông báo đã đọc messages qua WebSocket
   socketService.sendToRoom(`conversation:${conversationId}`, "messages_read", {
     conversationId,
     userId,
@@ -388,7 +431,9 @@ const getUnreadCount = async (userId: string) => {
   });
 
   let totalUnread = 0;
+  // Duyệt qua tất cả conversations và tính tổng số tin nhắn chưa đọc
   conversations.forEach((conv) => {
+    // Nếu có unreadCount và là Map, lấy số lượng chưa đọc của người dùng
     if (conv.unreadCount && conv.unreadCount instanceof Map) {
       const unread = conv.unreadCount.get(userId.toString()) || 0;
       totalUnread += unread;

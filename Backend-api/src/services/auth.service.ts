@@ -6,11 +6,16 @@ import crypto from 'crypto';
 import { env } from '../helpers/env.helper';
 import { Response } from 'express';
 import emailService from './email.service';
+
+/**
+ * Đăng nhập người dùng: xác thực email và mật khẩu, kiểm tra trạng thái tài khoản,
+ * và trả về access token và refresh token nếu đăng nhập thành công
+ */
 const login = async (email: string, password: string) => {
     // Chỉ tìm user chưa bị xóa
     const user = await User.findOne({email, deletedAt: null});
     if(!user) {
-        throw createError(401, 'Invalid email or password');
+        throw createError(401, 'Email hoặc mật khẩu không đúng');
     }
     
     // Kiểm tra tài khoản có bị vô hiệu hóa không
@@ -25,7 +30,7 @@ const login = async (email: string, password: string) => {
     
     const isMatch = await bcrypt.compare(password, user.password);
     if(!isMatch) {
-        throw createError(401, 'Invalid email or password');
+        throw createError(401, 'Email hoặc mật khẩu không đúng');
     }
 
     const accessToken  = jwt.sign(
@@ -49,11 +54,19 @@ const login = async (email: string, password: string) => {
         refreshToken
       };
     }
+
+/**
+ * Lấy thông tin profile của người dùng hiện tại từ res.locals
+ */
 const getProfile = async (res: Response) => {
         const { user } = res.locals;
         return user;
     }
 
+/**
+ * Xác nhận email của người dùng bằng token xác nhận
+ * Cập nhật trạng thái emailVerified và xóa token sau khi xác nhận thành công
+ */
 const verifyEmail = async (token: string) => {
     // Tìm user với token hợp lệ và chưa hết hạn
     const user = await User.findOne({
@@ -80,7 +93,10 @@ const verifyEmail = async (token: string) => {
     return { message: 'Email đã được xác nhận thành công. Bạn có thể đăng nhập ngay bây giờ.' };
 }
 
-// Yêu cầu đặt lại mật khẩu - gửi OTP
+/**
+ * Yêu cầu đặt lại mật khẩu: tạo và gửi mã OTP 6 số đến email của người dùng
+ * OTP có thời hạn 10 phút
+ */
 const requestForgotPassword = async (email: string) => {
     // Tìm user theo email
     const user = await User.findOne({ email, deletedAt: null });
@@ -124,7 +140,10 @@ const requestForgotPassword = async (email: string) => {
     return { message: 'Nếu email tồn tại, chúng tôi đã gửi mã xác nhận đến email của bạn.' };
 }
 
-// Xác nhận OTP
+/**
+ * Xác nhận mã OTP để đặt lại mật khẩu
+ * Kiểm tra OTP có hợp lệ và chưa hết hạn hay không
+ */
 const verifyOTP = async (email: string, otp: string) => {
     const user = await User.findOne({
         email,
@@ -141,7 +160,10 @@ const verifyOTP = async (email: string, otp: string) => {
     return { message: 'Mã xác nhận hợp lệ. Bạn có thể đặt lại mật khẩu.' };
 }
 
-// Đặt lại mật khẩu
+/**
+ * Đặt lại mật khẩu mới cho người dùng sau khi xác nhận OTP thành công
+ * Xóa OTP sau khi đặt lại mật khẩu và gửi email xác nhận
+ */
 const resetPassword = async (email: string, otp: string, newPassword: string) => {
     // Tìm user với OTP hợp lệ
     const user = await User.findOne({

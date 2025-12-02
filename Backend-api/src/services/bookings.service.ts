@@ -12,7 +12,10 @@ import notificationsService from "./notifications.service";
 import GroupBooking from "../models/groupBooking.model";
 import emailService from "./email.service";
 
-// Lấy tất cả booking với filter + pagination
+/**
+ * Lấy danh sách tất cả booking với các bộ lọc (customerId, roomId, paymentStatus, source, ngày, tên khách)
+ * và phân trang. Tự động loại bỏ các booking đã bị hủy
+ */
 const getAll = async (query: any) => {
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 10;
@@ -23,27 +26,30 @@ const getAll = async (query: any) => {
 
   const where: Record<string, any> = {};
 
-  // filter theo customerId, roomId, paymentStatus
+  // Lọc theo customerId nếu có
   if (query.customerId) where.customerId = query.customerId;
+  // Lọc theo roomId nếu có
   if (query.roomId) where.roomId = query.roomId;
+  // Lọc theo paymentStatus nếu có
   if (query.paymentStatus) where.paymentStatus = query.paymentStatus;
-  if (query.source) where.source = query.source; // filter theo nguồn đặt
+  // Lọc theo nguồn đặt (online hoặc walk_in) nếu có
+  if (query.source) where.source = query.source;
 
-  // luôn loại booking đã huỷ
+  // Luôn loại bỏ các booking đã bị hủy
   where.paymentStatus = { $ne: "cancelled" };
 
-  // filter theo ngày (kiểm tra overlap chuẩn)
+  // Lọc theo khoảng thời gian (kiểm tra overlap với checkIn và checkOut)
   if (query.startDate && query.endDate) {
     const start = new Date(query.startDate);
     const end = new Date(query.endDate);
 
     where.$and = [
-      { checkIn: { $lt: end } }, // checkIn < searchCheckOut
-      { checkOut: { $gt: start } }, // checkOut > searchCheckIn
+      { checkIn: { $lt: end } }, // checkIn phải nhỏ hơn ngày kết thúc tìm kiếm
+      { checkOut: { $gt: start } }, // checkOut phải lớn hơn ngày bắt đầu tìm kiếm
     ];
   }
 
-  // filter theo guests.fullName (khách walk-in)
+  // Lọc theo tên khách hàng (tìm kiếm trong danh sách guests, dùng cho khách walk-in)
   if (query.guestName) {
     where["guests.fullName"] = { $regex: query.guestName, $options: "i" };
   }
@@ -63,38 +69,45 @@ const getAll = async (query: any) => {
   };
 };
 
-// Lấy booking theo id
+/**
+ * Lấy thông tin chi tiết của một booking theo ID, bao gồm thông tin khách hàng và phòng
+ */
 const getById = async (id: string) => {
   const booking = await Booking.findById(id)
     .populate("customerId", "fullName email phoneNumber")
     .populate("roomId", "roomNumber typeId");
-  if (!booking) throw createError(404, "Booking not found");
+  if (!booking) throw createError(404, "Không tìm thấy đặt phòng");
   return booking;
 };
 
-// Tạo booking mới
+/**
+ * Tạo booking mới: kiểm tra trùng lịch phòng, khoảng cách 2 giờ dọn phòng,
+ * sức chứa phòng, tính giá với giảm giá sinh nhật, tạo invoice, service bookings,
+ * gửi email xác nhận và thông báo cho admin/staff
+ */
 const create = async (payload: any) => {
   const { roomId, checkIn, checkOut, services = [], extendHours = 0 } = payload;
 
   const newCheckIn = new Date(checkIn);
   const newCheckOut = new Date(checkOut);
   
-  // Thêm extra hours vào checkOut nếu có
+  // Thêm số giờ gia hạn vào thời gian check-out nếu có
   if (extendHours > 0) {
     newCheckOut.setHours(newCheckOut.getHours() + extendHours);
   }
 
-  // check trùng phòng với Booking khác (overlap)
+  // Kiểm tra trùng lịch phòng với booking khác (kiểm tra overlap thời gian)
   const conflictBooking = await Booking.findOne({
     roomId,
     paymentStatus: { $ne: "cancelled" },
     checkIn: { $lt: newCheckOut },
     checkOut: { $gt: newCheckIn },
   });
+  // Nếu có booking trùng lịch thì báo lỗi
   if (conflictBooking)
     throw createError(400, "Phòng đã được đặt trong khoảng thời gian này");
 
-  // Check khoảng cách 2 giờ dọn phòng với booking trước đó
+  // Kiểm tra khoảng cách 2 giờ dọn phòng với booking trước đó
   // Tìm booking kết thúc trước check-in của booking mới
   const previousBooking = await Booking.findOne({
     roomId,
@@ -102,14 +115,16 @@ const create = async (payload: any) => {
     checkOut: { $lte: newCheckIn }, // Booking kết thúc trước hoặc bằng check-in mới
   }).sort({ checkOut: -1 }); // Lấy booking kết thúc gần nhất
 
+  // Nếu có booking trước đó, kiểm tra khoảng cách thời gian
   if (previousBooking) {
     const timeDiff = newCheckIn.getTime() - new Date(previousBooking.checkOut).getTime();
     const hoursDiff = timeDiff / (1000 * 60 * 60); // Chuyển sang giờ
     
+    // Nếu khoảng cách nhỏ hơn 2 giờ thì báo lỗi
     if (hoursDiff < 2) {
       const prevCheckOut = new Date(previousBooking.checkOut);
       const minCheckIn = new Date(prevCheckOut);
-      minCheckIn.setHours(minCheckIn.getHours() + 2); // Thêm 2 giờ
+      minCheckIn.setHours(minCheckIn.getHours() + 2); // Thêm 2 giờ để đảm bảo đủ thời gian dọn phòng
       throw createError(
         400,
         `Cần ít nhất 2 giờ để dọn phòng. Check-in sớm nhất có thể là ${minCheckIn.toLocaleString('vi-VN')}`
@@ -117,7 +132,7 @@ const create = async (payload: any) => {
     }
   }
 
-  // Check khoảng cách 2 giờ dọn phòng với booking sau đó
+  // Kiểm tra khoảng cách 2 giờ dọn phòng với booking sau đó
   // Tìm booking bắt đầu sau check-out của booking mới
   const nextBooking = await Booking.findOne({
     roomId,
@@ -125,14 +140,16 @@ const create = async (payload: any) => {
     checkIn: { $gte: newCheckOut }, // Booking bắt đầu sau hoặc bằng check-out mới
   }).sort({ checkIn: 1 }); // Lấy booking bắt đầu sớm nhất
 
+  // Nếu có booking sau đó, kiểm tra khoảng cách thời gian
   if (nextBooking) {
     const timeDiff = new Date(nextBooking.checkIn).getTime() - newCheckOut.getTime();
     const hoursDiff = timeDiff / (1000 * 60 * 60);
     
+    // Nếu khoảng cách nhỏ hơn 2 giờ thì báo lỗi
     if (hoursDiff < 2) {
       const nextCheckIn = new Date(nextBooking.checkIn);
       const maxCheckOut = new Date(nextCheckIn);
-      maxCheckOut.setHours(maxCheckOut.getHours() - 2); // Trừ 2 giờ
+      maxCheckOut.setHours(maxCheckOut.getHours() - 2); // Trừ 2 giờ để đảm bảo đủ thời gian dọn phòng
       throw createError(
         400,
         `Cần ít nhất 2 giờ để dọn phòng. Check-out muộn nhất có thể là ${maxCheckOut.toLocaleString('vi-VN')}`
@@ -140,27 +157,30 @@ const create = async (payload: any) => {
     }
   }
 
-  // check trùng phòng với GroupBooking đã được allocate
+  // Kiểm tra trùng lịch phòng với GroupBooking đã được phân bổ
   const conflictGroupBooking = await GroupBooking.findOne({
     allocatedRoomIds: roomId,
     status: { $nin: ["cancelled", "rejected", "refunded"] },
     checkIn: { $lt: newCheckOut },
     checkOut: { $gt: newCheckIn },
   });
+  // Nếu có group booking trùng lịch thì báo lỗi
   if (conflictGroupBooking)
     throw createError(400, "Phòng đã được đặt theo đoàn trong khoảng thời gian này");
 
-  // Check khoảng cách 2 giờ với group booking trước đó
+  // Kiểm tra khoảng cách 2 giờ với group booking trước đó
   const previousGroupBooking = await GroupBooking.findOne({
     allocatedRoomIds: roomId,
     status: { $nin: ["cancelled", "rejected", "refunded"] },
     checkOut: { $lte: newCheckIn },
   }).sort({ checkOut: -1 });
 
+  // Nếu có group booking trước đó, kiểm tra khoảng cách thời gian
   if (previousGroupBooking) {
     const timeDiff = newCheckIn.getTime() - new Date(previousGroupBooking.checkOut).getTime();
     const hoursDiff = timeDiff / (1000 * 60 * 60);
     
+    // Nếu khoảng cách nhỏ hơn 2 giờ thì báo lỗi
     if (hoursDiff < 2) {
       const prevCheckOut = new Date(previousGroupBooking.checkOut);
       const minCheckIn = new Date(prevCheckOut);
@@ -172,17 +192,19 @@ const create = async (payload: any) => {
     }
   }
 
-  // Check khoảng cách 2 giờ với group booking sau đó
+  // Kiểm tra khoảng cách 2 giờ với group booking sau đó
   const nextGroupBooking = await GroupBooking.findOne({
     allocatedRoomIds: roomId,
     status: { $nin: ["cancelled", "rejected", "refunded"] },
     checkIn: { $gte: newCheckOut },
   }).sort({ checkIn: 1 });
 
+  // Nếu có group booking sau đó, kiểm tra khoảng cách thời gian
   if (nextGroupBooking) {
     const timeDiff = new Date(nextGroupBooking.checkIn).getTime() - newCheckOut.getTime();
     const hoursDiff = timeDiff / (1000 * 60 * 60);
     
+    // Nếu khoảng cách nhỏ hơn 2 giờ thì báo lỗi
     if (hoursDiff < 2) {
       const nextCheckIn = new Date(nextGroupBooking.checkIn);
       const maxCheckOut = new Date(nextCheckIn);
@@ -194,20 +216,23 @@ const create = async (payload: any) => {
     }
   }
 
-  // Validate guests array
+  // Kiểm tra danh sách khách hàng có hợp lệ không
   if (!payload.guests || !Array.isArray(payload.guests) || payload.guests.length === 0) {
     throw createError(400, "Danh sách khách hàng là bắt buộc");
   }
 
-  // Check room capacity
+  // Kiểm tra sức chứa của phòng
   const room = await Room.findById(roomId).populate('typeId', 'capacity');
+  // Nếu không tìm thấy phòng thì báo lỗi
   if (!room) {
     throw createError(404, "Không tìm thấy phòng");
   }
   
   const roomType = room.typeId as any;
+  // Nếu phòng có thông tin sức chứa, kiểm tra số lượng khách
   if (roomType && roomType.capacity) {
     const guestCount = payload.guests.length;
+    // Nếu số lượng khách vượt quá sức chứa thì báo lỗi
     if (guestCount > roomType.capacity) {
       throw createError(
         400,
@@ -216,7 +241,7 @@ const create = async (payload: any) => {
     }
   }
 
-  // Set isMainGuest for the first guest if not specified
+  // Đặt cờ isMainGuest cho khách hàng đầu tiên nếu chưa được chỉ định
   const guestsWithMainFlag = payload.guests.map((guest: any, index: number) => ({
     ...guest,
     isMainGuest: guest.isMainGuest !== undefined ? guest.isMainGuest : index === 0
@@ -240,6 +265,7 @@ const create = async (payload: any) => {
     
     // Populate thêm các field cần thiết cho tính giá
     await room.populate('typeId', 'pricePerNight extraHourPrice');
+    // Nếu có thông tin loại phòng, tính giá với giảm giá sinh nhật
     if (room && room.typeId) {
       const pricePerNight = (room.typeId as any).pricePerNight;
       const extraHourPrice = (room.typeId as any).extraHourPrice || 0;
@@ -313,7 +339,7 @@ const create = async (payload: any) => {
   try {
     const savedBooking = await booking.save();
 
-    // Tạo các service booking nếu có
+    // Tạo các service booking nếu có dịch vụ
     if (services && services.length > 0) {
       const serviceBookings = services.map((service: any) => ({
         bookingId: savedBooking._id,
@@ -330,15 +356,15 @@ const create = async (payload: any) => {
     const mainGuest = guestsWithMainFlag.find((guest: any) => guest.isMainGuest);
     const mainGuestName = mainGuest?.fullName || "Guest";
 
-    // Xác định actorName dựa trên loại khách hàng
+    // Xác định tên người thực hiện dựa trên loại khách hàng
     let actorName = "Guest";
+    // Nếu có customerId thì là khách hàng online
     if (payload.customerId) {
-      // Khách hàng online - sử dụng tên từ customerId (cần populate từ database)
-      // Vì payload.customerId chỉ là ID, cần lấy thông tin từ database
+      // Khách hàng online - lấy tên từ database
       const customer = await User.findById(payload.customerId);
       actorName = customer?.fullName || mainGuestName;
     } else {
-      // Khách hàng walk_in - sử dụng tên từ guests array
+      // Khách hàng walk_in - sử dụng tên từ danh sách guests
       actorName = mainGuestName;
     }
 
@@ -363,7 +389,7 @@ const create = async (payload: any) => {
     });
     console.log(`✅ Đã tạo invoice mới cho booking ${savedBooking._id}: totalAmount=${savedBooking.totalPrice}`);
 
-    // Tạo payment cho walk-in customers
+    // Tạo payment cho khách hàng walk-in
     if (savedBooking.source === "walk_in") {
       try {
         const paymentService = require('./payments.service').default;
@@ -457,8 +483,8 @@ const create = async (payload: any) => {
       let customerEmail: string | null = null;
       let guestName: string = "Khách hàng";
       
+      // Nếu là khách hàng online, lấy email từ customerId
       if (savedBooking.customerId && (savedBooking.customerId as any).email) {
-        // Khách hàng online - lấy email từ customerId
         customerEmail = (savedBooking.customerId as any).email;
         guestName = (savedBooking.customerId as any)?.fullName || guestName;
         console.log(`📧 Lấy email từ customerId: ${customerEmail}, tên: ${guestName}`);
@@ -470,7 +496,7 @@ const create = async (payload: any) => {
         console.log(`📧 Lấy email từ main guest: ${customerEmail}, tên: ${guestName}`);
       }
 
-      // Chỉ gửi email nếu có email
+      // Chỉ gửi email nếu có địa chỉ email
       if (customerEmail) {
         const room = savedBooking.roomId as any;
         const roomNumber = room?.roomNumber || "N/A";
@@ -519,7 +545,10 @@ const create = async (payload: any) => {
   }
 };
 
-// Cập nhật booking
+/**
+ * Cập nhật thông tin booking: kiểm tra trùng lịch, khoảng cách dọn phòng,
+ * cập nhật dịch vụ, đồng bộ invoice và payment, gửi email và thông báo khi có thay đổi trạng thái
+ */
 const updateById = async (id: string, payload: any) => {
   const booking = await getById(id);
 
@@ -529,13 +558,13 @@ const updateById = async (id: string, payload: any) => {
   const extendHours = payload.extendHours || 0;
   const services = payload.services || booking.services || [];
 
-  // Thêm extra hours vào checkOut nếu có
+  // Thêm số giờ gia hạn vào thời gian check-out nếu có
   if (extendHours > 0) {
     checkOut = new Date(checkOut);
     checkOut.setHours(checkOut.getHours() + extendHours);
   }
 
-  // check trùng phòng với Booking khác (overlap)
+  // Kiểm tra trùng lịch phòng với booking khác (kiểm tra overlap thời gian)
   const conflictBooking = await Booking.findOne({
     _id: { $ne: id },
     roomId,
@@ -543,10 +572,11 @@ const updateById = async (id: string, payload: any) => {
     checkIn: { $lt: checkOut },
     checkOut: { $gt: checkIn },
   });
+  // Nếu có booking trùng lịch thì báo lỗi
   if (conflictBooking)
     throw createError(400, "Phòng đã được đặt trong khoảng thời gian này");
 
-  // Check khoảng cách 2 giờ dọn phòng với booking trước đó
+  // Kiểm tra khoảng cách 2 giờ dọn phòng với booking trước đó
   const previousBooking = await Booking.findOne({
     _id: { $ne: id },
     roomId,
@@ -554,10 +584,12 @@ const updateById = async (id: string, payload: any) => {
     checkOut: { $lte: checkIn },
   }).sort({ checkOut: -1 });
 
+  // Nếu có booking trước đó, kiểm tra khoảng cách thời gian
   if (previousBooking) {
     const timeDiff = checkIn.getTime() - new Date(previousBooking.checkOut).getTime();
     const hoursDiff = timeDiff / (1000 * 60 * 60);
     
+    // Nếu khoảng cách nhỏ hơn 2 giờ thì báo lỗi
     if (hoursDiff < 2) {
       const prevCheckOut = new Date(previousBooking.checkOut);
       const minCheckIn = new Date(prevCheckOut);
@@ -569,7 +601,7 @@ const updateById = async (id: string, payload: any) => {
     }
   }
 
-  // Check khoảng cách 2 giờ dọn phòng với booking sau đó
+  // Kiểm tra khoảng cách 2 giờ dọn phòng với booking sau đó
   const nextBooking = await Booking.findOne({
     _id: { $ne: id },
     roomId,
@@ -577,10 +609,12 @@ const updateById = async (id: string, payload: any) => {
     checkIn: { $gte: checkOut },
   }).sort({ checkIn: 1 });
 
+  // Nếu có booking sau đó, kiểm tra khoảng cách thời gian
   if (nextBooking) {
     const timeDiff = new Date(nextBooking.checkIn).getTime() - checkOut.getTime();
     const hoursDiff = timeDiff / (1000 * 60 * 60);
     
+    // Nếu khoảng cách nhỏ hơn 2 giờ thì báo lỗi
     if (hoursDiff < 2) {
       const nextCheckIn = new Date(nextBooking.checkIn);
       const maxCheckOut = new Date(nextCheckIn);
@@ -592,27 +626,30 @@ const updateById = async (id: string, payload: any) => {
     }
   }
 
-  // check trùng phòng với GroupBooking đã được allocate
+  // Kiểm tra trùng lịch phòng với GroupBooking đã được phân bổ
   const conflictGroupBooking = await GroupBooking.findOne({
     allocatedRoomIds: roomId,
     status: { $nin: ["cancelled", "rejected", "refunded"] },
     checkIn: { $lt: checkOut },
     checkOut: { $gt: checkIn },
   });
+  // Nếu có group booking trùng lịch thì báo lỗi
   if (conflictGroupBooking)
     throw createError(400, "Phòng đã được đặt theo đoàn trong khoảng thời gian này");
 
-  // Check khoảng cách 2 giờ với group booking trước đó
+  // Kiểm tra khoảng cách 2 giờ với group booking trước đó
   const previousGroupBooking = await GroupBooking.findOne({
     allocatedRoomIds: roomId,
     status: { $nin: ["cancelled", "rejected", "refunded"] },
     checkOut: { $lte: checkIn },
   }).sort({ checkOut: -1 });
 
+  // Nếu có group booking trước đó, kiểm tra khoảng cách thời gian
   if (previousGroupBooking) {
     const timeDiff = checkIn.getTime() - new Date(previousGroupBooking.checkOut).getTime();
     const hoursDiff = timeDiff / (1000 * 60 * 60);
     
+    // Nếu khoảng cách nhỏ hơn 2 giờ thì báo lỗi
     if (hoursDiff < 2) {
       const prevCheckOut = new Date(previousGroupBooking.checkOut);
       const minCheckIn = new Date(prevCheckOut);
@@ -624,17 +661,19 @@ const updateById = async (id: string, payload: any) => {
     }
   }
 
-  // Check khoảng cách 2 giờ với group booking sau đó
+  // Kiểm tra khoảng cách 2 giờ với group booking sau đó
   const nextGroupBooking = await GroupBooking.findOne({
     allocatedRoomIds: roomId,
     status: { $nin: ["cancelled", "rejected", "refunded"] },
     checkIn: { $gte: checkOut },
   }).sort({ checkIn: 1 });
 
+  // Nếu có group booking sau đó, kiểm tra khoảng cách thời gian
   if (nextGroupBooking) {
     const timeDiff = new Date(nextGroupBooking.checkIn).getTime() - checkOut.getTime();
     const hoursDiff = timeDiff / (1000 * 60 * 60);
     
+    // Nếu khoảng cách nhỏ hơn 2 giờ thì báo lỗi
     if (hoursDiff < 2) {
       const nextCheckIn = new Date(nextGroupBooking.checkIn);
       const maxCheckOut = new Date(nextCheckIn);
@@ -646,14 +685,17 @@ const updateById = async (id: string, payload: any) => {
     }
   }
 
-  // Check room capacity if guests are being updated
+  // Kiểm tra sức chứa phòng nếu đang cập nhật danh sách khách
   if (payload.guests && Array.isArray(payload.guests) && payload.guests.length > 0) {
     const roomIdToCheck = payload.roomId || booking.roomId;
     const room = await Room.findById(roomIdToCheck).populate('typeId', 'capacity');
+    // Nếu tìm thấy phòng, kiểm tra sức chứa
     if (room) {
       const roomType = room.typeId as any;
+      // Nếu phòng có thông tin sức chứa, kiểm tra số lượng khách
       if (roomType && roomType.capacity) {
         const guestCount = payload.guests.length;
+        // Nếu số lượng khách vượt quá sức chứa thì báo lỗi
         if (guestCount > roomType.capacity) {
           throw createError(
             400,
@@ -664,11 +706,12 @@ const updateById = async (id: string, payload: any) => {
     }
   }
 
+  // Nếu có cập nhật dịch vụ, xóa dịch vụ cũ và thêm dịch vụ mới
   if (payload.services) {
-    // 1. Xóa tất cả dịch vụ cũ của booking này
+    // Xóa tất cả dịch vụ cũ của booking này
     await ServiceBooking.deleteMany({ bookingId: id });
 
-    // 2. Thêm các dịch vụ mới
+    // Tạo danh sách dịch vụ mới
     const serviceBookings = payload.services.map((service: any) => ({
       bookingId: id,
       serviceId: service.serviceId,
@@ -683,12 +726,13 @@ const updateById = async (id: string, payload: any) => {
       notes: service.notes || "",
     }));
 
+    // Nếu có dịch vụ mới, thêm vào database
     if (serviceBookings.length > 0) {
       await ServiceBooking.insertMany(serviceBookings);
     }
   }
 
-  // Không cho phép đổi nguồn đặt (source) khi update
+  // Không cho phép đổi nguồn đặt (source) khi cập nhật
   if (payload && Object.prototype.hasOwnProperty.call(payload, 'source')) {
     delete payload.source;
   }
@@ -713,13 +757,18 @@ const updateById = async (id: string, payload: any) => {
   });
   
   // Cập nhật paidAmount và remainingAmount khi paymentStatus thay đổi
+  // Nếu trạng thái là đã thanh toán đủ
   if (cleanUpdates.paymentStatus === "paid") {
     cleanUpdates.paidAmount = booking.totalPrice;
     cleanUpdates.remainingAmount = 0;
-  } else if (cleanUpdates.paymentStatus === "partial_paid") {
+  } 
+  // Nếu trạng thái là thanh toán một phần
+  else if (cleanUpdates.paymentStatus === "partial_paid") {
     cleanUpdates.paidAmount = Math.round(booking.totalPrice * 0.5);
     cleanUpdates.remainingAmount = booking.totalPrice - cleanUpdates.paidAmount;
-  } else if (cleanUpdates.paymentStatus === "pending") {
+  } 
+  // Nếu trạng thái là chưa thanh toán
+  else if (cleanUpdates.paymentStatus === "pending") {
     cleanUpdates.paidAmount = 0;
     cleanUpdates.remainingAmount = booking.totalPrice;
   }
@@ -737,6 +786,7 @@ const updateById = async (id: string, payload: any) => {
 
   // Đồng bộ invoice với booking khi có thay đổi
   const totalPriceChanged = updatedBooking.totalPrice !== previousTotalPrice;
+  // Nếu trạng thái thanh toán hoặc tổng giá thay đổi
   if (updatedBooking.paymentStatus !== previousPaymentStatus || totalPriceChanged) {
     try {
       console.log(`🔄 Booking ${updatedBooking._id} thay đổi:`, {
@@ -747,6 +797,7 @@ const updateById = async (id: string, payload: any) => {
       
       const existingInvoice = await Invoice.findOne({ bookingId: updatedBooking._id });
       
+      // Nếu đã có invoice, cập nhật thông tin
       if (existingInvoice) {
         // Cập nhật invoice theo booking (cả status và totalAmount)
         await invoicesService.updateById(existingInvoice._id.toString(), { 
@@ -757,7 +808,9 @@ const updateById = async (id: string, payload: any) => {
           paymentStatus: updatedBooking.paymentStatus
         });
         console.log(`✅ Đã cập nhật invoice ${existingInvoice._id}: status=${updatedBooking.paymentStatus}, totalAmount=${updatedBooking.totalPrice}`);
-      } else if (updatedBooking.paymentStatus === "paid") {
+      } 
+      // Nếu chưa có invoice và booking đã thanh toán đủ, tạo invoice mới
+      else if (updatedBooking.paymentStatus === "paid") {
         // Tạo invoice mới nếu booking = paid và chưa có invoice
         await invoicesService.create({
           bookingId: updatedBooking._id,
@@ -785,8 +838,9 @@ const updateById = async (id: string, payload: any) => {
       // Kiểm tra xem đã có payment chưa
       const existingPayment = await paymentService.getByBookingId(updatedBooking._id.toString());
       
+      // Nếu chưa có payment và là khách walk-in, tạo payment mới
       if (!existingPayment && updatedBooking.source === 'walk_in') {
-        // Tạo payment mới cho walk-in customer
+        // Tạo payment mới cho khách hàng walk-in
         const paymentMethod = updatedBooking.paymentStatus === 'paid' ? 'cash' : 'cash';
         await paymentService.create({
           bookingId: updatedBooking._id.toString(),
@@ -805,7 +859,9 @@ const updateById = async (id: string, payload: any) => {
           })
         });
         console.log(`✅ Đã tạo payment mới cho walk-in booking ${updatedBooking._id}`);
-      } else if (existingPayment) {
+      } 
+      // Nếu đã có payment, đồng bộ thông tin
+      else if (existingPayment) {
         // Đồng bộ payment hiện có
         await paymentService.syncPaymentWithBooking(updatedBooking._id.toString(), updatedBooking.paymentStatus);
         console.log(`✅ Đồng bộ payment cho booking ${updatedBooking._id}: ${previousPaymentStatus} → ${updatedBooking.paymentStatus}`);
@@ -816,16 +872,17 @@ const updateById = async (id: string, payload: any) => {
     }
   }
 
-  // Log refund transition
+  // Ghi log khi chuyển sang trạng thái hoàn tiền
   if (updatedBooking.paymentStatus === "refunded" && previousPaymentStatus !== "refunded") {
-    // Xác định actorName dựa trên loại khách hàng
+    // Xác định tên người thực hiện dựa trên loại khách hàng
     let actorName = "Admin";
+    // Nếu có customerId thì là khách hàng online
     if (updatedBooking.customerId) {
       // Khách hàng online - lấy tên từ database
       const customer = await User.findById(updatedBooking.customerId);
       actorName = customer?.fullName || "Khách hàng online";
     } else {
-      // Khách hàng walk_in - sử dụng tên từ guests array
+      // Khách hàng walk_in - sử dụng tên từ danh sách guests
       const mainGuest = updatedBooking.guests?.find((g: any) => g.isMainGuest);
       actorName = mainGuest?.fullName || "Khách hàng walk-in";
     }
@@ -1047,14 +1104,16 @@ const updateById = async (id: string, payload: any) => {
     }
   }
 
-  // Log cancelled transition (hủy phòng không hoàn tiền hoặc hủy trước khi thanh toán)
+  // Ghi log khi chuyển sang trạng thái hủy (hủy phòng không hoàn tiền hoặc hủy trước khi thanh toán)
   if (updatedBooking.paymentStatus === "cancelled" && previousPaymentStatus !== "cancelled") {
-    // Xác định actorName dựa trên loại khách hàng
+    // Xác định tên người thực hiện dựa trên loại khách hàng
     let actorName = "Admin";
+    // Nếu có customerId thì là khách hàng online
     if (updatedBooking.customerId) {
       const customer = await User.findById(updatedBooking.customerId);
       actorName = customer?.fullName || "Khách hàng online";
     } else {
+      // Khách hàng walk-in - sử dụng tên từ danh sách guests
       const mainGuest = updatedBooking.guests?.find((g: any) => g.isMainGuest);
       actorName = mainGuest?.fullName || "Khách hàng walk-in";
     }
@@ -1165,18 +1224,19 @@ const updateById = async (id: string, payload: any) => {
     }
   }
 
-  // Log refund requested transition (khách gửi yêu cầu)
+  // Ghi log khi chuyển sang trạng thái yêu cầu hoàn tiền (khách gửi yêu cầu)
   if (updatedBooking.paymentStatus === "refund_requested" && previousPaymentStatus !== "refund_requested") {
     try {
-      // Xác định actorName dựa trên loại khách hàng
+      // Xác định tên người thực hiện dựa trên loại khách hàng
       let actorName = "Admin";
       let customer = null;
+      // Nếu có customerId thì là khách hàng online
       if (updatedBooking.customerId) {
         // Khách hàng online - lấy tên từ database
         customer = await User.findById(updatedBooking.customerId);
         actorName = customer?.fullName || "Khách hàng online";
       } else {
-        // Khách hàng walk_in - sử dụng tên từ guests array
+        // Khách hàng walk_in - sử dụng tên từ danh sách guests
         const mainGuest = updatedBooking.guests?.find((g: any) => g.isMainGuest);
         actorName = mainGuest?.fullName || "Khách hàng walk-in";
       }
@@ -1296,16 +1356,17 @@ const updateById = async (id: string, payload: any) => {
     }
   }
 
-  // Log failed payment transition
+  // Ghi log khi chuyển sang trạng thái thanh toán thất bại
   if (updatedBooking.paymentStatus === "failed" && previousPaymentStatus !== "failed") {
-    // Xác định actorName dựa trên loại khách hàng
+    // Xác định tên người thực hiện dựa trên loại khách hàng
     let actorName = "Admin";
+    // Nếu có customerId thì là khách hàng online
     if (updatedBooking.customerId) {
       // Khách hàng online - lấy tên từ database
       const customer = await User.findById(updatedBooking.customerId);
       actorName = customer?.fullName || "Khách hàng online";
     } else {
-      // Khách hàng walk_in - sử dụng tên từ guests array
+      // Khách hàng walk_in - sử dụng tên từ danh sách guests
       const mainGuest = updatedBooking.guests?.find((g: any) => g.isMainGuest);
       actorName = mainGuest?.fullName || "Khách hàng walk-in";
     }
@@ -1319,14 +1380,16 @@ const updateById = async (id: string, payload: any) => {
     });
   }
 
-  // Log paid transition và gửi email xác nhận thanh toán đủ kèm hóa đơn
+  // Ghi log khi chuyển sang trạng thái đã thanh toán đủ và gửi email xác nhận kèm hóa đơn
   if (updatedBooking.paymentStatus === "paid" && previousPaymentStatus !== "paid") {
-    // Xác định actorName dựa trên loại khách hàng
+    // Xác định tên người thực hiện dựa trên loại khách hàng
     let actorName = "Admin";
+    // Nếu có customerId thì là khách hàng online
     if (updatedBooking.customerId) {
       const customer = await User.findById(updatedBooking.customerId);
       actorName = customer?.fullName || "Khách hàng online";
     } else {
+      // Khách hàng walk-in - sử dụng tên từ danh sách guests
       const mainGuest = updatedBooking.guests?.find((g: any) => g.isMainGuest);
       actorName = mainGuest?.fullName || "Khách hàng walk-in";
     }
@@ -1348,15 +1411,18 @@ const updateById = async (id: string, payload: any) => {
       let customerEmail: string | null = null;
       let guestName: string = "Khách hàng";
       
+      // Nếu là khách hàng online, lấy email từ customerId
       if (updatedBooking.customerId && (updatedBooking.customerId as any).email) {
         customerEmail = (updatedBooking.customerId as any).email;
         guestName = (updatedBooking.customerId as any)?.fullName || guestName;
       } else {
+        // Khách hàng walk-in - lấy email từ main guest
         const mainGuest = updatedBooking.guests?.find((g: any) => g.isMainGuest) || updatedBooking.guests?.[0];
         customerEmail = mainGuest?.email || null;
         guestName = mainGuest?.fullName || guestName;
       }
 
+      // Chỉ gửi email nếu có địa chỉ email
       if (customerEmail) {
         const room = updatedBooking.roomId as any;
         const roomNumber = room?.roomNumber || "N/A";
@@ -1387,6 +1453,7 @@ const updateById = async (id: string, payload: any) => {
         let invoicePdfBuffer: Buffer | undefined = undefined;
         let invoiceFileName: string | undefined = undefined;
 
+        // Nếu có invoice, tạo PDF hóa đơn
         if (invoice) {
           try {
             // Tạo PDF hóa đơn
@@ -1417,8 +1484,10 @@ const updateById = async (id: string, payload: any) => {
 
       // Gửi socket notification và lưu vào database cho khách hàng
       try {
+        // Chỉ gửi notification cho khách hàng online (có customerId)
         if (updatedBooking.customerId) {
           const customer = await User.findById(updatedBooking.customerId);
+          // Nếu tìm thấy khách hàng, gửi notification
           if (customer) {
             const room = updatedBooking.roomId as any;
             const roomNumber = room?.roomNumber || "N/A";
@@ -1482,16 +1551,17 @@ const updateById = async (id: string, payload: any) => {
     }
   }
 
-  // If extend hours or checkOut changed forward, log extension
+  // Ghi log khi gia hạn giờ hoặc thay đổi checkOut về sau
   if (payload.extendHours || (payload.checkOut && new Date(payload.checkOut) > new Date(booking.checkOut))) {
-    // Xác định actorName dựa trên loại khách hàng
+    // Xác định tên người thực hiện dựa trên loại khách hàng
     let actorName = "Admin";
+    // Nếu có customerId thì là khách hàng online
     if (updatedBooking.customerId) {
       // Khách hàng online - lấy tên từ database
       const customer = await User.findById(updatedBooking.customerId);
       actorName = customer?.fullName || "Khách hàng online";
     } else {
-      // Khách hàng walk_in - sử dụng tên từ guests array
+      // Khách hàng walk_in - sử dụng tên từ danh sách guests
       const mainGuest = updatedBooking.guests?.find((g: any) => g.isMainGuest);
       actorName = mainGuest?.fullName || "Khách hàng walk-in";
     }
@@ -1505,23 +1575,25 @@ const updateById = async (id: string, payload: any) => {
     });
   }
 
-  // Log general booking updates (không phải payment status changes)
+  // Ghi log các cập nhật chung của booking (không phải thay đổi payment status)
   const hasNonPaymentChanges = Object.keys(cleanUpdates).some(key => 
     !['paymentStatus', 'totalPrice'].includes(key) && 
     cleanUpdates[key] !== undefined && 
     cleanUpdates[key] !== null
   );
 
+  // Nếu có thay đổi không liên quan đến thanh toán và paymentStatus không đổi
   if (hasNonPaymentChanges && updatedBooking.paymentStatus === previousPaymentStatus) {
     try {
-      // Xác định actorName dựa trên loại khách hàng
+      // Xác định tên người thực hiện dựa trên loại khách hàng
       let actorName = "Admin";
+      // Nếu có customerId thì là khách hàng online
       if (updatedBooking.customerId) {
         // Khách hàng online - lấy tên từ database
         const customer = await User.findById(updatedBooking.customerId);
         actorName = customer?.fullName || "Khách hàng online";
       } else {
-        // Khách hàng walk_in - sử dụng tên từ guests array
+        // Khách hàng walk_in - sử dụng tên từ danh sách guests
         const mainGuest = updatedBooking.guests?.find((g: any) => g.isMainGuest);
         actorName = mainGuest?.fullName || "Khách hàng walk-in";
       }
@@ -1539,18 +1611,19 @@ const updateById = async (id: string, payload: any) => {
     }
   }
 
-  // Log payment status changes (nếu chưa được log ở trên)
+  // Ghi log thay đổi payment status (nếu chưa được log ở trên)
   if (updatedBooking.paymentStatus !== previousPaymentStatus && 
       !['refunded', 'refund_requested', 'failed'].includes(updatedBooking.paymentStatus)) {
     try {
-      // Xác định actorName dựa trên loại khách hàng
+      // Xác định tên người thực hiện dựa trên loại khách hàng
       let actorName = "Admin";
+      // Nếu có customerId thì là khách hàng online
       if (updatedBooking.customerId) {
         // Khách hàng online - lấy tên từ database
         const customer = await User.findById(updatedBooking.customerId);
         actorName = customer?.fullName || "Khách hàng online";
       } else {
-        // Khách hàng walk_in - sử dụng tên từ guests array
+        // Khách hàng walk_in - sử dụng tên từ danh sách guests
         const mainGuest = updatedBooking.guests?.find((g: any) => g.isMainGuest);
         actorName = mainGuest?.fullName || "Khách hàng walk-in";
       }
@@ -1570,22 +1643,29 @@ const updateById = async (id: string, payload: any) => {
   return updatedBooking;
 };
 
-// Xoá booking
+/**
+ * Xóa booking theo ID (soft delete)
+ */
 const deleteById = async (id: string) => {
   const booking = await getById(id);
   await booking.deleteOne();
   return booking;
 };
 
-// Cập nhật trạng thái thanh toán
+/**
+ * Cập nhật trạng thái thanh toán của booking: cộng thêm số tiền thanh toán,
+ * tính lại số tiền còn lại và cập nhật paymentStatus (partial_paid hoặc paid)
+ */
 const updatePaymentStatus = async (id: string, paymentData: { amount: number; paymentMethod?: string }) => {
   const booking = await Booking.findById(id);
-  if (!booking) throw createError(404, "Booking not found");
+  // Nếu không tìm thấy booking thì báo lỗi
+  if (!booking) throw createError(404, "Không tìm thấy đặt phòng");
 
   const newPaidAmount = (booking.paidAmount || 0) + paymentData.amount;
   const remainingAmount = booking.totalPrice - newPaidAmount;
   
   let newPaymentStatus = "partial_paid";
+  // Nếu số tiền còn lại <= 0 thì đã thanh toán đủ
   if (remainingAmount <= 0) {
     newPaymentStatus = "paid";
   }
@@ -1603,7 +1683,10 @@ const updatePaymentStatus = async (id: string, paymentData: { amount: number; pa
   return updatedBooking;
 };
 
-// Gửi lại email xác nhận cho booking hiện có
+/**
+ * Gửi lại email xác nhận đặt phòng cho booking hiện có
+ * Lấy email từ customer hoặc main guest để gửi
+ */
 const resendConfirmationEmail = async (id: string) => {
   try {
     const booking = await getById(id);
@@ -1616,8 +1699,8 @@ const resendConfirmationEmail = async (id: string) => {
     let customerEmail: string | null = null;
     let guestName: string = "Khách hàng";
     
+    // Nếu là khách hàng online, lấy email từ customerId
     if (booking.customerId && (booking.customerId as any).email) {
-      // Khách hàng online - lấy email từ customerId
       customerEmail = (booking.customerId as any).email;
       guestName = (booking.customerId as any)?.fullName || guestName;
     } else {
@@ -1627,6 +1710,7 @@ const resendConfirmationEmail = async (id: string) => {
       guestName = mainGuest?.fullName || guestName;
     }
 
+    // Nếu không có email thì báo lỗi
     if (!customerEmail) {
       throw createError(400, "Không tìm thấy email để gửi xác nhận. Vui lòng cập nhật thông tin email của khách hàng.");
     }
@@ -1654,9 +1738,11 @@ const resendConfirmationEmail = async (id: string) => {
 
     return { success: true, message: `Đã gửi email xác nhận đến ${customerEmail}` };
   } catch (error: any) {
+    // Nếu là lỗi HTTP đã có statusCode thì throw lại
     if (error.statusCode) {
       throw error;
     }
+    // Nếu không phải lỗi HTTP thì tạo lỗi 500
     throw createError(500, `Lỗi gửi email: ${error.message}`);
   }
 };

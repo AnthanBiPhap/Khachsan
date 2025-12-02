@@ -11,7 +11,9 @@ import socketService from "./socket.service";
 import notificationsService from "./notifications.service";
 import emailService from "./email.service";
 
+// Tỷ lệ đặt cọc cho group booking (mặc định 50%)
 const GROUP_DEPOSIT_RATE = Number(process.env.GROUP_DEPOSIT_RATE ?? 0.5);
+// Nhãn hiển thị tỷ lệ đặt cọc dưới dạng phần trăm
 const GROUP_DEPOSIT_PERCENT_LABEL = `${Math.round(GROUP_DEPOSIT_RATE * 100)}%`;
 
 const calculateDepositAmount = (quoteAmount: number): number => {
@@ -31,13 +33,17 @@ type CreateGroupBookingPayload = {
   notes?: string;
 };
 
+/**
+ * Tạo yêu cầu đặt phòng nhóm mới: validate email, normalize thời gian,
+ * tạo group booking, gửi notification và email xác nhận
+ */
 const create = async (payload: CreateGroupBookingPayload) => {
-  // Validate email
+  // Kiểm tra email có tồn tại không
   if (!payload.requesterEmail || !payload.requesterEmail.trim()) {
     throw createError(400, "Email là bắt buộc để đặt phòng nhóm");
   }
 
-  // Validate email format
+  // Kiểm tra định dạng email
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(payload.requesterEmail.trim())) {
     throw createError(400, "Email không hợp lệ");
@@ -57,6 +63,7 @@ const create = async (payload: CreateGroupBookingPayload) => {
     return d;
   };
 
+  // Chuẩn hóa payload: trim email, normalize thời gian và set status mặc định
   const normalizedPayload = {
     ...payload,
     requesterEmail: payload.requesterEmail.trim(),
@@ -65,6 +72,7 @@ const create = async (payload: CreateGroupBookingPayload) => {
     status: "pending_approval" as const,
   };
 
+  // Tạo group booking mới trong database
   const gb = await GroupBooking.create(normalizedPayload);
 
   // Populate để lấy thông tin đầy đủ
@@ -187,7 +195,7 @@ const create = async (payload: CreateGroupBookingPayload) => {
         checkOut: gb.checkOut,
         peopleCount: gb.peopleCount,
         roomCount: gb.roomCount,
-        quoteAmount: gb.quoteAmount,
+        quoteAmount: gb.quoteAmount ?? undefined,
         status: gb.status,
         allocatedRooms,
       });
@@ -205,31 +213,46 @@ const create = async (payload: CreateGroupBookingPayload) => {
   return gb;
 };
 
+/**
+ * Lấy thông tin chi tiết của một group booking theo ID,
+ * bao gồm thông tin phòng đã phân bổ và người yêu cầu
+ */
 const getById = async (id: string) => {
   const gb = await GroupBooking.findById(id)
     .populate({ path: "allocatedRoomIds", select: "roomNumber typeId", populate: { path: "typeId", select: "pricePerNight name capacity extraHourPrice maxExtendHours amenities" } })
     .populate("requesterId", "fullName email phoneNumber");
-  if (!gb) throw createError(404, "Group booking not found");
+  if (!gb) throw createError(404, "Không tìm thấy đặt phòng nhóm");
   return gb;
 };
 
+/**
+ * Lấy danh sách group bookings với các bộ lọc (status, requesterId, khoảng thời gian)
+ */
 const list = async (query: any = {}) => {
   const q: any = {};
+  // Lọc theo status nếu có
   if (query.status) q.status = query.status;
+  // Lọc theo requesterId nếu có
   if (query.requesterId) q.requesterId = query.requesterId;
+  // Lọc theo khoảng thời gian tạo nếu có
   if (query.from || query.to) {
     q.createdAt = {} as any;
     if (query.from) q.createdAt.$gte = new Date(query.from);
     if (query.to) q.createdAt.$lte = new Date(query.to);
   }
+  // Tìm và sắp xếp theo thời gian tạo mới nhất
   const items = await GroupBooking.find(q)
     .sort({ createdAt: -1 })
     .populate("allocatedRoomIds", "roomNumber typeId");
   return items;
 };
 
+/**
+ * Kiểm tra phòng khả dụng cho group booking: tìm các phòng không bị trùng lịch
+ * với booking thường và group booking khác trong khoảng thời gian chỉ định
+ */
 const checkAvailability = async (checkIn: Date, checkOut: Date, excludeGroupBookingId?: string) => {
-  // Load rooms with type info (price/capacity)
+  // Load tất cả phòng với thông tin loại phòng (giá/sức chứa)
   const rooms = await Room.find({}).populate('typeId', 'pricePerNight capacity name');
   const allRoomIds = rooms.map((r) => r._id);
 
@@ -347,12 +370,16 @@ const checkAvailability = async (checkIn: Date, checkOut: Date, excludeGroupBook
   return availableRooms as any[];
 };
 
+/**
+ * Chọn tổ hợp phòng tối ưu về giá để đáp ứng số lượng phòng và sức chứa yêu cầu
+ * Sử dụng thuật toán DFS với pruning để tìm tổ hợp có giá thấp nhất
+ */
 function chooseOptimalRooms(
   rooms: Array<any>,
   requiredRooms: number,
   requiredPeople: number
 ): Array<any> | null {
-  // Sort by price ascending to help pruning
+  // Sắp xếp theo giá tăng dần để hỗ trợ pruning
   const sorted = [...rooms].sort((a: any, b: any) => (
     Number(a?.typeId?.pricePerNight || 0) - Number(b?.typeId?.pricePerNight || 0)
   ));
@@ -362,8 +389,11 @@ function chooseOptimalRooms(
 
   const n = sorted.length;
 
+  // Hàm đệ quy DFS để tìm tổ hợp phòng tối ưu
   const dfs = (start: number, picked: Array<any>, capSum: number, priceSum: number) => {
+    // Nếu đã chọn đủ số phòng yêu cầu
     if (picked.length === requiredRooms) {
+      // Nếu tổng sức chứa đủ và giá tốt hơn thì cập nhật
       if (capSum >= requiredPeople && priceSum < bestPrice) {
         bestPrice = priceSum;
         bestCombo = [...picked];
@@ -371,7 +401,7 @@ function chooseOptimalRooms(
       return;
     }
 
-    // If even picking all remaining cannot reach requiredRooms, stop
+    // Nếu số phòng còn lại không đủ để chọn đủ số phòng yêu cầu thì dừng
     if (n - start < requiredRooms - picked.length) return;
 
     for (let i = start; i < n; i++) {
@@ -379,25 +409,36 @@ function chooseOptimalRooms(
       const price = Number(room?.typeId?.pricePerNight || 0);
       const capacity = Number(room?.typeId?.capacity || 0);
 
-      // Prune: if current price already exceeds best
+      // Pruning: nếu giá hiện tại đã vượt quá giá tốt nhất thì bỏ qua
       if (priceSum + price >= bestPrice) continue;
 
+      // Thử chọn phòng này và tiếp tục đệ quy
       picked.push(room);
       dfs(i + 1, picked, capSum + capacity, priceSum + price);
+      // Backtrack: bỏ phòng này ra để thử phòng khác
       picked.pop();
     }
   };
 
+  // Bắt đầu tìm kiếm từ đầu
   dfs(0, [], 0, 0);
   return bestCombo;
 }
 
+/**
+ * Thêm ghi chú vào group booking
+ */
 const appendNote = (gb: any, label: string, content?: string) => {
+  // Nếu không có nội dung thì không thêm
   if (!content) return;
   const entry = `${label}: ${content}`.trim();
+  // Nối thêm vào notes hiện có hoặc tạo mới
   gb.notes = gb.notes ? `${gb.notes}\n${entry}` : entry;
 };
 
+/**
+ * Định dạng khoảng thời gian check-in đến check-out theo định dạng tiếng Việt
+ */
 const formatDateRange = (checkIn: Date | string, checkOut: Date | string) => {
   const formatter = new Intl.DateTimeFormat("vi-VN", { dateStyle: "medium" });
   const start = formatter.format(new Date(checkIn));
@@ -405,7 +446,11 @@ const formatDateRange = (checkIn: Date | string, checkOut: Date | string) => {
   return `${start} → ${end}`;
 };
 
+/**
+ * Từ chối group booking: cập nhật status, ghi chú và gửi email thông báo
+ */
 const rejectGroupBooking = async (gb: any, reason: string) => {
+  // Cập nhật status và thời gian từ chối
   gb.status = "rejected";
   gb.rejectedAt = new Date();
   appendNote(gb, "Rejected", reason);
@@ -430,9 +475,15 @@ const rejectGroupBooking = async (gb: any, reason: string) => {
   }
 };
 
+/**
+ * Duyệt group booking: kiểm tra phòng khả dụng, chọn phòng tối ưu,
+ * phân bổ phòng, gửi email và notification
+ */
 const approve = async (id: string) => {
   const gb = await GroupBooking.findById(id);
-  if (!gb) throw createError(404, "Group booking not found");
+  // Nếu không tìm thấy group booking thì báo lỗi
+  if (!gb) throw createError(404, "Không tìm thấy đặt phòng nhóm");
+  // Chỉ có thể duyệt khi status là pending_approval
   if (gb.status !== "pending_approval")
     throw createError(400, "Only pending_approval can be approved");
 
@@ -453,8 +504,9 @@ const approve = async (id: string) => {
     throw createError(400, "Không đủ phòng trống để duyệt yêu cầu đặt đoàn");
   }
 
-  // Choose cost-optimized allocation meeting capacity and room count
+  // Chọn tổ hợp phòng tối ưu về giá đáp ứng sức chứa và số lượng phòng
   const optimal = chooseOptimalRooms(availableRooms, gb.roomCount, gb.peopleCount);
+  // Nếu không tìm được tổ hợp phòng phù hợp thì từ chối
   if (!optimal) {
     const reason = `Không tìm được tổ hợp phòng đáp ứng ${gb.peopleCount} khách trong giai đoạn ${formatDateRange(
       gb.checkIn,
@@ -463,6 +515,7 @@ const approve = async (id: string) => {
     await rejectGroupBooking(gb, reason);
     throw createError(400, "Không thể tìm được tổ hợp phòng đáp ứng yêu cầu đoàn");
   }
+  // Phân bổ phòng đã chọn
   gb.allocatedRoomIds = optimal.map((r: any) => r._id);
   gb.status = "approved";
   await gb.save();
@@ -596,6 +649,10 @@ const approve = async (id: string) => {
   return gb;
 };
 
+/**
+ * Upload danh sách thành viên cho group booking: validate số lượng người,
+ * kiểm tra sức chứa phòng và lưu thông tin thành viên
+ */
 const uploadMembers = async (id: string, members: any[]) => {
   const gb = await GroupBooking.findById(id)
     .populate({
@@ -606,13 +663,15 @@ const uploadMembers = async (id: string, members: any[]) => {
         select: "capacity"
       }
     });
-  if (!gb) throw createError(404, "Group booking not found");
+  // Nếu không tìm thấy group booking thì báo lỗi
+  if (!gb) throw createError(404, "Không tìm thấy đặt phòng nhóm");
   
-  // Cho phép upload khi đã có báo giá (quoted hoặc awaiting_payment)
+  // Chỉ cho phép upload khi đã có báo giá (quoted hoặc awaiting_payment)
   if (!["quoted", "awaiting_payment"].includes(gb.status)) {
     throw createError(400, "Chỉ có thể upload danh sách sau khi admin đã báo giá");
   }
   
+  // Phải có phòng được phân bổ mới có thể upload danh sách
   if (!gb.allocatedRoomIds || gb.allocatedRoomIds.length === 0) {
     throw createError(400, "Chưa có phòng được phân bổ, không thể upload danh sách");
   }
@@ -635,7 +694,7 @@ const uploadMembers = async (id: string, members: any[]) => {
     throw createError(400, "Không có số phòng hợp lệ");
   }
 
-  // Validate và xử lý members
+  // Validate và xử lý danh sách thành viên
   // Lọc bỏ các dòng trống (không có fullName) trước khi xử lý
   const validMembers = (Array.isArray(members) ? members : []).filter((m: any) => {
     const fullName = String(m.fullName || "").trim();
@@ -646,6 +705,7 @@ const uploadMembers = async (id: string, members: any[]) => {
   const expectedPeopleCount = gb.peopleCount || 0;
   const actualPeopleCount = validMembers.length;
   
+  // Nếu số lượng không khớp thì báo lỗi
   if (actualPeopleCount !== expectedPeopleCount) {
     throw createError(
       400,
@@ -659,7 +719,7 @@ const uploadMembers = async (id: string, members: any[]) => {
   const processedMembers = validMembers.map((m: any) => {
     const roomNumber = String(m.roomNumber || "").trim();
     
-    // Validate roomNumber nếu có
+    // Kiểm tra số phòng có hợp lệ không (nếu có)
     if (roomNumber && !validRoomNumbers.includes(roomNumber)) {
       throw createError(
         400,
@@ -711,10 +771,12 @@ const uploadMembers = async (id: string, members: any[]) => {
     };
   });
 
-  // Kiểm tra capacity của từng phòng
+  // Kiểm tra sức chứa của từng phòng
   for (const [roomNumber, guestCount] of roomGuestCount.entries()) {
     const roomInfo = roomInfoMap.get(roomNumber);
+    // Nếu phòng có thông tin sức chứa, kiểm tra số lượng khách
     if (roomInfo && roomInfo.capacity > 0) {
+      // Nếu số lượng khách vượt quá sức chứa thì báo lỗi
       if (guestCount > roomInfo.capacity) {
         throw createError(
           400,
@@ -724,25 +786,34 @@ const uploadMembers = async (id: string, members: any[]) => {
     }
   }
 
-  gb.members = processedMembers;
+  // Gán danh sách thành viên đã xử lý vào group booking
+  // Sử dụng type assertion vì Mongoose DocumentArray có thể nhận array thông thường
+  gb.members = processedMembers as any;
   gb.status = "info_uploaded";
   await gb.save();
   return gb;
 };
 
+/**
+ * Báo giá cho group booking: cập nhật quoteAmount, paymentLink, status
+ * và gửi email, notification cho khách hàng
+ */
 const quote = async (
   id: string,
   quoteAmount: number,
   paymentLink?: string
 ) => {
   const gb = await GroupBooking.findById(id);
-  if (!gb) throw createError(404, "Group booking not found");
-  // Cho phép báo giá sau khi approved hoặc info_uploaded
+  // Nếu không tìm thấy group booking thì báo lỗi
+  if (!gb) throw createError(404, "Không tìm thấy đặt phòng nhóm");
+  // Chỉ cho phép báo giá sau khi đã duyệt hoặc đã upload thông tin thành viên
   if (gb.status !== "info_uploaded" && gb.status !== "approved")
     throw createError(400, "Can only quote after info uploaded or approval");
 
+  // Cập nhật báo giá và link thanh toán
   gb.quoteAmount = quoteAmount;
   gb.paymentLink = paymentLink;
+  // Nếu có paymentLink thì status là awaiting_payment, không thì là quoted
   gb.status = paymentLink ? "awaiting_payment" : "quoted";
   await gb.save();
 
@@ -826,18 +897,27 @@ const quote = async (
   return gb;
 };
 
+/**
+ * Đánh dấu group booking đã thanh toán: tính số tiền đặt cọc hoặc thanh toán đủ,
+ * tạo invoice và payment, gửi notification cho admin/staff
+ */
 const markPaid = async (
   id: string,
   options?: { stripeSessionId?: string; stripePaymentIntentId?: string; stripeCustomerId?: string }
 ) => {
   const gb = await GroupBooking.findById(id)
     .populate("requesterId", "fullName email phoneNumber");
-  if (!gb) throw createError(404, "Group booking not found");
+  // Nếu không tìm thấy group booking thì báo lỗi
+  if (!gb) throw createError(404, "Không tìm thấy đặt phòng nhóm");
+  // Phải có báo giá mới có thể đánh dấu đã thanh toán
   if (!gb.quoteAmount) throw createError(400, "Quote not set");
+  // Chỉ có thể đánh dấu thanh toán khi ở các trạng thái hợp lệ
   if (!["awaiting_payment", "quoted", "info_uploaded"].includes(gb.status))
     throw createError(400, "Invalid state to mark paid");
 
+  // Tính số tiền đặt cọc và số tiền thanh toán
   const depositAmount = calculateDepositAmount(gb.quoteAmount);
+  // Nếu có đặt cọc thì thanh toán số tiền đặt cọc, không thì thanh toán đủ
   const paidAmount = depositAmount > 0 ? depositAmount : gb.quoteAmount;
   const remainingAmount = Math.max(0, gb.quoteAmount - paidAmount);
 
@@ -1024,7 +1104,7 @@ const markFullPayment = async (
 ) => {
   const gb = await GroupBooking.findById(id)
     .populate("requesterId", "fullName email phoneNumber");
-  if (!gb) throw createError(404, "Group booking not found");
+  if (!gb) throw createError(404, "Không tìm thấy đặt phòng nhóm");
   if (!gb.quoteAmount) throw createError(400, "Quote not set");
 
   if (!["deposit_paid", "awaiting_payment", "quoted", "confirmed"].includes(gb.status)) {
@@ -1338,7 +1418,7 @@ const markFullPayment = async (
 
 const confirm = async (id: string) => {
   const gb = await GroupBooking.findById(id);
-  if (!gb) throw createError(404, "Group booking not found");
+  if (!gb) throw createError(404, "Không tìm thấy đặt phòng nhóm");
   if (!["paid", "deposit_paid"].includes(gb.status))
     throw createError(400, "Chỉ có thể xác nhận đặt đoàn sau khi đã nhận đặt cọc");
   gb.status = "confirmed";
@@ -1462,7 +1542,7 @@ const confirm = async (id: string) => {
 
 const cancel = async (id: string, reason?: string) => {
   const gb = await GroupBooking.findById(id);
-  if (!gb) throw createError(404, "Group booking not found");
+  if (!gb) throw createError(404, "Không tìm thấy đặt phòng nhóm");
 
   if (["cancelled", "refund_requested", "refunded", "rejected"].includes(gb.status)) {
     throw createError(400, `Group booking is already ${gb.status}, không thể hủy thêm lần nữa`);
@@ -1619,7 +1699,7 @@ const markRefunded = async (
   options?: { amount?: number; note?: string }
 ) => {
   const gb = await GroupBooking.findById(id);
-  if (!gb) throw createError(404, "Group booking not found");
+  if (!gb) throw createError(404, "Không tìm thấy đặt phòng nhóm");
 
   if (!["refund_requested", "paid", "confirmed", "deposit_paid"].includes(gb.status)) {
     throw createError(400, "Chỉ có thể hoàn tiền cho đặt đoàn đã thanh toán hoặc đang chờ hoàn tiền");
@@ -1795,7 +1875,7 @@ export default {
 
 export const computeAutoQuote = async (id: string) => {
   const gb: any = await getById(id);
-  if (!gb) throw createError(404, "Group booking not found");
+  if (!gb) throw createError(404, "Không tìm thấy đặt phòng nhóm");
   if (!gb.allocatedRoomIds || gb.allocatedRoomIds.length === 0) {
     throw createError(400, "No allocated rooms to compute quote");
   }

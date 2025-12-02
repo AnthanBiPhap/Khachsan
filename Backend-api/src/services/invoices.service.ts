@@ -7,28 +7,39 @@ import moment from "moment";
 import serviceBookingsService from "./serviceBookings.service";
 import fs from "fs";
 
+/**
+ * Lấy danh sách tất cả invoice với các bộ lọc (bookingId, groupBookingId, customerId, status, khoảng giá)
+ * và phân trang. Bao gồm thông tin chi tiết về booking, group booking và customer.
+ */
 const getAll = async (query: any) => {
+  // Thiết lập phân trang
   const page = Number(query.page) || 1;
   const limit = Number(query.limit) || 10;
 
+  // Thiết lập sắp xếp
   const sortField = query.sort_by || "createdAt";
   const sortType = query.sort_type === "asc" ? 1 : -1;
   const sortObject: Record<string, 1 | -1> = { [sortField]: sortType };
 
   const where: Record<string, any> = {};
 
+  // Lọc theo bookingId nếu có
   if (query.bookingId) where.bookingId = query.bookingId;
+  // Lọc theo groupBookingId nếu có
   if (query.groupBookingId) where.groupBookingId = query.groupBookingId;
+  // Lọc theo customerId nếu có
   if (query.customerId) where.customerId = query.customerId;
+  // Lọc theo status nếu có
   if (query.status) where.status = query.status;
 
-  // Filter tổng tiền
+  // Lọc theo khoảng tổng tiền (minAmount, maxAmount)
   if (query.minAmount || query.maxAmount) {
     where.totalAmount = {};
     if (query.minAmount) where.totalAmount.$gte = Number(query.minAmount);
     if (query.maxAmount) where.totalAmount.$lte = Number(query.maxAmount);
   }
 
+  // Tìm invoices với populate thông tin booking, group booking và customer
   const invoices = await Invoice.find(where)
     .populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount totalPrice paidAmount remainingAmount paymentStatus")
     .populate({
@@ -45,6 +56,7 @@ const getAll = async (query: any) => {
     .limit(limit)
     .sort(sortObject);
 
+  // Đếm tổng số invoice để phân trang
   const count = await Invoice.countDocuments(where);
 
   return {
@@ -57,6 +69,10 @@ const getAll = async (query: any) => {
   };
 };
 
+/**
+ * Lấy thông tin chi tiết của một invoice theo ID,
+ * bao gồm thông tin booking, group booking và customer
+ */
 const getById = async (id: string) => {
   const invoice = await Invoice.findById(id)
     .populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount")
@@ -70,11 +86,17 @@ const getById = async (id: string) => {
       }
     })
     .populate("customerId", "fullName email phoneNumber");
+  // Nếu không tìm thấy invoice thì báo lỗi
   if (!invoice) throw createError(404, "Invoice not found");
   return invoice;
 };
 
+/**
+ * Tạo invoice mới: tạo invoice với thông tin booking/group booking, customer,
+ * số tiền và trạng thái thanh toán
+ */
 const create = async (payload: any) => {
+  // Tạo invoice mới với các thông tin từ payload
   const invoice = new Invoice({
     bookingId: payload.bookingId,
     groupBookingId: payload.groupBookingId,
@@ -87,9 +109,11 @@ const create = async (payload: any) => {
     issuedAt: payload.issuedAt || Date.now(),
   });
   const savedInvoice = await invoice.save();
+  // Populate thông tin booking nếu có
   if (savedInvoice.bookingId) {
     await savedInvoice.populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount totalPrice paidAmount remainingAmount paymentStatus");
   }
+  // Populate thông tin group booking nếu có
   if (savedInvoice.groupBookingId) {
     await savedInvoice.populate({
       path: "groupBookingId",
@@ -101,24 +125,33 @@ const create = async (payload: any) => {
       }
     });
   }
+  // Populate thông tin customer
   await savedInvoice.populate("customerId", "fullName email phoneNumber");
   return savedInvoice;
 };
 
+/**
+ * Cập nhật invoice theo ID: lọc bỏ các giá trị rỗng/null/undefined,
+ * cập nhật và populate lại thông tin liên quan
+ */
 const updateById = async (id: string, payload: any) => {
   const invoice = await getById(id);
 
+  // Lọc bỏ các giá trị rỗng, null hoặc undefined để chỉ cập nhật các trường hợp lệ
   const cleanUpdates = Object.fromEntries(
     Object.entries(payload).filter(
       ([, v]) => v !== "" && v !== null && v !== undefined
     )
   );
 
+  // Cập nhật invoice với các giá trị đã lọc
   Object.assign(invoice, cleanUpdates);
   const updatedInvoice = await invoice.save();
+  // Populate lại thông tin booking nếu có
   if (updatedInvoice.bookingId) {
     await updatedInvoice.populate("bookingId", "_id checkIn checkOut guestInfo source guests guestCount");
   }
+  // Populate lại thông tin group booking nếu có
   if (updatedInvoice.groupBookingId) {
     await updatedInvoice.populate({
       path: "groupBookingId",
@@ -130,17 +163,26 @@ const updateById = async (id: string, payload: any) => {
       }
     });
   }
+  // Populate lại thông tin customer
   await updatedInvoice.populate("customerId", "fullName email phoneNumber");
   return updatedInvoice;
 };
 
+/**
+ * Xóa invoice theo ID
+ */
 const deleteById = async (id: string) => {
   const invoice = await getById(id);
   await invoice.deleteOne();
   return invoice;
 };
+
+/**
+ * In hóa đơn PDF: tạo PDF hóa đơn với đầy đủ thông tin booking/group booking,
+ * customer, dịch vụ và tóm tắt thanh toán
+ */
 const printInvoice = async (invoiceId: string) => {
-  // Lấy invoice, populate booking hoặc groupBooking, customer, services
+  // Lấy invoice với populate đầy đủ thông tin booking, group booking, customer
   const invoice = await Invoice.findById(invoiceId)
     .populate({
       path: "bookingId",
@@ -158,11 +200,13 @@ const printInvoice = async (invoiceId: string) => {
     })
     .populate("customerId", "fullName email phoneNumber");
 
+  // Nếu không tìm thấy invoice thì báo lỗi
   if (!invoice) throw createError(404, "Invoice not found");
 
-  // Tạo PDF
+  // Tạo PDF document với kích thước A4
   const doc = new PDFDocument({ margin: 50, size: "A4" });
   const chunks: Uint8Array[] = [];
+  // Thu thập các chunk dữ liệu PDF
   doc.on("data", (chunk) => chunks.push(chunk));
 
   // Sử dụng font Noto Sans hỗ trợ tiếng Việt
@@ -170,17 +214,18 @@ const printInvoice = async (invoiceId: string) => {
   doc.registerFont("NotoSans", fontPath);
   doc.font("NotoSans");
 
+  // Lấy thông tin customer, booking và group booking
   const customer = invoice.customerId as { fullName?: string; email?: string; phoneNumber?: string };
   const booking = invoice.bookingId as any;
   const groupBooking = invoice.groupBookingId as any;
 
-  // --- Header ---
+  // --- Header: Tiêu đề hóa đơn ---
   doc
     .fontSize(20)
     .text("HÓA ĐƠN THANH TOÁN KHÁCH SẠN MIKO", { align: "center", underline: true })
     .moveDown(1);
 
-  // --- Invoice info ---
+  // --- Thông tin hóa đơn: mã và ngày xuất ---
   doc.fontSize(12).text(`Mã hóa đơn: ${invoice._id}`);
   doc.text(
     `Ngày xuất: ${
@@ -191,10 +236,10 @@ const printInvoice = async (invoiceId: string) => {
   );
   doc.moveDown(0.5);
 
-  // --- Customer info ---
+  // --- Thông tin khách hàng ---
   doc.fontSize(14).text("THÔNG TIN KHÁCH HÀNG", { underline: true });
   
-  // Xử lý cho Group Booking
+  // Xử lý cho Group Booking (đặt phòng theo đoàn)
   if (groupBooking) {
     doc.fontSize(12).text(`Tên người yêu cầu: ${groupBooking.requesterName || "-"}`);
     doc.text(`Điện thoại: ${groupBooking.requesterPhone || "-"}`);
@@ -203,23 +248,25 @@ const printInvoice = async (invoiceId: string) => {
     doc.text(`Số phòng: ${groupBooking.roomCount || "-"}`);
     doc.moveDown(0.5);
     
-    // --- Booking info cho Group Booking ---
+    // --- Thông tin đặt phòng cho Group Booking ---
     doc.fontSize(14).text("THÔNG TIN ĐẶT PHÒNG", { underline: true });
     doc.fontSize(12).text(`Loại: Đặt theo đoàn`);
     
-    // Tính số đêm
+    // Tính số đêm từ check-in đến check-out
     let nights = 0;
     if (groupBooking.checkIn && groupBooking.checkOut) {
       nights = Math.ceil((new Date(groupBooking.checkOut).getTime() - new Date(groupBooking.checkIn).getTime()) / (1000 * 60 * 60 * 24));
+      // Đảm bảo ít nhất 1 đêm
       nights = Math.max(1, nights);
     }
     
-    // Hiển thị danh sách phòng
+    // Hiển thị danh sách phòng đã phân bổ
     if (groupBooking.allocatedRoomIds && groupBooking.allocatedRoomIds.length > 0) {
       doc.text(`Phòng: ${groupBooking.allocatedRoomIds.map((r: any) => r.roomNumber || "-").join(", ")}`);
       doc.moveDown(0.5);
       doc.fontSize(12).text("CHI TIẾT PHÒNG:", { underline: true });
       doc.moveDown(0.3);
+      // Duyệt từng phòng đã phân bổ để hiển thị chi tiết
       groupBooking.allocatedRoomIds.forEach((room: any, idx: number) => {
         const roomNum = room.roomNumber || "-";
         const typeName = room.typeId?.name || "-";
@@ -228,6 +275,7 @@ const printInvoice = async (invoiceId: string) => {
         const extraHourPrice = room.typeId?.extraHourPrice || 0;
         const maxExtendHours = room.typeId?.maxExtendHours || 0;
         const amenities = room.typeId?.amenities || [];
+        // Tính tổng phụ cho phòng này
         const subtotal = pricePerNight * nights;
         
         doc.fontSize(11).text(`${idx + 1}. Phòng ${roomNum} - ${typeName}`, { underline: true });
@@ -255,7 +303,7 @@ const printInvoice = async (invoiceId: string) => {
           doc.text(`   ${line3.join(" | ")}`);
         }
         
-        // Tiện ích
+        // Hiển thị tiện ích nếu có
         if (amenities && amenities.length > 0) {
           doc.text(`   Tiện ích:`);
           doc.text(`   ${amenities.join(", ")}`);
@@ -264,6 +312,7 @@ const printInvoice = async (invoiceId: string) => {
         doc.moveDown(0.4);
       });
     } else {
+      // Nếu chưa có phòng được phân bổ
       doc.text(`Phòng: Chưa phân bổ`);
     }
     
@@ -290,14 +339,16 @@ const printInvoice = async (invoiceId: string) => {
     
     doc.moveDown(0.5);
     
-    // --- Members info ---
+    // --- Thông tin thành viên đoàn ---
     if (groupBooking.members && groupBooking.members.length > 0) {
       doc.fontSize(14).text("THÀNH VIÊN ĐOÀN", { underline: true });
       doc.fontSize(11);
+      // Duyệt từng thành viên để hiển thị thông tin
       groupBooking.members.forEach((member: any, idx: number) => {
         const isLeader = member.isLeader ? " (Trưởng đoàn)" : "";
         const roomNumber = member.roomNumber ? ` - Phòng ${member.roomNumber}` : "";
         doc.text(`${idx + 1}. ${member.fullName || "-"}${isLeader}${roomNumber}`);
+        // Hiển thị thông tin bổ sung nếu có
         if (member.idNumber) doc.text(`   CMND/CCCD: ${member.idNumber}`);
         if (member.phoneNumber) doc.text(`   Điện thoại: ${member.phoneNumber}`);
         if (member.email) doc.text(`   Email: ${member.email}`);
@@ -306,17 +357,21 @@ const printInvoice = async (invoiceId: string) => {
       doc.moveDown(0.3);
     }
     
+    // Group booking không có dịch vụ
     doc.fontSize(12).text("Dịch vụ: Không có dịch vụ (đặt theo đoàn)");
     doc.moveDown(0.5);
   } else if (booking) {
-    // Logic cũ cho Booking thông thường
+    // Xử lý cho Booking thông thường
+    // Nếu có thông tin customer (khách online có tài khoản)
     if (customer?.fullName) {
       // Khách online (có tài khoản)
       doc.fontSize(12).text(`Tên: ${customer.fullName}`);
       doc.text(`Email: ${customer.email || "-"}`);
       doc.text(`Điện thoại: ${customer.phoneNumber || "-"}`);
-    } else if (booking?.guests && booking.guests.length > 0) {
-      // Khách hàng walk_in - lấy thông tin khách chính
+    } 
+    // Nếu có danh sách guests (khách walk_in)
+    else if (booking?.guests && booking.guests.length > 0) {
+      // Lấy thông tin khách chính (có isMainGuest hoặc khách đầu tiên)
       const mainGuest = booking.guests.find((guest: any) => guest.isMainGuest) || booking.guests[0];
       
       // Tính tuổi từ dateOfBirth nếu không có age
@@ -326,6 +381,7 @@ const printInvoice = async (invoiceId: string) => {
         const today = new Date();
         age = today.getFullYear() - birthDate.getFullYear();
         const monthDiff = today.getMonth() - birthDate.getMonth();
+        // Điều chỉnh nếu chưa đến sinh nhật trong năm
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
           age--;
         }
@@ -337,7 +393,7 @@ const printInvoice = async (invoiceId: string) => {
       doc.text(`Điện thoại: ${mainGuest?.phoneNumber || "-"}`);
       // Không hiển thị email cho khách walk_in
       
-      // Hiển thị thông tin khách phụ nếu có
+      // Hiển thị thông tin khách phụ nếu có nhiều khách
       if (booking.guests.length > 1) {
         doc.text(`Số khách: ${booking.guestCount || booking.guests.length} người`);
         const otherGuests = booking.guests.filter((guest: any) => !guest.isMainGuest);
@@ -345,8 +401,9 @@ const printInvoice = async (invoiceId: string) => {
           doc.text(`Khách phụ: ${otherGuests.map((g: any) => g.fullName).join(", ")}`);
         }
       }
-    } else if (booking?.guestInfo) {
-      // Fallback cho dữ liệu cũ
+    } 
+    // Fallback cho dữ liệu cũ (sử dụng guestInfo)
+    else if (booking?.guestInfo) {
       // Tính tuổi từ dateOfBirth nếu không có age
       let age: number | string = booking.guestInfo.age;
       if (!age && booking.guestInfo.dateOfBirth) {
@@ -354,6 +411,7 @@ const printInvoice = async (invoiceId: string) => {
         const today = new Date();
         age = today.getFullYear() - birthDate.getFullYear();
         const monthDiff = today.getMonth() - birthDate.getMonth();
+        // Điều chỉnh nếu chưa đến sinh nhật trong năm
         if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
           age--;
         }
@@ -365,12 +423,12 @@ const printInvoice = async (invoiceId: string) => {
       doc.text(`Điện thoại: ${booking.guestInfo.phoneNumber || "-"}`);
       // Không hiển thị email cho khách walk_in
     } else {
-      // Không có thông tin
+      // Không có thông tin khách hàng
       doc.fontSize(12).text("Không có thông tin khách hàng");
     }
     doc.moveDown(0.5);
 
-    // --- Booking info ---
+    // --- Thông tin đặt phòng ---
     doc.fontSize(14).text("THÔNG TIN ĐẶT PHÒNG", { underline: true });
     doc.fontSize(12).text(`Phòng: ${booking?.roomId?.roomNumber || "-"}`);
     doc.text(
@@ -389,10 +447,11 @@ const printInvoice = async (invoiceId: string) => {
     );
     doc.moveDown(0.5);
 
-    // --- Services ---
+    // --- Dịch vụ đã sử dụng ---
     doc.fontSize(14).text("DỊCH VỤ", { underline: true });
     console.log(booking?.services);
     
+    // Hiển thị danh sách dịch vụ nếu có
     if (booking?.services && booking.services.length > 0) {
       booking.services.forEach((s: any, idx: number) => {
         const name = s?.name || "Unknown";
@@ -409,15 +468,17 @@ const printInvoice = async (invoiceId: string) => {
           );
       });
     } else {
+      // Không có dịch vụ
       doc.fontSize(12).text("Không có dịch vụ");
     }
     doc.moveDown(0.5);
   } else {
+    // Không có thông tin booking hoặc group booking
     doc.fontSize(12).text("Không có thông tin đặt phòng");
     doc.moveDown(0.5);
   }
 
-  // --- Total & Payment Summary ---
+  // --- Tóm tắt thanh toán ---
   const nf = new Intl.NumberFormat("vi-VN");
   const totalFormatted = nf.format(invoice.totalAmount);
 
@@ -426,13 +487,14 @@ const printInvoice = async (invoiceId: string) => {
   const remainingAmount = (invoice as any).remainingAmount ?? booking?.remainingAmount ?? (groupBooking ? 0 : Math.max((invoice.totalAmount || 0) - (paidAmount || 0), 0));
   const paymentStatus = (invoice as any).paymentStatus ?? booking?.paymentStatus ?? (groupBooking?.status === "paid" ? "paid" : "pending");
 
-  // Nhãn trạng thái thanh toán
+  // Xác định nhãn trạng thái thanh toán
   let paymentLabel = "Chờ thanh toán";
   if (paymentStatus === "partial_paid") paymentLabel = "Đã thanh toán 50%";
   else if (paymentStatus === "paid") paymentLabel = "Đã thanh toán đủ";
   else if (paymentStatus === "failed") paymentLabel = "Thanh toán thất bại";
   else if (paymentStatus === "refunded") paymentLabel = "Đã hoàn tiền";
 
+  // Hiển thị tóm tắt thanh toán
   doc.fontSize(14).text("TÓM TẮT THANH TOÁN", { underline: true }).moveDown(0.5);
   doc.fontSize(12).text(`Trạng thái: ${paymentLabel}`);
   doc.text(`Tổng giá trị: ${totalFormatted} VND`);
@@ -442,8 +504,9 @@ const printInvoice = async (invoiceId: string) => {
   // Dòng tổng cộng nổi bật ở cuối
   doc.fontSize(16).text(`TỔNG CỘNG: ${totalFormatted} VND`, { align: "right" });
 
-  // --- Signature Section ---
+  // --- Phần chữ ký ---
   doc.moveDown(2);
+  // Tính toán kích thước trang và cột
   const pageWidth = (doc.page as any).width || 595.28; // A4 width in pt
   const margin = 50;
   const columnWidth = (pageWidth - margin * 2) / 2;
@@ -456,7 +519,7 @@ const printInvoice = async (invoiceId: string) => {
   const rightX = margin + columnWidth;
   doc.font("NotoSans").fontSize(12).text(signDate, rightX, undefined, { width: columnWidth, align: "right" });
   doc.text(directorTitle, rightX, undefined, { width: columnWidth, align: "right" }).moveDown(3);
-  // Dòng ký giám đốc
+  // Vẽ dòng ký giám đốc
   const rightX1 = margin + columnWidth + 40;
   const rightX2 = margin + columnWidth * 2;
   const yLineRight = (doc.y || 0) + 10;
@@ -471,8 +534,10 @@ const printInvoice = async (invoiceId: string) => {
   //   }
   // } catch {}
 
+  // Kết thúc tạo PDF
   doc.end();
 
+  // Đợi PDF hoàn thành và trả về buffer
   await new Promise((resolve) => doc.on("end", resolve));
   return Buffer.concat(chunks);
 };

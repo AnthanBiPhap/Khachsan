@@ -1,8 +1,12 @@
 import nodemailer from "nodemailer";
 import { env } from "../helpers/env.helper";
 
-// Tạo transporter với Gmail
+/**
+ * Tạo transporter với Gmail để gửi email:
+ * Kiểm tra thông tin đăng nhập Gmail và tạo transporter với cấu hình Gmail
+ */
 const createTransporter = () => {
+  // Nếu thiếu thông tin đăng nhập Gmail thì báo lỗi
   if (!env.GMAIL_USER || !env.GMAIL_APP_PASSWORD) {
     throw new Error("Gmail credentials chưa được cấu hình. Vui lòng thiết lập GMAIL_USER và GMAIL_APP_PASSWORD trong file .env");
   }
@@ -34,7 +38,10 @@ interface BookingConfirmationEmailData {
   }>;
 }
 
-// Hàm gửi email xác nhận đặt phòng
+/**
+ * Gửi email xác nhận đặt phòng: tạo và gửi email HTML với thông tin đặt phòng,
+ * bao gồm thông tin phòng, ngày check-in/check-out, giá tiền và dịch vụ
+ */
 const sendBookingConfirmation = async (data: BookingConfirmationEmailData) => {
   try {
     console.log(`📧 Email service: Bắt đầu gửi email đến ${data.to}`);
@@ -42,10 +49,10 @@ const sendBookingConfirmation = async (data: BookingConfirmationEmailData) => {
     
     const transporter = createTransporter();
     
-    // Verify transporter connection
+    // Xác minh kết nối transporter
     await transporter.verify();
     console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
-    // Format ngày tháng
+    // Định dạng ngày tháng
     const formatDate = (date: Date) => {
       return new Date(date).toLocaleString("vi-VN", {
         year: "numeric",
@@ -64,7 +71,7 @@ const sendBookingConfirmation = async (data: BookingConfirmationEmailData) => {
       }).format(amount);
     };
 
-    // Tạo HTML cho danh sách dịch vụ
+    // Tạo HTML cho danh sách dịch vụ nếu có
     let servicesHtml = "";
     if (data.services && data.services.length > 0) {
       servicesHtml = `
@@ -334,7 +341,10 @@ interface GroupBookingFullPaymentEmailData {
   invoiceFileName?: string;
 }
 
-// Hàm gửi email xác nhận đặt phòng nhóm
+/**
+ * Gửi email xác nhận đặt phòng nhóm: tạo và gửi email HTML với thông tin yêu cầu đặt phòng nhóm,
+ * bao gồm trạng thái, số lượng người/phòng và phòng đã được phân bổ
+ */
 const sendGroupBookingConfirmation = async (data: GroupBookingConfirmationEmailData) => {
   try {
     console.log(`📧 Email service: Bắt đầu gửi email group booking đến ${data.to}`);
@@ -342,11 +352,11 @@ const sendGroupBookingConfirmation = async (data: GroupBookingConfirmationEmailD
     
     const transporter = createTransporter();
     
-    // Verify transporter connection
+    // Xác minh kết nối transporter
     await transporter.verify();
     console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
     
-    // Format ngày tháng
+    // Định dạng ngày tháng
     const formatDate = (date: Date) => {
       return new Date(date).toLocaleString("vi-VN", {
         year: "numeric",
@@ -357,7 +367,7 @@ const sendGroupBookingConfirmation = async (data: GroupBookingConfirmationEmailD
       });
     };
 
-    // Format tiền VND
+    // Định dạng tiền VND
     const formatCurrency = (amount: number) => {
       return new Intl.NumberFormat("vi-VN", {
         style: "currency",
@@ -365,7 +375,7 @@ const sendGroupBookingConfirmation = async (data: GroupBookingConfirmationEmailD
       }).format(amount);
     };
 
-    // Tạo HTML cho danh sách phòng
+    // Tạo HTML cho danh sách phòng đã được phân bổ
     let roomsHtml = "";
     if (data.allocatedRooms && data.allocatedRooms.length > 0) {
       roomsHtml = `
@@ -388,7 +398,7 @@ const sendGroupBookingConfirmation = async (data: GroupBookingConfirmationEmailD
       `;
     }
 
-    // Xác định trạng thái và thông điệp
+    // Xác định thông điệp và màu sắc dựa trên trạng thái
     let statusMessage = "";
     let statusColor = "#666";
     switch (data.status) {
@@ -597,18 +607,21 @@ interface EmailVerificationData {
   verificationToken: string;
 }
 
-// Hàm gửi email thông báo admin đã duyệt đặt phòng nhóm
+/**
+ * Gửi email thông báo admin đã duyệt đặt phòng nhóm:
+ * Thông báo yêu cầu đã được duyệt và phòng đã được phân bổ
+ */
 const sendGroupBookingApproval = async (data: GroupBookingApprovalEmailData) => {
   try {
     console.log(`📧 Email service: Bắt đầu gửi email duyệt group booking đến ${data.to}`);
     
     const transporter = createTransporter();
     
-    // Verify transporter connection
+    // Xác minh kết nối transporter
     await transporter.verify();
     console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
     
-    // Format ngày tháng
+    // Định dạng ngày tháng
     const formatDate = (date: Date) => {
       return new Date(date).toLocaleString("vi-VN", {
         year: "numeric",
@@ -619,7 +632,7 @@ const sendGroupBookingApproval = async (data: GroupBookingApprovalEmailData) => 
       });
     };
 
-    // Tạo HTML cho danh sách phòng đã phân bổ
+    // Tạo HTML cho danh sách phòng đã được phân bổ
     let roomsHtml = "";
     if (data.allocatedRooms && data.allocatedRooms.length > 0) {
       roomsHtml = `
@@ -712,18 +725,21 @@ const sendGroupBookingApproval = async (data: GroupBookingApprovalEmailData) => 
   }
 };
 
-// Hàm gửi email thông báo admin đã báo giá đặt phòng nhóm
+/**
+ * Gửi email thông báo admin đã báo giá đặt phòng nhóm:
+ * Gửi báo giá chi tiết và link thanh toán nếu có
+ */
 const sendGroupBookingQuoted = async (data: GroupBookingQuotedEmailData) => {
   try {
     console.log(`📧 Email service: Bắt đầu gửi email báo giá group booking đến ${data.to}`);
     
     const transporter = createTransporter();
     
-    // Verify transporter connection
+    // Xác minh kết nối transporter
     await transporter.verify();
     console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
     
-    // Format ngày tháng
+    // Định dạng ngày tháng
     const formatDate = (date: Date) => {
       return new Date(date).toLocaleString("vi-VN", {
         year: "numeric",
@@ -734,7 +750,7 @@ const sendGroupBookingQuoted = async (data: GroupBookingQuotedEmailData) => {
       });
     };
 
-    // Format tiền VND
+    // Định dạng tiền VND
     const formatCurrency = (amount: number) => {
       return new Intl.NumberFormat("vi-VN", {
         style: "currency",
@@ -746,7 +762,7 @@ const sendGroupBookingQuoted = async (data: GroupBookingQuotedEmailData) => {
     const checkOutDate = formatDate(data.checkOut);
     const formattedAmount = formatCurrency(data.quoteAmount);
 
-    // Tạo HTML cho payment link nếu có
+    // Tạo HTML cho link thanh toán nếu có
     let paymentLinkHtml = "";
     if (data.paymentLink) {
       paymentLinkHtml = `
@@ -837,18 +853,21 @@ const sendGroupBookingQuoted = async (data: GroupBookingQuotedEmailData) => {
   }
 };
 
-// Hàm gửi email thông báo admin đã từ chối đặt phòng nhóm
+/**
+ * Gửi email thông báo admin đã từ chối đặt phòng nhóm:
+ * Thông báo yêu cầu bị từ chối kèm lý do
+ */
 const sendGroupBookingRejected = async (data: GroupBookingRejectedEmailData) => {
   try {
     console.log(`📧 Email service: Bắt đầu gửi email từ chối group booking đến ${data.to}`);
     
     const transporter = createTransporter();
     
-    // Verify transporter connection
+    // Xác minh kết nối transporter
     await transporter.verify();
     console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
     
-    // Format ngày tháng
+    // Định dạng ngày tháng
     const formatDate = (date: Date) => {
       return new Date(date).toLocaleString("vi-VN", {
         year: "numeric",
@@ -932,18 +951,21 @@ const sendGroupBookingRejected = async (data: GroupBookingRejectedEmailData) => 
   }
 };
 
-// Hàm gửi email thông báo admin đã xác nhận đặt phòng nhóm
+/**
+ * Gửi email thông báo admin đã xác nhận đặt phòng nhóm:
+ * Thông báo đặt phòng đã được xác nhận hoàn tất
+ */
 const sendGroupBookingConfirmed = async (data: GroupBookingConfirmedEmailData) => {
   try {
     console.log(`📧 Email service: Bắt đầu gửi email xác nhận group booking đến ${data.to}`);
     
     const transporter = createTransporter();
     
-    // Verify transporter connection
+    // Xác minh kết nối transporter
     await transporter.verify();
     console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
     
-    // Format ngày tháng
+    // Định dạng ngày tháng
     const formatDate = (date: Date) => {
       return new Date(date).toLocaleString("vi-VN", {
         year: "numeric",
@@ -1030,18 +1052,21 @@ const sendGroupBookingConfirmed = async (data: GroupBookingConfirmedEmailData) =
   }
 };
 
-// Hàm gửi email thông báo admin đã hoàn tiền group booking
+/**
+ * Gửi email thông báo admin đã hoàn tiền group booking:
+ * Thông báo số tiền hoàn lại và thời gian xử lý
+ */
 const sendGroupBookingRefunded = async (data: GroupBookingRefundedEmailData) => {
   try {
     console.log(`📧 Email service: Bắt đầu gửi email hoàn tiền group booking đến ${data.to}`);
     
     const transporter = createTransporter();
     
-    // Verify transporter connection
+    // Xác minh kết nối transporter
     await transporter.verify();
     console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
     
-    // Format ngày tháng
+    // Định dạng ngày tháng
     const formatDate = (date: Date) => {
       return new Date(date).toLocaleString("vi-VN", {
         year: "numeric",
@@ -1052,7 +1077,7 @@ const sendGroupBookingRefunded = async (data: GroupBookingRefundedEmailData) => 
       });
     };
 
-    // Format tiền VND
+    // Định dạng tiền VND
     const formatCurrency = (amount: number) => {
       return new Intl.NumberFormat("vi-VN", {
         style: "currency",
@@ -1143,18 +1168,21 @@ const sendGroupBookingRefunded = async (data: GroupBookingRefundedEmailData) => 
   }
 };
 
-// Hàm gửi email thông báo thanh toán đủ toàn bộ group booking kèm hóa đơn
+/**
+ * Gửi email thông báo thanh toán đủ toàn bộ group booking kèm hóa đơn:
+ * Gửi email xác nhận thanh toán đủ và đính kèm PDF hóa đơn nếu có
+ */
 const sendGroupBookingFullPayment = async (data: GroupBookingFullPaymentEmailData) => {
   try {
     console.log(`📧 Email service: Bắt đầu gửi email thanh toán đủ group booking đến ${data.to}`);
     
     const transporter = createTransporter();
     
-    // Verify transporter connection
+    // Xác minh kết nối transporter
     await transporter.verify();
     console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
     
-    // Format ngày tháng
+    // Định dạng ngày tháng
     const formatDate = (date: Date) => {
       return new Date(date).toLocaleString("vi-VN", {
         year: "numeric",
@@ -1165,7 +1193,7 @@ const sendGroupBookingFullPayment = async (data: GroupBookingFullPaymentEmailDat
       });
     };
 
-    // Format tiền VND
+    // Định dạng tiền VND
     const formatCurrency = (amount: number) => {
       return new Intl.NumberFormat("vi-VN", {
         style: "currency",
@@ -1180,7 +1208,7 @@ const sendGroupBookingFullPayment = async (data: GroupBookingFullPaymentEmailDat
 
     const attachments: any[] = [];
     
-    // Đính kèm PDF hóa đơn nếu có
+    // Đính kèm file PDF hóa đơn nếu có
     if (data.invoicePdfBuffer && data.invoiceFileName) {
       attachments.push({
         filename: data.invoiceFileName,
@@ -1277,18 +1305,20 @@ const sendGroupBookingFullPayment = async (data: GroupBookingFullPaymentEmailDat
   }
 };
 
-// Hàm gửi email xác nhận đăng ký
+/**
+ * Gửi email xác nhận đăng ký: gửi email với link xác nhận email để kích hoạt tài khoản
+ */
 const sendEmailVerification = async (data: EmailVerificationData) => {
   try {
     console.log(`📧 Email service: Bắt đầu gửi email xác nhận đến ${data.to}`);
     
     const transporter = createTransporter();
     
-    // Verify transporter connection
+    // Xác minh kết nối transporter
     await transporter.verify();
     console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
     
-    // Tạo link xác nhận (cần lấy từ env hoặc config)
+    // Tạo link xác nhận email (lấy từ env hoặc config)
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
     const verificationLink = `${frontendUrl}/auth/verify-email?token=${data.verificationToken}`;
 
@@ -1412,14 +1442,16 @@ interface PasswordResetOTPData {
   otp: string;
 }
 
-// Hàm gửi email OTP đặt lại mật khẩu
+/**
+ * Gửi email OTP đặt lại mật khẩu: gửi mã OTP 6 số để người dùng đặt lại mật khẩu
+ */
 const sendPasswordResetOTP = async (data: PasswordResetOTPData) => {
   try {
     console.log(`📧 Email service: Bắt đầu gửi email OTP đến ${data.to}`);
     
     const transporter = createTransporter();
     
-    // Verify transporter connection
+    // Xác minh kết nối transporter
     await transporter.verify();
     console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
 
@@ -1543,14 +1575,17 @@ interface PasswordResetConfirmationData {
   fullName: string;
 }
 
-// Hàm gửi email xác nhận đã đặt lại mật khẩu thành công
+/**
+ * Gửi email xác nhận đã đặt lại mật khẩu thành công:
+ * Thông báo mật khẩu đã được thay đổi và cảnh báo bảo mật
+ */
 const sendPasswordResetConfirmation = async (data: PasswordResetConfirmationData) => {
   try {
     console.log(`📧 Email service: Bắt đầu gửi email xác nhận đặt lại mật khẩu đến ${data.to}`);
     
     const transporter = createTransporter();
     
-    // Verify transporter connection
+    // Xác minh kết nối transporter
     await transporter.verify();
     console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
 
@@ -1661,18 +1696,21 @@ interface BookingCancellationEmailData {
   cancellationReason?: string;
 }
 
-// Hàm gửi email xác nhận hủy phòng
+/**
+ * Gửi email xác nhận hủy phòng: thông báo đặt phòng đã bị hủy,
+ * bao gồm thông tin hoàn tiền nếu có
+ */
 const sendBookingCancellation = async (data: BookingCancellationEmailData) => {
   try {
     console.log(`📧 Email service: Bắt đầu gửi email hủy phòng đến ${data.to}`);
     
     const transporter = createTransporter();
     
-    // Verify transporter connection
+    // Xác minh kết nối transporter
     await transporter.verify();
     console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
     
-    // Format ngày tháng
+    // Định dạng ngày tháng
     const formatDate = (date: Date) => {
       return new Date(date).toLocaleString("vi-VN", {
         year: "numeric",
@@ -1683,7 +1721,7 @@ const sendBookingCancellation = async (data: BookingCancellationEmailData) => {
       });
     };
 
-    // Format tiền VND
+    // Định dạng tiền VND
     const formatCurrency = (amount: number) => {
       return new Intl.NumberFormat("vi-VN", {
         style: "currency",
@@ -1858,18 +1896,21 @@ interface PaymentConfirmationEmailData {
   invoiceFileName?: string;
 }
 
-// Hàm gửi email xác nhận thanh toán đủ kèm hóa đơn
+/**
+ * Gửi email xác nhận thanh toán đủ kèm hóa đơn:
+ * Gửi email xác nhận thanh toán đủ và đính kèm PDF hóa đơn nếu có
+ */
 const sendPaymentConfirmation = async (data: PaymentConfirmationEmailData) => {
   try {
     console.log(`📧 Email service: Bắt đầu gửi email xác nhận thanh toán đến ${data.to}`);
     
     const transporter = createTransporter();
     
-    // Verify transporter connection
+    // Xác minh kết nối transporter
     await transporter.verify();
     console.log(`✅ Email service: Đã xác minh kết nối Gmail thành công`);
     
-    // Format ngày tháng
+    // Định dạng ngày tháng
     const formatDate = (date: Date) => {
       return new Date(date).toLocaleString("vi-VN", {
         year: "numeric",
@@ -1880,7 +1921,7 @@ const sendPaymentConfirmation = async (data: PaymentConfirmationEmailData) => {
       });
     };
 
-    // Format tiền VND
+    // Định dạng tiền VND
     const formatCurrency = (amount: number) => {
       return new Intl.NumberFormat("vi-VN", {
         style: "currency",
@@ -1890,7 +1931,7 @@ const sendPaymentConfirmation = async (data: PaymentConfirmationEmailData) => {
 
     const attachments: any[] = [];
     
-    // Đính kèm PDF hóa đơn nếu có
+    // Đính kèm file PDF hóa đơn nếu có
     if (data.invoicePdfBuffer && data.invoiceFileName) {
       attachments.push({
         filename: data.invoiceFileName,
