@@ -73,8 +73,17 @@ export function ServicesSection() {
           );
         });
         
-        console.log('Dịch vụ hợp lệ:', validServices);
-        setServices(validServices);
+        // Sắp xếp theo createdAt (mới nhất trước) và chỉ lấy 3 dịch vụ đầu tiên
+        const sortedServices = validServices.sort((a: any, b: any) => {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return dateB - dateA; // Mới nhất trước
+        });
+        
+        const latestServices = sortedServices.slice(0, 3);
+        
+        console.log('3 dịch vụ mới nhất:', latestServices);
+        setServices(latestServices);
       } catch (err: unknown) {
         if (err instanceof Error) {
           if (err.name === 'AbortError') {
