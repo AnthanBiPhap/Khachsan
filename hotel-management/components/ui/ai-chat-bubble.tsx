@@ -199,7 +199,7 @@ export default function AIChatBubble() {
       {isOpen && (
         <div
           data-ai-chat-modal
-          className="fixed bottom-24 right-24 w-96 h-[500px] bg-white shadow-2xl rounded-2xl overflow-hidden flex flex-col z-[1001] animate-in slide-in-from-bottom-4 fade-in duration-300 border border-gray-200"
+          className="fixed bottom-24 right-24 w-[480px] h-[600px] bg-white shadow-2xl rounded-2xl overflow-hidden flex flex-col z-[1001] animate-in slide-in-from-bottom-4 fade-in duration-300 border border-gray-200"
         >
           {/* Chat Header */}
           <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-purple-500 to-pink-600 text-white">
@@ -282,34 +282,90 @@ export default function AIChatBubble() {
             </div>
           </div>
 
-          {/* Quick Suggestions */}
-          {user?.preferences && user.preferences.length > 0 && messages.length <= 1 && (
-            <div className="p-3 border-t bg-gradient-to-r from-purple-50 to-pink-50">
-              <p className="text-xs text-gray-600 font-medium mb-2">💡 Gợi ý nhanh dựa trên sở thích của bạn:</p>
-              <div className="flex flex-wrap gap-2">
-                {user.preferences.map((pref, index) => (
-                  <button
-                    key={index}
-                    onClick={() => {
-                      const suggestions = {
-                        'tham quan': 'Gợi ý địa điểm tham quan nổi tiếng ở Đà Nẵng',
-                        'ăn uống': 'Nhà hàng và món ăn đặc sản Đà Nẵng nào ngon?',
-                        'thể thao': 'Hoạt động thể thao nào phù hợp tại Đà Nẵng?',
-                        'phim ảnh': 'Rạp chiếu phim nào gần Miko Hotel Đà Nẵng?',
-                        'sách': 'Thư viện hoặc quán cà phê đọc sách nào ở Đà Nẵng?',
-                        'game': 'Khu vui chơi game nào thú vị tại Đà Nẵng?',
-                        'du lịch': 'Tour du lịch Đà Nẵng nào hấp dẫn?',
-                        'thư giãn': 'Spa và dịch vụ thư giãn nào tốt tại Miko Hotel?',
-                        'thăm bảo tàng': 'Bảo tàng nào đáng tham quan ở Đà Nẵng?',
-                        'thăm vườn quốc gia': 'Vườn quốc gia nào đẹp gần Đà Nẵng?'
-                      };
-                      setInputMessage(suggestions[pref as keyof typeof suggestions] || `Gợi ý về ${pref} tại Đà Nẵng`);
-                    }}
-                    className="px-3 py-1 bg-white border border-purple-200 rounded-full text-xs text-purple-700 hover:bg-purple-100 transition-colors"
-                  >
-                    {pref}
-                  </button>
-                ))}
+          {/* Quick Suggestions - Luôn hiển thị nếu có preferences */}
+          {user?.preferences && user.preferences.length > 0 && (
+            <div className="p-2 border-t bg-gradient-to-r from-purple-50 to-pink-50 max-h-28 overflow-y-auto">
+              <p className="text-[10px] text-gray-500 mb-1.5 px-1">💡 Gợi ý nhanh:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {user.preferences.map((pref, index) => {
+                  const suggestions: Record<string, string> = {
+                    'tham quan': 'Gợi ý địa điểm tham quan nổi tiếng ở Đà Nẵng',
+                    'ăn uống': 'Nhà hàng và món ăn đặc sản Đà Nẵng nào ngon?',
+                    'thể thao': 'Hoạt động thể thao nào phù hợp tại Đà Nẵng?',
+                    'phim ảnh': 'Rạp chiếu phim nào gần Miko Hotel Đà Nẵng?',
+                    'sách': 'Thư viện hoặc quán cà phê đọc sách nào ở Đà Nẵng?',
+                    'game': 'Khu vui chơi game nào thú vị tại Đà Nẵng?',
+                    'du lịch': 'Tour du lịch Đà Nẵng nào hấp dẫn?',
+                    'thư giãn': 'Spa và dịch vụ thư giãn nào tốt tại Miko Hotel?',
+                    'thăm bảo tàng': 'Bảo tàng nào đáng tham quan ở Đà Nẵng?',
+                    'thăm vườn quốc gia': 'Vườn quốc gia nào đẹp gần Đà Nẵng?'
+                  };
+                  
+                  const question = suggestions[pref] || `Gợi ý về ${pref} tại Đà Nẵng`;
+                  
+                  return (
+                    <button
+                      key={index}
+                      onClick={async () => {
+                        // Tự động gửi câu hỏi
+                        const userMessage = {
+                          id: Date.now().toString(),
+                          text: question,
+                          isUser: true,
+                          timestamp: new Date()
+                        };
+
+                        setMessages(prev => [...prev, userMessage]);
+                        setIsLoadingAI(true);
+
+                        try {
+                          const response = await fetch('/api/ai-chat', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              message: question,
+                              locationInfo: {
+                                name: 'Miko Hotel Đà Nẵng',
+                                address: 'Đà Nẵng, Việt Nam',
+                                type: 'khách sạn và dịch vụ du lịch tại Đà Nẵng'
+                              },
+                              userPreferences: user?.preferences || []
+                            })
+                          });
+
+                          const data = await response.json();
+                          const aiResponse = data.response || 'Xin lỗi, tôi không thể trả lời câu hỏi này.';
+                          
+                          const aiMessage = {
+                            id: (Date.now() + 1).toString(),
+                            text: aiResponse,
+                            isUser: false,
+                            timestamp: new Date()
+                          };
+
+                          setMessages(prev => [...prev, aiMessage]);
+                        } catch (error) {
+                          console.error('Error calling AI:', error);
+                          const errorMessage = {
+                            id: (Date.now() + 1).toString(),
+                            text: 'Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.',
+                            isUser: false,
+                            timestamp: new Date()
+                          };
+                          setMessages(prev => [...prev, errorMessage]);
+                        } finally {
+                          setIsLoadingAI(false);
+                        }
+                      }}
+                      disabled={isLoadingAI}
+                      className="px-2 py-1 bg-white border border-purple-200 rounded-lg text-[10px] text-purple-600 hover:bg-purple-50 hover:border-purple-300 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-sm"
+                    >
+                      {pref}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
