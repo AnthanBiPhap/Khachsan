@@ -36,3 +36,23 @@ export const deleteRoom = async (id: string) => {
   if (!res.ok) throw new Error("Failed to delete room");
   return true; // assume 204 No Content
 };
+
+export const getAvailableRooms = async (checkIn: string, checkOut: string, extendHours: number = 0) => {
+  try {
+    const params = new URLSearchParams({
+      checkIn,
+      checkOut,
+      extendHours: extendHours.toString(),
+    });
+    const res = await fetch(`${env.API_URL}/api/v1/rooms/available?${params}`);
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.message || "Failed to fetch available rooms");
+    }
+    const response = await res.json();
+    return response.data?.rooms || [];
+  } catch (error) {
+    console.error("Error fetching available rooms:", error);
+    throw error;
+  }
+};

@@ -9,17 +9,23 @@ import {
   Tag,
   Image,
   Row,
-  Col
+  Col,
+  Card,
+  DatePicker,
+  List,
+  Empty,
+  Spin
 } from "antd";
 import { useEffect, useState } from "react";
-import { HomeOutlined, PlusOutlined } from "@ant-design/icons";
+import { HomeOutlined, PlusOutlined, CalendarOutlined } from "@ant-design/icons";
 import type { Room } from "../../types/room";
-import { fetchRooms, deleteRoom } from "../../services/rooms.service";
+import { fetchRooms, deleteRoom, getAvailableRooms } from "../../services/rooms.service";
 import { env } from "../../constanst/getEnvs";
 import { roomsColumns } from "../../components/Rooms/RoomsColumns";
 import RoomsForm from "../../components/Rooms/RoomsForm";
 import RoomSearchFilter from "../../components/Rooms/RoomSearchFilter";
 import { useAuthStore } from "../../stores/authStore";
+import type { Dayjs } from "dayjs";
 
 export default function RoomsPage() {
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -41,6 +47,11 @@ export default function RoomsPage() {
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const user = useAuthStore.getState().user;
   const isStaff = user?.role === 'staff';
+  
+  // Available rooms states
+  const [dateRange, setDateRange] = useState<[Dayjs | null, Dayjs | null]>([null, null]);
+  const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
+  const [loadingAvailableRooms, setLoadingAvailableRooms] = useState(false);
 
   const loadRooms = async (page = 1, limit = 10) => {
     try {
@@ -77,7 +88,7 @@ export default function RoomsPage() {
       filtered = filtered.filter(room =>
         room.roomNumber?.toLowerCase().includes(searchLower) ||
         room.typeId?.name?.toLowerCase().includes(searchLower) ||
-        room.description?.toLowerCase().includes(searchLower)
+        (room as any).description?.toLowerCase().includes(searchLower)
       );
     }
 
@@ -97,6 +108,33 @@ export default function RoomsPage() {
 
     setFilteredRooms(filtered);
   }, [rooms, searchText, filterType, filterStatus]);
+
+  // Function để tìm phòng trống trong khoảng thời gian
+  const handleSearchAvailableRooms = async () => {
+    if (!dateRange[0] || !dateRange[1]) {
+      message.warning("Vui lòng chọn khoảng thời gian");
+      return;
+    }
+
+    setLoadingAvailableRooms(true);
+    try {
+      const checkIn = dateRange[0].hour(14).minute(0).second(0).toISOString();
+      const checkOut = dateRange[1].hour(12).minute(0).second(0).toISOString();
+      const rooms = await getAvailableRooms(checkIn, checkOut, 0);
+      setAvailableRooms(rooms);
+      if (rooms.length === 0) {
+        message.info("Không có phòng trống trong khoảng thời gian này");
+      } else {
+        message.success(`Tìm thấy ${rooms.length} phòng trống`);
+      }
+    } catch (error: any) {
+      console.error("Error fetching available rooms:", error);
+      message.error(error.message || "Không thể tải danh sách phòng trống");
+      setAvailableRooms([]);
+    } finally {
+      setLoadingAvailableRooms(false);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     try {
@@ -182,6 +220,109 @@ export default function RoomsPage() {
         totalCount={rooms.length}
         filteredCount={filteredRooms.length}
       />
+
+      {/* Tìm phòng trống trong khoảng thời gian */}
+      <Card
+        title={
+          <Space>
+            <CalendarOutlined />
+            <span>Tìm phòng trống theo khoảng thời gian</span>
+          </Space>
+        }
+        style={{ marginBottom: 16 }}
+      >
+        <Space direction="vertical" style={{ width: "100%" }}>
+          <Space>
+            <DatePicker.RangePicker
+              value={dateRange}
+              onChange={(dates) => setDateRange(dates as [Dayjs | null, Dayjs | null])}
+              format="DD/MM/YYYY"
+              placeholder={["Từ ngày", "Đến ngày"]}
+              style={{ width: 300 }}
+            />
+            <Button
+              type="primary"
+              onClick={handleSearchAvailableRooms}
+              loading={loadingAvailableRooms}
+              icon={<CalendarOutlined />}
+            >
+              Tìm kiếm
+            </Button>
+            {dateRange[0] && dateRange[1] && (
+              <Button
+                onClick={() => {
+                  setDateRange([null, null]);
+                  setAvailableRooms([]);
+                }}
+              >
+                Xóa
+              </Button>
+            )}
+          </Space>
+
+          {loadingAvailableRooms && (
+            <div style={{ textAlign: "center", padding: 20 }}>
+              <Spin size="large" />
+            </div>
+          )}
+
+          {!loadingAvailableRooms && availableRooms.length > 0 && (
+            <div>
+              <Typography.Text strong style={{ fontSize: 16, marginBottom: 12, display: "block" }}>
+                Tìm thấy {availableRooms.length} phòng trống:
+              </Typography.Text>
+              <List
+                grid={{ gutter: 16, xs: 1, sm: 2, md: 3, lg: 4 }}
+                dataSource={availableRooms}
+                renderItem={(room) => (
+                  <List.Item>
+                    <Card
+                      size="small"
+                      hoverable
+                      onClick={() => {
+                        setDetailItem(room);
+                        setOpenDetail(true);
+                      }}
+                      style={{ cursor: "pointer" }}
+                    >
+                      <Space direction="vertical" style={{ width: "100%" }}>
+                        <Typography.Text strong style={{ fontSize: 16 }}>
+                          Phòng {room.roomNumber}
+                        </Typography.Text>
+                        <Typography.Text type="secondary">
+                          {room.typeId?.name || (room.typeId as any)?.name || "-"}
+                        </Typography.Text>
+                        {room.typeId && (room.typeId as any).capacity && (
+                          <Typography.Text>
+                            Sức chứa: {(room.typeId as any).capacity} người
+                          </Typography.Text>
+                        )}
+                        {room.typeId && (room.typeId as any).pricePerNight && (
+                          <Typography.Text strong style={{ color: "#1890ff" }}>
+                            {new Intl.NumberFormat("vi-VN", {
+                              style: "currency",
+                              currency: "VND",
+                            }).format((room.typeId as any).pricePerNight)}
+                            /đêm
+                          </Typography.Text>
+                        )}
+                        <Tag color="green">Sẵn sàng</Tag>
+                      </Space>
+                    </Card>
+                  </List.Item>
+                )}
+              />
+            </div>
+          )}
+
+          {!loadingAvailableRooms && dateRange[0] && dateRange[1] && availableRooms.length === 0 && (
+            <Empty
+              description="Không có phòng trống trong khoảng thời gian này"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+            />
+          )}
+        </Space>
+      </Card>
 
       <Table
         columns={roomsColumns(
