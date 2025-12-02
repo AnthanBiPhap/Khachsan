@@ -214,12 +214,52 @@ const printInvoice = async (invoiceId: string) => {
   doc.registerFont("NotoSans", fontPath);
   doc.font("NotoSans");
 
+  // Đường dẫn đến logo khách sạn
+  // Thử nhiều đường dẫn để tương thích với cả development và production
+  const possibleLogoPaths = [
+    path.join(__dirname, "../../../hotel-management/public/718f64e051ef2e1e1390493be6f8a29b.jpg"), // Từ dist/services
+    path.join(process.cwd(), "hotel-management/public/718f64e051ef2e1e1390493be6f8a29b.jpg"), // Từ root project
+    path.join(__dirname, "../../../../hotel-management/public/718f64e051ef2e1e1390493be6f8a29b.jpg"), // Từ src/services
+  ];
+  
+  let logoPath: string | null = null;
+  for (const possiblePath of possibleLogoPaths) {
+    if (fs.existsSync(possiblePath)) {
+      logoPath = possiblePath;
+      break;
+    }
+  }
+  
+  // --- Header: Logo và Tiêu đề hóa đơn ---
+  // Vẽ logo nếu file tồn tại
+  if (logoPath) {
+    try {
+      // Kích thước logo (hình vuông, nhỏ hơn)
+      const logoSize = 80; // Chiều rộng và chiều cao bằng nhau (hình vuông)
+      
+      // Tính toán vị trí để căn giữa logo
+      const pageWidth = (doc.page as any).width || 595.28; // A4 width in pt
+      const margin = 50;
+      const logoX = (pageWidth - logoSize) / 2; // Căn giữa
+      const logoY = margin - 10; // Đẩy lên trên một chút (giảm 10px)
+      
+      // Vẽ logo (hình vuông)
+      doc.image(logoPath, logoX, logoY, { width: logoSize, height: logoSize });
+      
+      // Di chuyển xuống dưới logo
+      doc.y = logoY + logoSize + 15;
+    } catch (error) {
+      console.error("Error loading logo:", error);
+      // Nếu không load được logo, tiếp tục mà không có logo
+    }
+  }
+
   // Lấy thông tin customer, booking và group booking
   const customer = invoice.customerId as { fullName?: string; email?: string; phoneNumber?: string };
   const booking = invoice.bookingId as any;
   const groupBooking = invoice.groupBookingId as any;
 
-  // --- Header: Tiêu đề hóa đơn ---
+  // --- Tiêu đề hóa đơn ---
   doc
     .fontSize(20)
     .text("HÓA ĐƠN THANH TOÁN KHÁCH SẠN MIKO", { align: "center", underline: true })
@@ -516,9 +556,11 @@ const printInvoice = async (invoiceId: string) => {
 
   // Cột bên phải: Giám đốc khách sạn
   const directorTitle = "Giám đốc khách sạn";
+  const directorName = "Nguyễn Văn Tứ";
   const rightX = margin + columnWidth;
   doc.font("NotoSans").fontSize(12).text(signDate, rightX, undefined, { width: columnWidth, align: "right" });
-  doc.text(directorTitle, rightX, undefined, { width: columnWidth, align: "right" }).moveDown(3);
+  doc.text(directorTitle, rightX, undefined, { width: columnWidth, align: "right" });
+  doc.text(directorName, rightX, undefined, { width: columnWidth, align: "right" }).moveDown(3);
   // Vẽ dòng ký giám đốc
   const rightX1 = margin + columnWidth + 40;
   const rightX2 = margin + columnWidth * 2;
