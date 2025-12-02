@@ -1,8 +1,39 @@
 "use client"
 
 import { MapPin, Phone, Mail, Facebook, MessageSquare, MessageCircle } from "lucide-react"
+import { useEffect, useState } from "react"
+
+interface Service {
+  _id: string;
+  name: string;
+  description?: string;
+  basePrice?: number;
+}
 
 export function Footer() {
+  const [services, setServices] = useState<Service[]>([]);
+
+  useEffect(() => {
+    const fetchServices = async () => {
+      try {
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
+        const API_URL = `${API_BASE_URL.replace(/\/$/, '')}/api/v1`;
+        
+        const response = await fetch(`${API_URL}/services?status=active&limit=4`);
+        const data = await response.json();
+        
+        const servicesList = data?.data?.data || data?.data?.services || [];
+        setServices(servicesList.slice(0, 4)); // Lấy 4 dịch vụ đầu tiên
+      } catch (error) {
+        console.error('Error fetching services:', error);
+        // Fallback nếu API lỗi
+        setServices([]);
+      }
+    };
+
+    fetchServices();
+  }, []);
+
   return (
     <footer className="bg-gray-900 text-white py-12">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -20,7 +51,7 @@ export function Footer() {
               </div>
               <div className="flex items-center text-gray-300">
                 <Phone className="h-4 w-4 mr-2" />
-                <span className="text-sm">1900 1234</span>
+                <span className="text-sm">0704627402</span>
               </div>
               <div className="flex items-center text-gray-300">
                 <Mail className="h-4 w-4 mr-2" />
@@ -33,26 +64,42 @@ export function Footer() {
           <div>
             <h3 className="font-semibold mb-4">Dịch vụ</h3>
             <ul className="space-y-2 text-gray-300">
-              <li>
-                <a href="#" className="hover:text-white">
-                  Đặt phòng khách sạn
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-white">
-                  Tour du lịch
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-white">
-                  Ăn uống
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-white">
-                  Xe đưa đón
-                </a>
-              </li>
+              {services.length > 0 ? (
+                services.map((service) => (
+                  <li key={service._id}>
+                    <a 
+                      href={`/service-detail/${service._id}`} 
+                      className="hover:text-white transition-colors"
+                    >
+                      {service.name}
+                    </a>
+                  </li>
+                ))
+              ) : (
+                // Fallback nếu chưa load được hoặc API lỗi
+                <>
+                  <li>
+                    <a href="#" className="hover:text-white">
+                      Đặt phòng khách sạn
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" className="hover:text-white">
+                      Tour du lịch
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" className="hover:text-white">
+                      Ăn uống
+                    </a>
+                  </li>
+                  <li>
+                    <a href="#" className="hover:text-white">
+                      Xe đưa đón
+                    </a>
+                  </li>
+                </>
+              )}
             </ul>
           </div>
 
@@ -96,7 +143,7 @@ export function Footer() {
                    className="text-gray-300 hover:text-blue-500 transition-colors">
                   <MessageSquare className="h-6 w-6" />
                 </a>
-                <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer"
+                <a href="https://www.tiktok.com/@paimon1108" target="_blank" rel="noopener noreferrer"
                    className="text-gray-300 hover:text-pink-500 transition-colors">
                   <MessageCircle className="h-6 w-6" />
                 </a>
@@ -104,7 +151,7 @@ export function Footer() {
               <div className="mt-2">
                 <p className="text-sm text-gray-300 mb-2">Hỗ trợ 24/7</p>
                 <a href="tel:0905123456" className="text-white font-medium hover:underline">
-                  0905 123 456
+                  0704627402
                 </a>
               </div>
             </div>
