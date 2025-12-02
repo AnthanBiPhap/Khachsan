@@ -20,6 +20,7 @@ import {
 import Link from 'next/link';
 import { bookingService } from '@/services/bookingService';
 import { groupBookingService, type GroupBooking } from '@/services/groupBookingService';
+import { Footer } from '@/components/footer';
 
 const GROUP_DEPOSIT_RATE = Number(process.env.NEXT_PUBLIC_GROUP_DEPOSIT_RATE ?? 0.5);
 const GROUP_DEPOSIT_PERCENT_LABEL = `${Math.round(GROUP_DEPOSIT_RATE * 100)}%`;
@@ -390,14 +391,15 @@ export default function MyBookingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Lịch sử đặt phòng
-          </h1>
-          <p className="text-gray-600">Xem và quản lý các đặt phòng của bạn</p>
-        </div>
+    <>
+      <div className="bg-gray-50 min-h-screen">
+        <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              Lịch sử đặt phòng
+            </h1>
+            <p className="text-gray-600">Xem và quản lý các đặt phòng của bạn</p>
+          </div>
 
         <div className="space-y-6">
           {bookings.map((booking) => (
@@ -1129,7 +1131,11 @@ export default function MyBookingsPage() {
             })}
           </div>
         )}
+        </div>
       </div>
-    </div>
+
+      {/* Footer */}
+      <Footer />
+    </>
   );
 }
