@@ -5,7 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Mail, Phone, MapPin, Clock, Facebook, Instagram, MessageSquare } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
+import { Footer } from '@/components/footer';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -32,13 +34,14 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-12 max-w-6xl">
-      <div className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-gray-900 mb-4">Liên hệ với chúng tôi</h1>
-        <p className="text-xl text-gray-600">Mọi thắc mắc xin vui lòng liên hệ qua thông tin dưới đây</p>
-      </div>
+    <div className="bg-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">Liên hệ với chúng tôi</h1>
+          <p className="text-xl text-gray-600">Mọi thắc mắc xin vui lòng liên hệ qua thông tin dưới đây</p>
+        </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* Left Column - Contact Info */}
         <div className="space-y-8">
           {/* Basic Information */}
@@ -136,8 +139,18 @@ export default function ContactPage() {
             <div className="mt-6">
               <h3 className="font-medium text-gray-900 mb-2">Quét mã Zalo</h3>
               <div className="bg-gray-100 p-4 rounded-lg inline-block">
-                <div className="w-32 h-32 bg-white flex items-center justify-center text-gray-400">
-                  [Zalo QR Code]
+                <div className="relative w-32 h-32">
+                  <Image
+                    src="/zalo-qr.jpg"
+                    alt="Zalo QR Code"
+                    fill
+                    className="object-contain rounded"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null;
+                      target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlZWVlZWUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBhbGlnbm1lbnQtYmFzZWxpbmU9Im1pZGRsZSIgZmlsbD0iIzk5OSI+UUVSIENvZGU8L3RleHQ+PC9zdmc+';
+                    }}
+                  />
                 </div>
               </div>
             </div>
@@ -253,7 +266,11 @@ export default function ContactPage() {
             </div>
           </div>
         </div>
+        </div>
       </div>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }
