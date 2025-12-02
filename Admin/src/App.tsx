@@ -35,7 +35,8 @@ function PrivateRoute({ children }: { children: React.ReactNode }) {
 // Function to check if user has access to specific route
 function hasAccessToRoute(userRole: string, path: string): boolean {
   if (userRole === 'admin') {
-    return true; // Admin có quyền truy cập tất cả
+    // Admin có quyền truy cập tất cả trừ Chat
+    return path !== '/chat';
   } else if (userRole === 'staff') {
     // Staff chỉ được truy cập các route cụ thể
     const allowedPaths = ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms', '/room-types'];

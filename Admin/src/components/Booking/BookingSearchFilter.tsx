@@ -71,9 +71,12 @@ export default function BookingSearchFilter({
           >
             <Select.Option value="all">Tất cả trạng thái</Select.Option>
             <Select.Option value="pending">Chờ thanh toán</Select.Option>
+            <Select.Option value="partial_paid">Đã thanh toán một phần</Select.Option>
             <Select.Option value="paid">Đã thanh toán</Select.Option>
             <Select.Option value="failed">Thanh toán thất bại</Select.Option>
+            <Select.Option value="refund_requested">Đang xử lý hoàn tiền</Select.Option>
             <Select.Option value="refunded">Đã hoàn tiền</Select.Option>
+            <Select.Option value="cancelled">Đã hủy</Select.Option>
           </Select>
         </Col>
         <Col xs={24} sm={12} md={6}>

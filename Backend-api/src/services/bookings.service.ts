@@ -311,9 +311,41 @@ const create = async (payload: any) => {
     // Nếu lỗi, sử dụng giá gốc
   }
 
-  // Tính số tiền thanh toán (50% tổng giá trị)
-  const paidAmount = Math.round(finalTotalPrice * 0.5);
-  const remainingAmount = finalTotalPrice - paidAmount;
+  // Tính số tiền thanh toán dựa trên paymentStatus từ payload
+  // Với booking online (có customerId): luôn là partial_paid (50%) - khách đặt online chỉ thanh toán đặt cọc
+  // Với booking walk-in (không có customerId): có thể chọn paid, partial_paid hoặc pending
+  const isOnlineBooking = !!payload.customerId;
+  let paymentStatus: string;
+  let paidAmount: number;
+  let remainingAmount: number;
+
+  if (isOnlineBooking) {
+    // Booking online: luôn là partial_paid (50%) - khách đặt online chỉ thanh toán đặt cọc
+    paymentStatus = "partial_paid";
+    paidAmount = Math.round(finalTotalPrice * 0.5);
+    remainingAmount = finalTotalPrice - paidAmount;
+  } else {
+    // Booking walk-in: sử dụng paymentStatus từ payload hoặc mặc định là partial_paid
+    paymentStatus = payload.paymentStatus || "partial_paid";
+    
+    if (paymentStatus === "paid") {
+      // Nếu đã thanh toán đủ, set paidAmount = totalPrice và remainingAmount = 0
+      paidAmount = finalTotalPrice;
+      remainingAmount = 0;
+    } else if (paymentStatus === "partial_paid") {
+      // Nếu thanh toán một phần, mặc định là 50%
+      paidAmount = Math.round(finalTotalPrice * 0.5);
+      remainingAmount = finalTotalPrice - paidAmount;
+    } else if (paymentStatus === "pending") {
+      // Nếu chưa thanh toán, set paidAmount = 0 và remainingAmount = totalPrice
+      paidAmount = 0;
+      remainingAmount = finalTotalPrice;
+    } else {
+      // Các trạng thái khác (failed, refunded, etc.), mặc định là pending
+      paidAmount = 0;
+      remainingAmount = finalTotalPrice;
+    }
+  }
 
   const booking = new Booking({
     customerId: payload.customerId || undefined,
@@ -326,7 +358,7 @@ const create = async (payload: any) => {
     paidAmount: paidAmount,
     remainingAmount: remainingAmount,
     source: payload.source || (payload.customerId ? "online" : "walk_in"),
-    paymentStatus: "partial_paid", // Luôn là partial_paid vì chỉ thanh toán 50% ban đầu
+    paymentStatus: paymentStatus,
     notes: payload.notes || "",
     services: services.map((s: any) => ({
       serviceId: s.serviceId,

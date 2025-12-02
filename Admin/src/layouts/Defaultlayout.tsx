@@ -75,7 +75,8 @@ const allMenuItems = [
 // Function to get menu items based on user role
 const getMenuItemsByRole = (userRole: string): MenuItem[] => {
   if (userRole === 'admin') {
-    return allMenuItems;
+    // Admin không có menu Chat
+    return allMenuItems.filter(item => item.key !== '/chat');
   } else if (userRole === 'staff') {
     // Staff chỉ được xem: Users, Bookings, Booking Status, Guests, Service Bookings, Invoices, Group Bookings, Chat
     return allMenuItems.filter(item => 

@@ -1,11 +1,9 @@
 import { Button, Dropdown, message, Modal, DatePicker, Space, Typography, Radio, Select } from "antd";
-import { DownloadOutlined, FileExcelOutlined, FilePdfOutlined, CalendarOutlined } from "@ant-design/icons";
+import { DownloadOutlined, FileExcelOutlined, CalendarOutlined } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { useState } from "react";
 import dayjs from 'dayjs';
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import type { Booking } from "../../types/booking";
 
 interface ExportButtonProps {
@@ -23,7 +21,7 @@ interface ExportButtonProps {
 export default function ExportButton({ bookings }: Omit<ExportButtonProps, 'statistics'>) {
   const [isDateModalVisible, setIsDateModalVisible] = useState(false);
   const [dateRange, setDateRange] = useState<[dayjs.Dayjs | null, dayjs.Dayjs | null]>([null, null]);
-  const [pendingExportType, setPendingExportType] = useState<'excel' | 'pdf' | null>(null);
+  const [pendingExportType, setPendingExportType] = useState<'excel' | null>(null);
   const [dateRangeType, setDateRangeType] = useState<'custom' | 'month' | 'year'>('custom');
   const [selectedMonth, setSelectedMonth] = useState<number>(new Date().getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
@@ -53,18 +51,32 @@ export default function ExportButton({ bookings }: Omit<ExportButtonProps, 'stat
     if (!startDate && !endDate) return bookings;
     
     return bookings.filter(booking => {
+      // Kiểm tra booking có checkIn không
+      if (!booking.checkIn) return false;
+      
       // Sử dụng ngày đặt phòng (checkIn) thay vì ngày tạo booking (createdAt)
-      const bookingDate = dayjs(booking.checkIn);
+      // Format về YYYY-MM-DD để so sánh chính xác theo ngày, không phụ thuộc vào giờ
+      const bookingDateStr = dayjs(booking.checkIn).format('YYYY-MM-DD');
+      const bookingDate = dayjs(bookingDateStr);
       
       if (startDate && endDate) {
-        // Kiểm tra ngày đặt phòng có nằm trong khoảng thời gian không
-        const isAfterStart = bookingDate.isAfter(startDate) || bookingDate.isSame(startDate, 'day');
-        const isBeforeEnd = bookingDate.isBefore(endDate) || bookingDate.isSame(endDate, 'day');
-        return isAfterStart && isBeforeEnd;
+        // Format về YYYY-MM-DD để so sánh chính xác
+        const startDateStr = startDate.format('YYYY-MM-DD');
+        const endDateStr = endDate.format('YYYY-MM-DD');
+        const normalizedStartDate = dayjs(startDateStr);
+        const normalizedEndDate = dayjs(endDateStr);
+        
+        // Kiểm tra ngày đặt phòng có nằm trong khoảng thời gian không (bao gồm cả 2 đầu)
+        return (bookingDate.isAfter(normalizedStartDate) || bookingDate.isSame(normalizedStartDate, 'day')) &&
+               (bookingDate.isBefore(normalizedEndDate) || bookingDate.isSame(normalizedEndDate, 'day'));
       } else if (startDate) {
-        return bookingDate.isAfter(startDate) || bookingDate.isSame(startDate, 'day');
+        const startDateStr = startDate.format('YYYY-MM-DD');
+        const normalizedStartDate = dayjs(startDateStr);
+        return bookingDate.isAfter(normalizedStartDate) || bookingDate.isSame(normalizedStartDate, 'day');
       } else if (endDate) {
-        return bookingDate.isBefore(endDate) || bookingDate.isSame(endDate, 'day');
+        const endDateStr = endDate.format('YYYY-MM-DD');
+        const normalizedEndDate = dayjs(endDateStr);
+        return bookingDate.isBefore(normalizedEndDate) || bookingDate.isSame(normalizedEndDate, 'day');
       }
       
       return true;
@@ -218,12 +230,12 @@ export default function ExportButton({ bookings }: Omit<ExportButtonProps, 'stat
       const guestCount = booking.guestCount || booking.guests?.length || 0;
       analysis.guestCountDistribution[guestCount] = (analysis.guestCountDistribution[guestCount] || 0) + 1;
 
-      // Ngày cao điểm
-      const dayOfWeek = dayjs(booking.createdAt).format('dddd');
+      // Ngày cao điểm (dựa trên ngày đặt phòng checkIn)
+      const dayOfWeek = dayjs(booking.checkIn).format('dddd');
       analysis.peakDays[dayOfWeek] = (analysis.peakDays[dayOfWeek] || 0) + 1;
 
-      // Doanh thu theo tháng
-      const month = dayjs(booking.createdAt).format('YYYY-MM');
+      // Doanh thu theo tháng (dựa trên ngày đặt phòng checkIn)
+      const month = dayjs(booking.checkIn).format('YYYY-MM');
       analysis.revenueByMonth[month] = (analysis.revenueByMonth[month] || 0) + (booking.totalPrice || 0);
     });
 
@@ -323,103 +335,17 @@ export default function ExportButton({ bookings }: Omit<ExportButtonProps, 'stat
   };
 
 
-  const exportToPDF = (filteredBookings?: Booking[]) => {
-    try {
-      const doc = new jsPDF();
-      const dataToUse = filteredBookings || bookings;
-      const filteredStats = calculateFilteredStatistics(dataToUse, dateRangeType, selectedMonth, selectedYear);
-      
-      // Tiêu đề
-      doc.setFontSize(20);
-      doc.text(removeVietnameseAccents('BÁO CÁO BOOKING'), 14, 22);
-      
-      // Thông tin thống kê
-      doc.setFontSize(12);
-      doc.text(`${removeVietnameseAccents('Ngày xuất')}: ${new Date().toLocaleDateString('vi-VN')}`, 14, 35);
-      doc.text(`${removeVietnameseAccents('Tổng số booking')}: ${dataToUse.length}`, 14, 45);
-      doc.text(`${removeVietnameseAccents('Khách đang ở')}: ${filteredStats.currentGuests}`, 14, 55);
-      
-      // Xác định label cho doanh thu
-      let revenueLabel = 'Doanh thu tháng này';
-      if (dateRangeType === 'month' && selectedMonth && selectedYear) {
-        revenueLabel = `Doanh thu tháng ${selectedMonth}/${selectedYear}`;
-      } else if (dateRangeType === 'year' && selectedYear) {
-        revenueLabel = `Doanh thu năm ${selectedYear}`;
-      } else if (dateRangeType === 'custom' && dateRange[0] && dateRange[1]) {
-        revenueLabel = `Doanh thu từ ${dateRange[0].format('DD/MM/YYYY')} đến ${dateRange[1].format('DD/MM/YYYY')}`;
-      }
-      doc.text(`${removeVietnameseAccents(revenueLabel)}: ${formatCurrency(filteredStats.monthRevenue)}`, 14, 65);
-      
-      // Bảng dữ liệu
-      const tableData = dataToUse.map(booking => {
-        const mainGuest = booking.guests?.find(guest => guest.isMainGuest) || booking.guests?.[0];
-        const customerName = booking.customerId?.fullName || mainGuest?.fullName || '-';
-        
-        return [
-          booking._id.substring(0, 8) + '...',
-          customerName,
-          (booking.roomId as { roomNumber?: string })?.roomNumber || '-',
-          booking.checkIn ? formatDate(booking.checkIn) : '-',
-          booking.checkOut ? formatDate(booking.checkOut) : '-',
-          booking.guestCount || booking.guests?.length || 0,
-          formatCurrency(booking.totalPrice || 0),
-          booking.paymentStatus || '-'
-        ];
-      });
-
-      autoTable(doc, {
-        startY: 80,
-        head: [[
-          removeVietnameseAccents('Mã'), 
-          removeVietnameseAccents('Khách hàng'), 
-          removeVietnameseAccents('Phòng'), 
-          removeVietnameseAccents('Nhận'), 
-          removeVietnameseAccents('Trả'), 
-          removeVietnameseAccents('Số khách'), 
-          removeVietnameseAccents('Tổng tiền'), 
-          removeVietnameseAccents('Trạng thái')
-        ]],
-        body: tableData,
-        styles: { fontSize: 8 },
-        headStyles: { fillColor: [24, 144, 255] },
-        margin: { top: 80 }
-      });
-
-      // Thống kê chi tiết
-      doc.setFontSize(14);
-      const finalY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
-      doc.text(removeVietnameseAccents('THỐNG KÊ CHI TIẾT'), 14, finalY + 20);
-      
-      autoTable(doc, {
-        startY: finalY + 25,
-        head: [[removeVietnameseAccents('Chỉ số'), removeVietnameseAccents('Giá trị')]],
-        body: getFilteredStatisticsData(filteredStats),
-        styles: { fontSize: 10 },
-        headStyles: { fillColor: [82, 196, 26] }
-      });
-
-      const dateSuffix = filteredBookings ? `-${dateRange[0]?.format('YYYY-MM-DD')}-${dateRange[1]?.format('YYYY-MM-DD')}` : '';
-      doc.save(`booking-report${dateSuffix}-${new Date().toISOString().split('T')[0]}.pdf`);
-      message.success('Xuất PDF thành công!');
-    } catch (error) {
-      console.error('PDF export error:', error);
-      message.error('Xuất PDF thất bại!');
-    }
-  };
-
   // Function để xử lý export với modal chọn ngày
-  const handleExportWithDate = (type: 'excel' | 'pdf') => {
+  const handleExportWithDate = (type: 'excel') => {
     setDateRangeType('custom');
     setPendingExportType(type);
     setIsDateModalVisible(true);
   };
 
   // Function để xử lý export ngay lập tức
-  const handleExportImmediate = (type: 'excel' | 'pdf') => {
+  const handleExportImmediate = (type: 'excel') => {
     if (type === 'excel') {
       exportToExcel();
-    } else {
-      exportToPDF();
     }
   };
 
@@ -460,7 +386,11 @@ export default function ExportButton({ bookings }: Omit<ExportButtonProps, 'stat
       filteredBookings = getFilteredBookings(startDate, endDate);
     } else {
       // Xuất theo khoảng thời gian tùy chọn - cũng sử dụng ngày đặt phòng
-      filteredBookings = getFilteredBookings(dateRange[0] || undefined, dateRange[1] || undefined);
+      if (!dateRange[0] || !dateRange[1]) {
+        message.error('Vui lòng chọn khoảng thời gian');
+        return;
+      }
+      filteredBookings = getFilteredBookings(dateRange[0], dateRange[1]);
       
       // Debug log cho khoảng thời gian tùy chọn
       if (dateRange[0] && dateRange[1]) {
@@ -487,8 +417,6 @@ export default function ExportButton({ bookings }: Omit<ExportButtonProps, 'stat
     
     if (pendingExportType === 'excel') {
       exportToExcel(filteredBookings);
-    } else {
-      exportToPDF(filteredBookings);
     }
     
     setIsDateModalVisible(false);
@@ -531,41 +459,6 @@ export default function ExportButton({ bookings }: Omit<ExportButtonProps, 'stat
         setIsDateModalVisible(true);
       }
     },
-    {
-      type: 'divider'
-    },
-    {
-      key: 'pdf',
-      label: 'Xuất PDF',
-      icon: <FilePdfOutlined />,
-      onClick: () => handleExportImmediate('pdf')
-    },
-    {
-      key: 'pdf-range',
-      label: 'Xuất PDF theo khoảng thời gian',
-      icon: <CalendarOutlined />,
-      onClick: () => handleExportWithDate('pdf')
-    },
-    {
-      key: 'pdf-month',
-      label: 'Xuất PDF theo tháng',
-      icon: <CalendarOutlined />,
-      onClick: () => {
-        setDateRangeType('month');
-        setPendingExportType('pdf');
-        setIsDateModalVisible(true);
-      }
-    },
-    {
-      key: 'pdf-year',
-      label: 'Xuất PDF theo năm',
-      icon: <CalendarOutlined />,
-      onClick: () => {
-        setDateRangeType('year');
-        setPendingExportType('pdf');
-        setIsDateModalVisible(true);
-      }
-    }
   ];
 
   return (
