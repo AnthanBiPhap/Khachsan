@@ -39,7 +39,8 @@ function hasAccessToRoute(userRole: string, path: string): boolean {
     return path !== '/chat';
   } else if (userRole === 'staff') {
     // Staff chỉ được truy cập các route cụ thể
-    const allowedPaths = ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms', '/room-types'];
+    // Cho phép "/" vì sẽ redirect đến "/bookings"
+    const allowedPaths = ['/', '/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms', '/room-types'];
     return allowedPaths.includes(path);
   } else {
     // User thường chỉ được truy cập dashboard
@@ -82,7 +83,9 @@ function App() {
             element={
               user?.role === 'staff' 
                 ? <Navigate to="/bookings" replace /> 
-                : <RoleProtectedRoute path="/"><Dashboard /></RoleProtectedRoute>
+                : user?.role === 'admin'
+                ? <RoleProtectedRoute path="/"><Dashboard /></RoleProtectedRoute>
+                : <Navigate to="/access-denied" replace />
             } 
           />
           <Route path="users/deleted" element={<RoleProtectedRoute path="/users/deleted"><DeletedUsersPage /></RoleProtectedRoute>} />

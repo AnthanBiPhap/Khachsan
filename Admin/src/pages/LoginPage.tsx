@@ -48,12 +48,21 @@ const LoginPage: React.FC = () => {
          
         // 3. Lưu thông tin profile vào local Storage
         if (responseProfile.status === 200) {
-          setUser(responseProfile.data.data);
+          const userData = responseProfile.data.data;
+          setUser(userData);
+          
+          // Đợi một chút để state được cập nhật
+          await new Promise(resolve => setTimeout(resolve, 100));
           
           // 4. Kiểm tra role admin hoặc staff
-          if (isAdminOrStaff()) {
-            // Chuyển hướng đến trang dashboard
-            navigate('/');
+          const currentUser = useAuthStore.getState().user;
+          if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'staff')) {
+            // Chuyển hướng dựa trên role
+            if (currentUser.role === 'staff') {
+              navigate('/bookings', { replace: true });
+            } else {
+              navigate('/', { replace: true });
+            }
           } else {
             // Xóa tokens và user nếu không có quyền
             setTokens({ accessToken: '', refreshToken: '' });
