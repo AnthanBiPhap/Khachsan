@@ -3,16 +3,14 @@
 
 |Staff|
 start
-:Quản lý service bookings\n(Xem/Cập nhật trạng thái);
+:Quản lý service bookings;
 
 |System|
-if (Cập nhật trạng thái?) then (có)
-    :Cập nhật trạng thái dịch vụ;
-    :Chi phí tự động đồng bộ vào invoice;
-    :result = "SUCCESS";
-else (không)
-    :Lấy danh sách service bookings;
-    :result = "SUCCESS";
+:Kiểm tra điều kiện và thực hiện CRUD;
+if (Thành công?) then (không)
+    :Hiển thị lỗi;
+else (có)
+    :Thực hiện thành công;
 endif
 
 |Staff|

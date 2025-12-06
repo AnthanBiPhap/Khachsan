@@ -3,27 +3,14 @@
 
 |Admin/Staff|
 start
-:Xem danh sách hội thoại\nhoặc Chọn hội thoại\nhoặc Gửi tin nhắn và file\nhoặc Đánh dấu đã đọc\nhoặc Xem số tin nhắn chưa đọc;
+:Quản lý chat;
 
 |System|
-if (Xem danh sách?) then (có)
-    :Lấy danh sách conversations\nvà unread count;
-    :result = "SUCCESS - Danh sách hội thoại";
-elseif (Chọn hội thoại?) then (có)
-    :Lấy messages của conversation;
-    :Join Socket.IO room;
-    :result = "SUCCESS - Tin nhắn";
-elseif (Gửi tin nhắn?) then (có)
-    :Xác thực quyền;
-    :Lưu message, cập nhật unreadCount;
-    :Phát event real-time qua Socket.IO;
-    :result = "SUCCESS - Tin nhắn đã gửi";
-elseif (Đánh dấu đã đọc?) then (có)
-    :Cập nhật lastReadAt, unreadCount = 0;
-    :result = "SUCCESS";
-else (không)
-    :Tính tổng unreadCount;
-    :result = "SUCCESS - Số tin nhắn chưa đọc";
+:Kiểm tra điều kiện và thực hiện CRUD;
+if (Thành công?) then (không)
+    :Hiển thị lỗi;
+else (có)
+    :Thực hiện thành công;
 endif
 
 |Admin/Staff|

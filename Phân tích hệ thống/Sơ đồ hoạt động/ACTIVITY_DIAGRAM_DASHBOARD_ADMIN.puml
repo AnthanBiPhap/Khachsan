@@ -3,33 +3,23 @@
 
 |Admin|
 start
-:Xem dashboard tổng quan\nhoặc Xem báo cáo chi tiết\nhoặc Xuất báo cáo Excel/PDF\nhoặc Quản lý khách hàng;
+:Quản lý dashboard;
 
 |System|
-if (Xem dashboard?) then (có)
-    :Lấy dữ liệu thống kê\n(đặt phòng, công suất, doanh thu, tỷ lệ hủy);
-    :Tính toán biểu đồ xu hướng;
-    :result = "SUCCESS - Dashboard data";
-elseif (Xem báo cáo chi tiết?) then (có)
-    :Lấy dữ liệu báo cáo với bộ lọc\n(ngày/tuần/tháng, loại phòng, kênh, trạng thái);
-    :result = "SUCCESS - Báo cáo chi tiết";
+if (Xem dashboard tổng quan?) then (có)
+    :Lấy dữ liệu và tính toán thống kê;
+    :Hiển thị dashboard;
 elseif (Xuất báo cáo?) then (có)
     :Lấy dữ liệu với bộ lọc;
     :Tạo file Excel hoặc PDF;
-    :result = "SUCCESS - File báo cáo";
-elseif (Quản lý khách hàng?) then (có)
-    if (Xem danh sách?) then (có)
-        :Lấy danh sách users;
-        :result = "SUCCESS - Danh sách khách hàng";
-    elseif (Xem chi tiết?) then (có)
-        :Lấy thông tin và lịch sử đặt phòng;
-        :result = "SUCCESS - Chi tiết khách hàng";
-    else (không)
-        :Cập nhật thông tin khách hàng;
-        :result = "SUCCESS";
-    endif
+    :Xuất báo cáo thành công;
 else (không)
-    :result = "ERROR";
+    :Kiểm tra điều kiện và thực hiện CRUD;
+    if (Thành công?) then (không)
+        :Hiển thị lỗi;
+    else (có)
+        :Thực hiện thành công;
+    endif
 endif
 
 |Admin|

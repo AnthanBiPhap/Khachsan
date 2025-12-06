@@ -3,26 +3,14 @@
 
 |Admin|
 start
-:Quản lý catalog dịch vụ\n(Tạo/Sửa/Xóa)\nhoặc Quản lý service bookings;
+:Quản lý dịch vụ;
 
 |System|
-if (Tạo dịch vụ?) then (có)
-    :Tạo dịch vụ mới;
-    :Lưu vào database;
-    :result = "SUCCESS";
-elseif (Sửa dịch vụ?) then (có)
-    :Cập nhật thông tin dịch vụ;
-    :result = "SUCCESS";
-elseif (Xóa dịch vụ?) then (có)
-    :Xóa dịch vụ;
-    :result = "SUCCESS";
-elseif (Cập nhật trạng thái service booking?) then (có)
-    :Cập nhật trạng thái;
-    :Chi phí tự động đồng bộ vào invoice;
-    :result = "SUCCESS";
-else (không)
-    :Lấy danh sách service bookings;
-    :result = "SUCCESS";
+:Kiểm tra điều kiện và thực hiện CRUD;
+if (Thành công?) then (không)
+    :Hiển thị lỗi;
+else (có)
+    :Thực hiện thành công;
 endif
 
 |Admin|

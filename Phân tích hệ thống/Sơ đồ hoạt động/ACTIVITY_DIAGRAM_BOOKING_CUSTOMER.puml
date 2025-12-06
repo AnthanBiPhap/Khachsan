@@ -3,32 +3,23 @@
 
 |Customer|
 start
-:Đặt phòng cá nhân\nhoặc Đặt phòng nhóm\nhoặc Xem danh sách booking\nhoặc Hủy booking;
+:Quản lý booking;
 
 |System|
-if (Đặt phòng cá nhân?) then (có)
+if (Đặt phòng?) then (có)
     :Kiểm tra tính khả dụng phòng;
-    :Tính toán tổng giá;
-    :Tạo booking;
-    :result = "SUCCESS - Đặt phòng thành công";
-elseif (Đặt phòng nhóm?) then (có)
-    :Tạo yêu cầu group booking;
-    :result = "SUCCESS - Yêu cầu đã gửi";
-elseif (Upload thông tin thành viên?) then (có)
-    :Xử lý file Excel;
-    :Lưu thông tin thành viên;
-    :result = "SUCCESS - Upload thành công";
-elseif (Hủy booking?) then (có)
-    :Kiểm tra chính sách hủy;
-    if (Được phép hủy?) then (có)
-        :Cập nhật trạng thái cancelled;
-        :result = "SUCCESS - Hủy booking thành công";
-    else (không)
-        :result = "ERROR - Không thể hủy booking";
+    if (Phòng khả dụng?) then (không)
+        :Phòng không khả dụng;
+    else (có)
+        :Đặt phòng thành công;
     endif
 else (không)
-    :Lấy danh sách booking;
-    :result = "SUCCESS - Danh sách booking";
+    :Kiểm tra điều kiện và thực hiện CRUD;
+    if (Thành công?) then (không)
+        :Hiển thị lỗi;
+    else (có)
+        :Thực hiện thành công;
+    endif
 endif
 
 |Customer|

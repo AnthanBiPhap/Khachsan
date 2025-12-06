@@ -3,22 +3,19 @@
 
 |Customer|
 start
-:Xem danh sách dịch vụ với bộ lọc\nhoặc Xem chi tiết dịch vụ\nhoặc Đặt dịch vụ kèm booking\nhoặc Xem danh sách dịch vụ đã đặt;
+:Quản lý dịch vụ;
 
 |System|
-if (Xem danh sách?) then (có)
-    :Lấy danh sách dịch vụ\náp dụng bộ lọc loại và giá;
-    :result = "SUCCESS - Danh sách dịch vụ";
-elseif (Xem chi tiết?) then (có)
-    :Lấy thông tin dịch vụ\n(mô tả, giá cả, thời gian phục vụ);
-    :result = "SUCCESS - Chi tiết dịch vụ";
-elseif (Đặt dịch vụ?) then (có)
+if (Đặt dịch vụ?) then (có)
     :Tạo service booking;
-    :Chi phí dịch vụ tự động đồng bộ vào invoice;
-    :result = "SUCCESS - Đặt dịch vụ thành công";
+    :Đặt dịch vụ thành công;
 else (không)
-    :Lấy danh sách dịch vụ đã đặt;
-    :result = "SUCCESS - Danh sách dịch vụ đã đặt";
+    :Kiểm tra điều kiện và thực hiện CRUD;
+    if (Thành công?) then (không)
+        :Hiển thị lỗi;
+    else (có)
+        :Thực hiện thành công;
+    endif
 endif
 
 |Customer|

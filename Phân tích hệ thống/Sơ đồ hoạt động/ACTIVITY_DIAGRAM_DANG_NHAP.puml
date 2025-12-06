@@ -3,28 +3,18 @@
 
 |User|
 start
-:Điền form đăng nhập\n(email, mật khẩu);
+:Điền form đăng nhập;
 
 |System|
-:Tìm user theo email trong database;
-if (User không tồn tại?) then (có)
-    :result = "ERROR - Email hoặc mật khẩu sai";
-else (không)
-    if (Tài khoản bị khóa?) then (có)
-        :result = "ERROR - Tài khoản đã bị khóa";
+:Tìm user và kiểm tra điều kiện đăng nhập;
+if (Điều kiện hợp lệ?) then (không)
+    :Hiển thị lỗi;
+else (có)
+    :So sánh mật khẩu với bcrypt;
+    if (Mật khẩu đúng?) then (có)
+        :Đăng nhập thành công;
     else (không)
-        if (Customer và email chưa xác thực?) then (có)
-            :result = "ERROR - Vui lòng xác thực email";
-        else (không)
-            :So sánh mật khẩu với bcrypt;
-            if (Mật khẩu sai?) then (có)
-                :result = "ERROR - Email hoặc mật khẩu sai";
-            else (không)
-                :Tạo access token\nhết hạn 24 giờ;
-                :Tạo refresh token\nhết hạn 365 ngày;
-                :result = "SUCCESS - Đăng nhập thành công\n+ accessToken + refreshToken";
-            endif
-        endif
+        :Email hoặc mật khẩu sai;
     endif
 endif
 

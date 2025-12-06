@@ -3,20 +3,23 @@
 
 |Customer|
 start
-:Tải template Excel\nhoặc Import file Excel danh sách thành viên\nhoặc Export danh sách thành viên;
+:Quản lý import/export;
 
 |System|
-if (Tải template?) then (có)
-    :Tạo Excel template từ group booking;
-    :result = "SUCCESS - File template";
-elseif (Import file Excel?) then (có)
+if (Import file Excel?) then (có)
     :Đọc và validate file Excel;
-    :Cập nhật members vào group booking;
-    :result = "SUCCESS - Import thành công";
+    if (Dữ liệu hợp lệ?) then (không)
+        :Dữ liệu không hợp lệ;
+    else (có)
+        :Import thành công;
+    endif
 else (không)
-    :Lấy danh sách members từ group booking;
-    :Tạo Excel file;
-    :result = "SUCCESS - File Excel";
+    :Kiểm tra điều kiện và thực hiện CRUD;
+    if (Thành công?) then (không)
+        :Hiển thị lỗi;
+    else (có)
+        :Thực hiện thành công;
+    endif
 endif
 
 |Customer|

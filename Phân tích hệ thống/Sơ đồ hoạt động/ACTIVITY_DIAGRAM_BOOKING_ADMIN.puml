@@ -3,27 +3,14 @@
 
 |Admin|
 start
-:Quản lý booking\n(Xem danh sách/Check-in/Check-out/Duyệt nhóm/Phân bổ phòng);
+:Quản lý booking;
 
 |System|
-if (Check-in/Check-out?) then (có)
-    :Cập nhật trạng thái booking;
-    :Cập nhật trạng thái phòng;
-    :result = "SUCCESS";
-elseif (Gia hạn check-out?) then (có)
-    :Cập nhật thời gian check-out;
-    :Tính toán chi phí phát sinh;
-    :result = "SUCCESS";
-elseif (Duyệt đặt phòng nhóm?) then (có)
-    :Phân bổ phòng cụ thể cho đoàn;
-    :Tạo báo giá;
-    :result = "SUCCESS";
-elseif (Cập nhật trạng thái?) then (có)
-    :Cập nhật trạng thái booking;
-    :result = "SUCCESS";
-else (không)
-    :Lấy danh sách hoặc chi tiết booking;
-    :result = "SUCCESS";
+:Kiểm tra điều kiện và thực hiện CRUD;
+if (Thành công?) then (không)
+    :Hiển thị lỗi;
+else (có)
+    :Thực hiện thành công;
 endif
 
 |Admin|

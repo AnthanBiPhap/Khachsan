@@ -3,11 +3,15 @@
 
 |Staff|
 start
-:Xem danh sách phòng\nhoặc Xem chi tiết phòng;
+:Xem phòng;
 
 |System|
-:Lấy danh sách hoặc chi tiết phòng;
-:result = "SUCCESS";
+:Kiểm tra điều kiện và thực hiện CRUD;
+if (Thành công?) then (không)
+    :Hiển thị lỗi;
+else (có)
+    :Thực hiện thành công;
+endif
 
 |Staff|
 :Hiển thị kết quả (read-only);

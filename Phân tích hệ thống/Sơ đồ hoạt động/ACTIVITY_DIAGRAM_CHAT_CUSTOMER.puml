@@ -3,22 +3,14 @@
 
 |Customer|
 start
-:Mở chat\nhoặc Gửi tin nhắn và file\nhoặc Xem lịch sử chat;
+:Quản lý chat;
 
 |System|
-if (Mở chat?) then (có)
-    :Tìm hoặc tạo conversation;
-    :Tự động ghép với staff online;
-    :Thiết lập Socket.IO connection;
-    :result = "SUCCESS - Chat đã mở";
-elseif (Gửi tin nhắn?) then (có)
-    :Xác thực quyền trong conversation;
-    :Lưu message vào database;
-    :Phát event real-time qua Socket.IO;
-    :result = "SUCCESS - Tin nhắn đã gửi";
-else (không)
-    :Lấy lịch sử chat với phân trang;
-    :result = "SUCCESS - Lịch sử chat";
+:Kiểm tra điều kiện và thực hiện CRUD;
+if (Thành công?) then (không)
+    :Hiển thị lỗi;
+else (có)
+    :Thực hiện thành công;
 endif
 
 |Customer|

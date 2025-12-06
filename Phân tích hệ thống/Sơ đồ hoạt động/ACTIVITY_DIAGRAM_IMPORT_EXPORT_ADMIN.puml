@@ -3,27 +3,23 @@
 
 |Admin/Staff|
 start
-:Export báo cáo Excel/PDF\nhoặc Export danh sách booking\nhoặc Export danh sách khách hàng\nhoặc Import danh sách khách hàng;
+:Quản lý import/export;
 
 |System|
-if (Export báo cáo?) then (có)
-    :Lấy dữ liệu báo cáo với bộ lọc;
-    :Tạo file Excel hoặc PDF;
-    :result = "SUCCESS - File báo cáo";
-elseif (Export danh sách booking?) then (có)
-    :Lấy danh sách booking với filters;
-    :Tạo Excel file;
-    :result = "SUCCESS - File Excel";
-elseif (Export danh sách khách hàng?) then (có)
-    :Lấy danh sách users;
-    :Tạo Excel file;
-    :result = "SUCCESS - File Excel";
-elseif (Import danh sách khách hàng?) then (có)
+if (Import danh sách khách hàng?) then (có)
     :Đọc và validate file Excel;
-    :Tạo users từ Excel;
-    :result = "SUCCESS - Import thành công";
+    if (Dữ liệu hợp lệ?) then (không)
+        :Dữ liệu không hợp lệ;
+    else (có)
+        :Import thành công;
+    endif
 else (không)
-    :result = "ERROR";
+    :Kiểm tra điều kiện và thực hiện CRUD;
+    if (Thành công?) then (không)
+        :Hiển thị lỗi;
+    else (có)
+        :Thực hiện thành công;
+    endif
 endif
 
 |Admin/Staff|

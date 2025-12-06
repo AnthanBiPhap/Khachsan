@@ -3,29 +3,24 @@
 
 |Customer|
 start
-:Thanh toán online qua Stripe\nhoặc Xem lịch sử thanh toán\nhoặc Xem hóa đơn\nhoặc Xuất hóa đơn PDF;
+:Quản lý thanh toán;
 
 |System|
 if (Thanh toán online?) then (có)
     :Tạo Stripe checkout session;
-    :Redirect đến trang thanh toán Stripe;
+    :Xử lý thanh toán;
     if (Thanh toán thành công?) then (có)
-        :Tạo booking;
-        :Tạo invoice;
-        :Tạo payment record;
-        :result = "SUCCESS - Thanh toán thành công";
+        :Thanh toán thành công;
     else (không)
-        :result = "ERROR - Thanh toán thất bại";
+        :Thanh toán thất bại;
     endif
-elseif (Xem hóa đơn?) then (có)
-    :Lấy thông tin hóa đơn;
-    :result = "SUCCESS - Chi tiết hóa đơn";
-elseif (Xuất PDF?) then (có)
-    :Tạo file PDF hóa đơn;
-    :result = "SUCCESS - File PDF";
 else (không)
-    :Lấy lịch sử thanh toán;
-    :result = "SUCCESS - Lịch sử thanh toán";
+    :Kiểm tra điều kiện và thực hiện CRUD;
+    if (Thành công?) then (không)
+        :Hiển thị lỗi;
+    else (có)
+        :Thực hiện thành công;
+    endif
 endif
 
 |Customer|

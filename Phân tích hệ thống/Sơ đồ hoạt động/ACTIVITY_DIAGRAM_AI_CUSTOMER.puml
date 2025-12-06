@@ -3,22 +3,18 @@
 
 |Customer|
 start
-:Hỏi về phòng/dịch vụ/địa điểm\nhoặc Xem gợi ý dựa trên sở thích;
+:Hỏi AI hoặc Xem gợi ý;
 
 |System|
 if (Hỏi với AI?) then (có)
     :Gửi câu hỏi đến Groq API;
     if (API thành công?) then (có)
-        :Nhận phản hồi từ AI;
-        :result = "SUCCESS - Gợi ý từ AI";
+        :Gợi ý từ AI;
     else (không)
-        :Sử dụng fallback response;
-        :result = "SUCCESS - Gợi ý dự phòng";
+        :Gợi ý dự phòng;
     endif
 else (không)
-    :Phân tích sở thích và lịch sử đặt phòng;
-    :Gợi ý phòng/dịch vụ phù hợp;
-    :result = "SUCCESS - Gợi ý cá nhân hóa";
+    :Gợi ý cá nhân hóa;
 endif
 
 |Customer|
