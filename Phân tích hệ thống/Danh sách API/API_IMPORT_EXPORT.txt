@@ -1,5 +1,0 @@
-STT	Phương thức HTTP	Đường dẫn API
-1	GET	/api/v1/group-bookings/:id/template
-2	POST	/api/v1/group-bookings/:id/upload
-3	GET	/api/v1/group-bookings/:id/members.xlsx
-

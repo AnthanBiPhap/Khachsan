@@ -1,7 +1,0 @@
-STT	Phương thức HTTP	Đường dẫn API
-1	GET	/api/v1/locations
-2	GET	/api/v1/locations/:id
-3	POST	/api/v1/locations
-4	PUT	/api/v1/locations/:id
-5	DELETE	/api/v1/locations/:id
-
