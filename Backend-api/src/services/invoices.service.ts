@@ -186,7 +186,7 @@ const printInvoice = async (invoiceId: string) => {
   const invoice = await Invoice.findById(invoiceId)
     .populate({
       path: "bookingId",
-      select: "_id checkIn checkOut roomId services guestInfo source guests guestCount totalPrice paidAmount remainingAmount paymentStatus newCustomerDiscount",
+      select: "_id checkIn checkOut roomId services guestInfo source guests guestCount totalPrice paidAmount remainingAmount paymentStatus newCustomerDiscount couponDiscount",
       populate: { path: "roomId", select: "roomNumber" },
     })
     .populate({
@@ -546,6 +546,33 @@ const printInvoice = async (invoiceId: string) => {
       .fillColor('#1890ff')
       .text(`Giảm giá khách hàng thân thiết (${discountPercentage}%): -${nf.format(discountAmount)} VND`)
       .fillColor('black');
+    doc.moveDown(0.5);
+  }
+  
+  // Hiển thị mã giảm giá nếu có (tách riêng phòng và dịch vụ)
+  if (booking?.couponDiscount && booking.couponDiscount.applied) {
+    const couponCode = booking.couponDiscount.code || "";
+    const roomDiscount = booking.couponDiscount.roomDiscount || 0;
+    const serviceDiscount = booking.couponDiscount.serviceDiscount || 0;
+    const totalCouponDiscount = booking.couponDiscount.amount || 0;
+    
+    doc.fontSize(12).fillColor('#722ed1');
+    
+    // Hiển thị breakdown nếu có roomDiscount và serviceDiscount
+    if (roomDiscount > 0 && serviceDiscount > 0) {
+      doc.text(`Mã giảm giá (${couponCode}) - Phòng: -${nf.format(roomDiscount)} VND`);
+      doc.text(`Mã giảm giá (${couponCode}) - Dịch vụ: -${nf.format(serviceDiscount)} VND`);
+    } else if (roomDiscount > 0) {
+      doc.text(`Mã giảm giá (${couponCode}) - Phòng: -${nf.format(roomDiscount)} VND`);
+    } else if (serviceDiscount > 0) {
+      doc.text(`Mã giảm giá (${couponCode}) - Dịch vụ: -${nf.format(serviceDiscount)} VND`);
+    } else {
+      // Fallback: hiển thị tổng nếu không có breakdown
+      doc.text(`Mã giảm giá (${couponCode}): -${nf.format(totalCouponDiscount)} VND`);
+    }
+    
+    doc.fillColor('black');
+    doc.moveDown(0.5);
   }
   
   doc.fontSize(12).text(`Tổng giá trị: ${totalFormatted} VND`);

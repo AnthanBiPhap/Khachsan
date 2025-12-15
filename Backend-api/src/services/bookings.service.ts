@@ -408,6 +408,18 @@ const create = async (payload: any) => {
     }
   }
 
+  // Xử lý coupon discount từ payload
+  let couponDiscount = undefined;
+  if (payload.coupon && payload.coupon.code && payload.coupon.discountAmount) {
+    couponDiscount = {
+      applied: true,
+      code: payload.coupon.code,
+      amount: payload.coupon.discountAmount,
+      roomDiscount: payload.coupon.roomDiscount || 0,
+      serviceDiscount: payload.coupon.serviceDiscount || 0,
+    };
+  }
+
   const booking = new Booking({
     customerId: payload.customerId || undefined,
     guests: guestsWithMainFlag,
@@ -428,6 +440,7 @@ const create = async (payload: any) => {
       quantity: s.quantity,
     })),
     newCustomerDiscount: newCustomerDiscount.applied ? newCustomerDiscount : undefined,
+    couponDiscount: couponDiscount,
   });
 
   try {

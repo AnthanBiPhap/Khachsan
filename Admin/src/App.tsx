@@ -25,6 +25,7 @@ import ChatPage from "./pages/ChatPage/ChatPage";
 import ContactsPage from "./pages/ContactsPage/ContactsPage";
 import ContactInfoPage from "./pages/ContactInfoPage/ContactInfoPage";
 import AboutInfoPage from "./pages/AboutInfoPage/AboutInfoPage";
+import CouponsPage from "./pages/CouponsPage/CouponsPage";
 import AccessDenied from "./pages/AccessDenied";
 import { useAuthStore } from "./stores/authStore";
 
@@ -43,7 +44,7 @@ function hasAccessToRoute(userRole: string, path: string): boolean {
   } else if (userRole === 'staff') {
     // Staff chỉ được truy cập các route cụ thể
     // Cho phép "/" vì sẽ redirect đến "/bookings"
-    const allowedPaths = ['/', '/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms', '/room-types', '/contacts', '/contact-info', '/about-info'];
+    const allowedPaths = ['/', '/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms', '/room-types', '/contacts', '/contact-info', '/about-info', '/coupons'];
     return allowedPaths.includes(path);
   } else {
     // User thường chỉ được truy cập dashboard
@@ -105,6 +106,7 @@ function App() {
           <Route path="contacts" element={<RoleProtectedRoute path="/contacts"><ContactsPage /></RoleProtectedRoute>} />
           <Route path="contact-info" element={<RoleProtectedRoute path="/contact-info"><ContactInfoPage /></RoleProtectedRoute>} />
           <Route path="about-info" element={<RoleProtectedRoute path="/about-info"><AboutInfoPage /></RoleProtectedRoute>} />
+          <Route path="coupons" element={<RoleProtectedRoute path="/coupons"><CouponsPage /></RoleProtectedRoute>} />
           <Route path="invoices" element={<RoleProtectedRoute path="/invoices"><InvoicesPage /></RoleProtectedRoute>} />
           <Route path="payments" element={<RoleProtectedRoute path="/payments"><PaymentsPage /></RoleProtectedRoute>} />
           <Route path="group-bookings" element={<RoleProtectedRoute path="/group-bookings"><GroupBookingsPage /></RoleProtectedRoute>} />

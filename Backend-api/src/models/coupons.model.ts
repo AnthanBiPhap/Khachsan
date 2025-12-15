@@ -75,17 +75,16 @@ const couponSchema = new Schema(
   }
 );
 
-// Index để tìm kiếm nhanh theo code
-couponSchema.index({ code: 1 });
-
-// Pre-save hook để tự động cập nhật status dựa trên ngày
-couponSchema.pre("save", function (next) {
-  const now = new Date();
-  if (this.endDate && this.endDate < now && this.status === "active") {
-    this.status = "expired";
-  }
-  next();
-});
+// Pre-save hook đã bị vô hiệu hóa để admin có thể tự quản lý status
+// Coupon sẽ luôn hiển thị nếu status = "active", bất kể thời gian hiệu lực
+// Admin có thể set status = "inactive" hoặc "expired" để ẩn coupon
+// couponSchema.pre("save", function (next) {
+//   const now = new Date();
+//   if (this.endDate && this.endDate < now && this.status === "active") {
+//     this.status = "expired";
+//   }
+//   next();
+// });
 
 export default model("Coupon", couponSchema);
 

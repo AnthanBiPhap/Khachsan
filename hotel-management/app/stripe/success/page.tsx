@@ -58,6 +58,7 @@ export default function StripeSuccessPage() {
         services: bookingInfo.services || [],
         customerId: bookingInfo.customerId,
         stripeSessionId: sessionId,
+        coupon: bookingInfo.coupon || null, // Gửi coupon discount nếu có
       };
 
       const res = await fetch('/api/bookings', {

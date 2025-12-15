@@ -102,6 +102,16 @@ const bookingSchema = new Schema(
       },
       required: false,
     },
+    couponDiscount: {
+      type: {
+        applied: { type: Boolean, default: false },
+        code: { type: String, default: "" },
+        amount: { type: Number, default: 0 },
+        roomDiscount: { type: Number, default: 0 },
+        serviceDiscount: { type: Number, default: 0 },
+      },
+      required: false,
+    },
   },
   {
     timestamps: true,

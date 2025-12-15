@@ -19,6 +19,7 @@ import {
   MessageOutlined,
   PhoneOutlined,
   InfoCircleOutlined,
+  TagOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Layout, Menu, theme, Button, Space, Badge } from 'antd';
@@ -68,6 +69,7 @@ const allMenuItems = [
   createMenuItem('Reviews', '/reviews', <StarOutlined />),
   createMenuItem('Contacts', '/contacts', <MessageOutlined />),
   createMenuItem('Contact Info', '/contact-info', <PhoneOutlined />),
+  createMenuItem('Coupons', '/coupons', <TagOutlined />),
   // Các menu khác (không trong danh sách chính)
   createMenuItem('Chat', '/chat', <MessageOutlined />),
   createMenuItem('About Info', '/about-info', <InfoCircleOutlined />),
@@ -81,9 +83,9 @@ const getMenuItemsByRole = (userRole: string): MenuItem[] => {
     // Admin không có menu Chat
     return allMenuItems.filter(item => item.key !== '/chat');
   } else if (userRole === 'staff') {
-    // Staff chỉ được xem: Users, Bookings, Booking Status, Guests, Service Bookings, Invoices, Group Bookings, Chat, Contacts, Contact Info
+    // Staff chỉ được xem: Users, Bookings, Booking Status, Guests, Service Bookings, Invoices, Group Bookings, Chat, Contacts, Contact Info, Coupons
     return allMenuItems.filter(item => 
-      ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms', '/room-types', '/contacts', '/contact-info'].includes(item.key)
+      ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms', '/room-types', '/contacts', '/contact-info', '/coupons'].includes(item.key)
     );
   } else {
     // User thường chỉ xem Dashboard

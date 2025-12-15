@@ -18,6 +18,7 @@ import chatRoute from "./router/v1/chat.route";
 import contactRoute from "./router/v1/contacts.route";
 import contactInfoRoute from "./router/v1/contactInfo.route";
 import aboutInfoRoute from "./router/v1/aboutInfo.route";
+import couponRoute from "./router/v1/coupons.route";
 import cors from "cors";
 
 const app = express();
@@ -64,6 +65,7 @@ app.use("/api/v1/chat", chatRoute);
 app.use("/api/v1", contactRoute);
 app.use("/api/v1", contactInfoRoute);
 app.use("/api/v1", aboutInfoRoute);
+app.use("/api/v1", couponRoute);
 // Hello World
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello World!");

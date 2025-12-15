@@ -4,6 +4,7 @@ import { RoomSearch } from "@/components/room-search-new"
 import { FeaturedRooms } from "@/components/featured-rooms"
 import { ServicesSection } from "@/components/services-section"
 import { NearbyAttractions } from "@/components/nearby-attractions"
+import { CouponsSection } from "@/components/coupons-section"
 import { Footer } from "@/components/footer"
 
 export default function MikoHotelHome() {
@@ -12,6 +13,7 @@ export default function MikoHotelHome() {
       <main>
         <HeroSection />
         <RoomSearch />
+        <CouponsSection />
         <FeaturedRooms />
         <section className="py-12 md:py-16 lg:py-20">
           <ServicesSection />

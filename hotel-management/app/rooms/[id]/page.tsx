@@ -16,7 +16,8 @@ import BookingServices from "@/components/booking-services";
 import { message, Modal } from "antd";
 import Loading from "@/app/loading";
 import { User } from "@/services/authService";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Tag } from "lucide-react";
+import { validateCoupon, type ValidateCouponResponse } from "@/services/couponService";
 
 interface RoomType {
   _id: string;
@@ -97,6 +98,18 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
       amount: number;
     };
   } | null>(null);
+
+  // Coupon state
+  const [couponCode, setCouponCode] = useState("");
+  const [couponDiscount, setCouponDiscount] = useState<{
+    applied: boolean;
+    amount: number;
+    roomDiscount?: number;
+    serviceDiscount?: number;
+    coupon?: ValidateCouponResponse["coupon"];
+  } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState("");
 
   // Load room
   useEffect(() => {
@@ -264,30 +277,26 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
     }, 0);
     
     // Tính giá extra hours
-    const extraHoursPrice = (extraHours || 0) * (room.typeId.extraHourPrice || 0);
+    const extraHoursPrice = (extraHours || 0) * (room.typeId?.extraHourPrice || 0);
     
-    // Nếu có pricing info với giảm giá, sử dụng giá đã giảm + extra hours
+    // Tính tổng giá trước khi áp dụng coupon
+    let baseTotal = 0;
     if (pricingInfo) {
-      const calculatedTotal = pricingInfo.totalPrice + serviceTotal + extraHoursPrice;
-      console.log('💰 Frontend totalPrice calculation:', {
-        pricingInfoTotalPrice: pricingInfo.totalPrice,
-        serviceTotal,
-        extraHoursPrice,
-        calculatedTotal,
-        birthdayDiscount: pricingInfo.discountAmount,
-        newCustomerDiscount: pricingInfo.newCustomerDiscount?.amount,
-      });
-      return calculatedTotal;
+      baseTotal = pricingInfo.totalPrice + serviceTotal + extraHoursPrice;
+    } else {
+      const nights = getNights();
+      baseTotal = nights * (room.typeId?.pricePerNight || 0) + extraHoursPrice + serviceTotal;
     }
 
-    // Nếu không có pricing info, tính giá bình thường + extra hours
-    const nights = getNights();
-    return (
-      nights * (room.typeId.pricePerNight || 0) +
-      extraHoursPrice +
-      serviceTotal
-    );
-  }, [room, checkIn, checkOut, extraHours, selectedServices, services, pricingInfo]);
+    // Áp dụng coupon discount nếu có (tách riêng phòng và dịch vụ)
+    if (couponDiscount && couponDiscount.applied) {
+      const roomDiscount = couponDiscount.roomDiscount || 0;
+      const serviceDiscount = couponDiscount.serviceDiscount || 0;
+      baseTotal = baseTotal - roomDiscount - serviceDiscount;
+    }
+
+    return Math.max(0, baseTotal); // Đảm bảo không âm
+  }, [room, checkIn, checkOut, extraHours, selectedServices, services, pricingInfo, couponDiscount]);
 
   // Tính giá thanh toán (50% tổng giá trị)
   const paymentAmount = useMemo(() => {
@@ -398,14 +407,14 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
       // Lưu thông tin đặt phòng vào localStorage để sử dụng sau khi thanh toán
       const bookingData = {
         roomId: room._id,
-        roomName: `${room.roomNumber} - ${room.typeId.name}`,
+        roomName: `${room.roomNumber} - ${room.typeId?.name || 'Unknown'}`,
         checkIn: checkInDate.toISOString(),
         checkOut: new Date(checkOutDate).toISOString(),
         extraHours: extraHours || 0,
         actualCheckOut: new Date(checkOutDate).toISOString(),
         guests: guestInfo, // Sử dụng mảng thông tin khách hàng mới
         guestCount: guests,
-        totalPrice: totalPrice, // Tổng giá đầy đủ (bao gồm extra hours)
+        totalPrice: totalPrice, // Tổng giá đầy đủ (bao gồm extra hours và coupon)
         paymentAmount: paymentAmount, // Số tiền thanh toán (50% tổng giá)
         services: selectedServices.map((s) => {
           const srv = services.find((srv) => srv._id === s.serviceId);
@@ -417,6 +426,12 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
           };
         }),
         customerId: userData?._id,
+        coupon: couponDiscount && couponDiscount.applied ? {
+          code: couponDiscount.coupon?.code,
+          discountAmount: couponDiscount.amount,
+          roomDiscount: couponDiscount.roomDiscount || 0,
+          serviceDiscount: couponDiscount.serviceDiscount || 0,
+        } : null,
       };
 
       localStorage.setItem('stripe_booking_data', JSON.stringify(bookingData));
@@ -485,7 +500,7 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                     Phòng {room.roomNumber}
                   </h1>
                   <h2 className="text-xl text-blue-600 font-semibold">
-                    {room.typeId.name}
+                    {room.typeId?.name || 'Unknown'}
                   </h2>
                 </div>
                 <Badge
@@ -501,13 +516,13 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                   <span className="text-gray-500">💰</span>
                   <span className="text-gray-600">Giá:</span>
                   <span className="font-semibold text-blue-600">
-                    {room.typeId.pricePerNight.toLocaleString()} VNĐ/đêm
+                    {room.typeId?.pricePerNight?.toLocaleString() || '0'} VNĐ/đêm
                   </span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <span className="text-gray-500">👥</span>
                   <span className="text-gray-600">Sức chứa:</span>
-                  <span className="font-semibold">{room.typeId.capacity} người</span>
+                  <span className="font-semibold">{room.typeId?.capacity || 0} người</span>
                 </div>
               </div>
 
@@ -576,7 +591,7 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                 {room?.typeId?.maxExtendHours && room?.typeId?.maxExtendHours > 0 && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      ⏰ Thêm giờ (tối đa {room.typeId.maxExtendHours}h)
+                      ⏰ Thêm giờ (tối đa {room.typeId?.maxExtendHours || 0}h)
                     </label>
                     <div className="text-sm text-gray-500 mb-2">
                       {room.typeId.extraHourPrice?.toLocaleString()} VNĐ/giờ
@@ -731,6 +746,141 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
               <h3 className="text-lg font-bold text-gray-800 mb-4">🛠️ Dịch vụ bổ sung</h3>
               <BookingServices services={services} onChange={setSelectedServices} />
             </div>
+
+            {/* Coupon section */}
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+              <h3 className="text-lg font-bold text-gray-800 mb-4">🎟️ Mã giảm giá</h3>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Nhập mã coupon"
+                  value={couponCode}
+                  onChange={(e) => {
+                    setCouponCode(e.target.value.toUpperCase());
+                    setCouponError("");
+                    if (couponDiscount) {
+                      setCouponDiscount(null);
+                    }
+                  }}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={async () => {
+                    if (!couponCode.trim()) {
+                      setCouponError("Vui lòng nhập mã coupon");
+                      return;
+                    }
+
+                    if (!room || !checkIn || !checkOut) {
+                      setCouponError("Vui lòng chọn ngày nhận và trả phòng trước");
+                      return;
+                    }
+
+                    setCouponLoading(true);
+                    setCouponError("");
+
+                    try {
+                      // Tính tổng giá hiện tại để validate coupon
+                      const nights = getNights();
+                      const pricePerNight = room.typeId?.pricePerNight || 0; // Giá 1 đêm (giá gốc)
+                      let roomPrice = nights * pricePerNight;
+                      const serviceTotal = selectedServices.reduce((sum, s) => {
+                        const service = services.find((srv) => srv._id === s.serviceId);
+                        if (!service) return sum;
+                        return sum + s.quantity * (service.basePrice || 0);
+                      }, 0);
+                      const extraHoursPrice = (extraHours || 0) * (room.typeId?.extraHourPrice || 0);
+                      
+                      // Nếu có pricing info, sử dụng giá đã giảm (bao gồm birthday và newCustomer discount)
+                      if (pricingInfo) {
+                        roomPrice = pricingInfo.totalPrice - (pricingInfo.newCustomerDiscount?.amount || 0);
+                      }
+                      
+                      // Tính tổng để validate minOrderAmount
+                      const orderAmount = roomPrice + serviceTotal + extraHoursPrice;
+                      
+                      console.log('🎟️ Frontend - Preparing coupon validation:', {
+                        couponCode,
+                        pricePerNight,
+                        roomPrice,
+                        serviceTotal,
+                        extraHoursPrice,
+                        orderAmount,
+                        nights,
+                      });
+                      
+                      // Gửi "all" để backend tự động xử lý dựa trên coupon.applicableTo
+                      // Backend sẽ tính discount đúng dựa trên loại coupon (room/all/service)
+                      const applicableTo = "all";
+
+                      const result = await validateCoupon(
+                        couponCode, 
+                        orderAmount, 
+                        applicableTo,
+                        roomPrice, // Giá phòng riêng (tổng số đêm)
+                        serviceTotal, // Giá dịch vụ riêng - QUAN TRỌNG: phải có giá trị
+                        pricePerNight // Giá 1 đêm (giá gốc) - coupon chỉ giảm trên 1 đêm
+                      );
+                      
+                      console.log('🎟️ Frontend - Coupon validation result:', {
+                        discountAmount: result.discountAmount,
+                        couponType: result.coupon.applicableTo,
+                        discountValue: result.coupon.discountValue,
+                      });
+                      
+                      setCouponDiscount({
+                        applied: true,
+                        amount: result.discountAmount,
+                        roomDiscount: result.roomDiscount,
+                        serviceDiscount: result.serviceDiscount,
+                        coupon: result.coupon,
+                      });
+                      message.success(`Áp dụng coupon thành công! Giảm ${result.discountAmount.toLocaleString()} VNĐ`);
+                    } catch (error: any) {
+                      setCouponError(error.message || "Mã coupon không hợp lệ");
+                      setCouponDiscount(null);
+                      message.error(error.message || "Mã coupon không hợp lệ");
+                    } finally {
+                      setCouponLoading(false);
+                    }
+                  }}
+                  disabled={couponLoading || !couponCode.trim()}
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                >
+                  {couponLoading ? "Đang kiểm tra..." : "Áp dụng"}
+                </Button>
+              </div>
+              {couponError && (
+                <p className="text-sm text-red-500 mt-2">{couponError}</p>
+              )}
+              {couponDiscount && couponDiscount.applied && couponDiscount.coupon && (
+                <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-green-800">
+                        ✓ {couponDiscount.coupon.name}
+                      </p>
+                      <p className="text-xs text-green-600 mt-1">
+                        {couponDiscount.coupon.discountType === "percentage"
+                          ? `Giảm ${couponDiscount.coupon.discountValue}%`
+                          : `Giảm ${couponDiscount.coupon.discountValue.toLocaleString()} VNĐ`}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setCouponCode("");
+                        setCouponDiscount(null);
+                        setCouponError("");
+                      }}
+                      className="text-red-600 hover:text-red-700"
+                    >
+                      Xóa
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right column - Booking summary */}
@@ -745,7 +895,7 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Phòng {room.roomNumber}</span>
                       <span className="font-medium">
-                        {getNights()} đêm × {room.typeId.pricePerNight.toLocaleString()} VNĐ
+                        {getNights()} đêm × {room.typeId?.pricePerNight?.toLocaleString() || '0'} VNĐ
                       </span>
                     </div>
                     {pricingInfo && pricingInfo.discountApplied && (
@@ -761,6 +911,14 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                         <span>🎁 Khách hàng thân thiết ({pricingInfo.newCustomerDiscount.percentage}%)</span>
                         <span className="font-medium">
                           -{pricingInfo.newCustomerDiscount.amount.toLocaleString()} VNĐ
+                        </span>
+                      </div>
+                    )}
+                    {couponDiscount && couponDiscount.applied && couponDiscount.roomDiscount && couponDiscount.roomDiscount > 0 && (
+                      <div className="flex justify-between text-sm text-purple-600">
+                        <span>🎟️ Mã giảm giá ({couponDiscount.coupon?.code}) - Phòng</span>
+                        <span className="font-medium">
+                          -{couponDiscount.roomDiscount.toLocaleString()} VNĐ
                         </span>
                       </div>
                     )}
@@ -791,6 +949,14 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                           </div>
                         );
                       })}
+                      {couponDiscount && couponDiscount.applied && couponDiscount.serviceDiscount && couponDiscount.serviceDiscount > 0 && (
+                        <div className="flex justify-between text-sm text-purple-600 mt-2 pt-2 border-t border-gray-200">
+                          <span>🎟️ Mã giảm giá ({couponDiscount.coupon?.code}) - Dịch vụ</span>
+                          <span className="font-medium">
+                            -{couponDiscount.serviceDiscount.toLocaleString()} VNĐ
+                          </span>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -869,6 +1035,26 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
               </p>
               <p className="text-xs text-blue-600 mt-1">
                 Tiết kiệm: {pricingInfo.newCustomerDiscount.amount.toLocaleString()} VNĐ
+              </p>
+            </div>
+          )}
+          {couponDiscount && couponDiscount.applied && (
+            <div className="bg-purple-50 p-3 rounded-lg border border-purple-200 space-y-2">
+              <p className="text-sm text-purple-700 font-medium">
+                🎟️ Mã giảm giá {couponDiscount.coupon?.code} đã được áp dụng!
+              </p>
+              {couponDiscount.roomDiscount && couponDiscount.roomDiscount > 0 && (
+                <p className="text-xs text-purple-600">
+                  Giảm giá phòng: -{couponDiscount.roomDiscount.toLocaleString()} VNĐ
+                </p>
+              )}
+              {couponDiscount.serviceDiscount && couponDiscount.serviceDiscount > 0 && (
+                <p className="text-xs text-purple-600">
+                  Giảm giá dịch vụ: -{couponDiscount.serviceDiscount.toLocaleString()} VNĐ
+                </p>
+              )}
+              <p className="text-xs text-purple-700 font-semibold mt-1 pt-1 border-t border-purple-200">
+                Tổng tiết kiệm: {couponDiscount.amount.toLocaleString()} VNĐ
               </p>
             </div>
           )}
