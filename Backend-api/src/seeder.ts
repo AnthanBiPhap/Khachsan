@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import User from "./models/users.model";
 import Service from "./models/services.model";
 import ContactInfo from "./models/contactInfo.model";
+import AboutInfo from "./models/aboutInfo.model";
 
 export const seedAdmin = async () => {
   try {
@@ -106,6 +107,25 @@ export const seedContactInfo = async () => {
     console.log("ContactInfo mặc định đã được tạo thành công!");
   } catch (err) {
     console.error("Lỗi khi seed contactInfo:", err);
+  }
+};
+
+export const seedAboutInfo = async () => {
+  try {
+    // Kiểm tra xem đã có aboutInfo chưa
+    const existingAboutInfo = await AboutInfo.findOne();
+    if (existingAboutInfo) {
+      console.log("AboutInfo đã tồn tại, bỏ qua seed.");
+      return;
+    }
+
+    // Tạo aboutInfo mặc định (sẽ dùng default values từ model)
+    const aboutInfo = new AboutInfo();
+    await aboutInfo.save();
+
+    console.log("AboutInfo mặc định đã được tạo thành công!");
+  } catch (err) {
+    console.error("Lỗi khi seed aboutInfo:", err);
   }
 };
 

@@ -18,6 +18,7 @@ import {
   BellOutlined,
   MessageOutlined,
   PhoneOutlined,
+  InfoCircleOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Layout, Menu, theme, Button, Space, Badge } from 'antd';
@@ -68,6 +69,7 @@ const allMenuItems = [
   createMenuItem('Reviews', '/reviews', <StarOutlined />),
   createMenuItem('Contacts', '/contacts', <MessageOutlined />),
   createMenuItem('Contact Info', '/contact-info', <PhoneOutlined />),
+  createMenuItem('About Info', '/about-info', <InfoCircleOutlined />),
   createMenuItem('Invoices', '/invoices', <FileTextOutlined />),
   createMenuItem('Payments', '/payments', <CreditCardOutlined />),
   

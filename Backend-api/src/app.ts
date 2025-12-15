@@ -17,6 +17,7 @@ import notificationRoute from "./router/v1/notifications.route";
 import chatRoute from "./router/v1/chat.route";
 import contactRoute from "./router/v1/contacts.route";
 import contactInfoRoute from "./router/v1/contactInfo.route";
+import aboutInfoRoute from "./router/v1/aboutInfo.route";
 import cors from "cors";
 
 const app = express();
@@ -62,6 +63,7 @@ app.use("/api/v1", streamRoute);
 app.use("/api/v1/chat", chatRoute);
 app.use("/api/v1", contactRoute);
 app.use("/api/v1", contactInfoRoute);
+app.use("/api/v1", aboutInfoRoute);
 // Hello World
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello World!");

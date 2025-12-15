@@ -1,7 +1,7 @@
 import app from "./app";
 import { env } from "./helpers/env.helper";
 import mongoose from "mongoose";
-import seedAdmin, { seedServices, seedContactInfo } from "./seeder";
+import seedAdmin, { seedServices, seedContactInfo, seedAboutInfo } from "./seeder";
 import { createServer } from "http";
 import socketService from "./services/socket.service";
 
@@ -21,6 +21,7 @@ mongoose
     await seedAdmin();
     await seedServices();
     await seedContactInfo();
+    await seedAboutInfo();
     
     // Tạo HTTP server từ Express app
     const httpServer = createServer(app);
