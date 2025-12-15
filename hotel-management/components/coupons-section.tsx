@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Tag, Sparkles, Copy, CheckCircle, Gift, Calendar, Users, Percent, DollarSign, Star, Clock, CheckCircle2 } from "lucide-react";
+import { Tag, Sparkles, Copy, CheckCircle, Gift, Calendar, Users, Percent, DollarSign, Star, Clock, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import type { Coupon } from "@/services/couponService";
 
 // Lấy API URL từ env, nếu không có thì dùng default
@@ -20,6 +21,7 @@ const API_URL = getApiUrl();
 console.log('🔗 Coupons API URL:', API_URL);
 
 export function CouponsSection() {
+  const router = useRouter();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export function CouponsSection() {
     const fetchCoupons = async () => {
       try {
         setLoading(true);
-        const url = `${API_URL}/coupons/public?limit=6`;
+        const url = `${API_URL}/coupons/public?limit=100`; // Lấy tất cả để đếm số lượng
         console.log('🔗 Fetching coupons from:', url);
         
         const response = await fetch(url, {
@@ -145,8 +147,9 @@ export function CouponsSection() {
             <p className="text-gray-600 mb-6">Chúng tôi đang chuẩn bị các ưu đãi hấp dẫn cho bạn. Vui lòng quay lại sau!</p>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {coupons.map((coupon) => {
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {coupons.slice(0, 3).map((coupon) => {
             const now = new Date();
             const startDate = new Date(coupon.startDate);
             const endDate = new Date(coupon.endDate);
@@ -293,7 +296,22 @@ export function CouponsSection() {
               </Card>
             );
           })}
-          </div>
+            </div>
+            
+            {/* Xem tất cả button */}
+            {coupons.length > 3 && (
+              <div className="text-center mt-8">
+                <Button
+                  onClick={() => router.push('/coupons')}
+                  variant="outline"
+                  className="px-8 py-6 text-lg font-semibold border-2 border-purple-500 text-purple-600 hover:bg-purple-50 hover:border-purple-600 transition-all duration-300"
+                >
+                  Xem tất cả ({coupons.length} mã giảm giá)
+                  <ArrowRight className="h-5 w-5 ml-2" />
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>
