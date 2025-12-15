@@ -56,7 +56,6 @@ function createMenuItem(
 const allMenuItems = [
   createMenuItem('Dashboard', '/', <PieChartOutlined />),
   createMenuItem('Users', '/users', <TeamOutlined />),
-  createMenuItem('Chat', '/chat', <MessageOutlined />),
   createMenuItem('Bookings', '/bookings', <BookOutlined />),
   createMenuItem('Group Bookings', '/group-bookings', <DeploymentUnitOutlined />),
   createMenuItem('Booking Status', '/bookingStatus', <FileDoneOutlined />),
@@ -69,12 +68,11 @@ const allMenuItems = [
   createMenuItem('Reviews', '/reviews', <StarOutlined />),
   createMenuItem('Contacts', '/contacts', <MessageOutlined />),
   createMenuItem('Contact Info', '/contact-info', <PhoneOutlined />),
+  // Các menu khác (không trong danh sách chính)
+  createMenuItem('Chat', '/chat', <MessageOutlined />),
   createMenuItem('About Info', '/about-info', <InfoCircleOutlined />),
   createMenuItem('Invoices', '/invoices', <FileTextOutlined />),
   createMenuItem('Payments', '/payments', <CreditCardOutlined />),
-  
-  
-  // createMenuItem('Invoice Items', '/invoiceitems', <FileTextOutlined />),
 ];
 
 // Function to get menu items based on user role
@@ -209,7 +207,21 @@ const Defaultlayout: React.FC = () => {
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
-      <Sider collapsible collapsed={collapsed} onCollapse={(value) => setCollapsed(value)}>
+      <Sider 
+        collapsible 
+        collapsed={collapsed} 
+        onCollapse={(value) => setCollapsed(value)}
+        style={{
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          bottom: 0,
+          height: '100vh',
+          overflow: 'auto',
+          zIndex: 1000,
+        }}
+        className="custom-sider"
+      >
         <div 
           className="demo-logo-vertical" 
           style={{ 
@@ -228,7 +240,7 @@ const Defaultlayout: React.FC = () => {
           ) : (
             <div style={{ color: 'white', textAlign: 'center', width: '100%' }}>
               <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>
-                {user?.fullName || 'Admin'}
+                {user?.fullName || (user?.role === 'admin' ? 'Admin' : user?.role === 'staff' ? 'Staff' : 'User')}
               </div>
               <div style={{ fontSize: '11px', opacity: 0.8 }}>
                 {user?.role === 'admin' ? 'Quản trị viên' : user?.role === 'staff' ? 'Nhân viên' : 'Người dùng'}
@@ -243,10 +255,11 @@ const Defaultlayout: React.FC = () => {
           mode="inline" 
           items={menuItems} 
           onClick={handleMenuClick}
+          style={{ borderRight: 0 }}
         />
       </Sider>
-      <Layout>
-        <Header style={{ padding: 0, background: colorBgContainer, paddingLeft: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Layout style={{ marginLeft: collapsed ? 80 : 200, transition: 'margin-left 0.2s' }}>
+        <Header style={{ padding: 0, background: colorBgContainer, paddingLeft: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 999 }}>
           <h2 style={{ color: 'rgba(0, 0, 0, 0.88)', margin: 0, lineHeight: '64px', fontWeight: 600 }}>
             {currentPageTitle}
           </h2>

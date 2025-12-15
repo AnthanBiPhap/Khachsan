@@ -1,0 +1,11 @@
+/* Ẩn scrollbar nhưng vẫn có thể scroll */
+.custom-sider::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+.custom-sider {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+

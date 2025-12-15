@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { User, Menu, Bell } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import notificationService from "@/services/notificationService";
 import NotificationDropdown from "@/components/NotificationDropdown";
@@ -12,6 +12,7 @@ import NotificationDropdown from "@/components/NotificationDropdown";
 export function Header() {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
@@ -83,19 +84,54 @@ export function Header() {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <Link href="/" className="text-foreground hover:text-blue-600 font-medium border-b-2 border-blue-600 pb-1">
+            <Link 
+              href="/" 
+              className={`font-medium transition-colors pb-1 ${
+                pathname === "/" 
+                  ? "text-blue-600 border-b-2 border-blue-600" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
               Phòng & Giá
             </Link>
-            <Link href="/contact" className="text-muted-foreground hover:text-foreground font-medium">
+            <Link 
+              href="/contact" 
+              className={`font-medium transition-colors pb-1 ${
+                pathname === "/contact" 
+                  ? "text-blue-600 border-b-2 border-blue-600" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
               Liên hệ
             </Link>
-            <Link href="/about" className="text-muted-foreground hover:text-foreground font-medium">
+            <Link 
+              href="/about" 
+              className={`font-medium transition-colors pb-1 ${
+                pathname === "/about" 
+                  ? "text-blue-600 border-b-2 border-blue-600" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
               Về chúng tôi
             </Link>
-            <Link href="/my-bookings" className="text-muted-foreground hover:text-foreground font-medium">
+            <Link 
+              href="/my-bookings" 
+              className={`font-medium transition-colors pb-1 ${
+                pathname === "/my-bookings" 
+                  ? "text-blue-600 border-b-2 border-blue-600" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
               Đặt phòng của tôi
             </Link>
-            <Link href="/dashboard" className="text-muted-foreground hover:text-foreground font-medium">
+            <Link 
+              href="/dashboard" 
+              className={`font-medium transition-colors pb-1 ${
+                pathname === "/dashboard" 
+                  ? "text-blue-600 border-b-2 border-blue-600" 
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
               Địa điểm gợi ý
             </Link>
           </nav>
