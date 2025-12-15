@@ -103,6 +103,10 @@ const calculatePrice = async(req: Request, res: Response, next: NextFunction) =>
             }
         }
         
+        // Tính giá gốc phòng (chưa giảm gì)
+        const nights = Math.ceil((new Date(checkOut as string).getTime() - new Date(checkIn as string).getTime()) / (1000 * 60 * 60 * 24)) || 1;
+        const baseRoomPrice = nights * pricePerNight;
+
         const result = await calculateRoomPriceWithBirthdayDiscount(
             pricePerNight,
             new Date(checkIn as string),
@@ -111,7 +115,59 @@ const calculatePrice = async(req: Request, res: Response, next: NextFunction) =>
             parsedGuests
         );
 
-        sendJsonSuccess(res, result, httpStatus.OK.statusCode, httpStatus.OK.message);
+        // Tính giảm giá khách hàng mới từ giá gốc phòng (10%)
+        let newCustomerDiscount = {
+            applied: false,
+            percentage: 0,
+            amount: 0,
+        };
+
+        if (customerId) {
+            try {
+                const User = (await import('../models/users.model')).default;
+                const customer = await User.findById(customerId).select('createdAt');
+                if (customer && customer.createdAt) {
+                    const accountCreatedAt = new Date(customer.createdAt);
+                    const now = new Date();
+                    const daysSinceRegistration = Math.floor(
+                        (now.getTime() - accountCreatedAt.getTime()) / (1000 * 60 * 60 * 24)
+                    );
+
+                    // Nếu đăng ký hơn 2 ngày (3 ngày trở lên) thì được giảm giá 10% từ giá gốc phòng
+                    if (daysSinceRegistration > 2) {
+                        const discountAmount = Math.round(baseRoomPrice * 0.1); // Giảm 10% từ giá gốc phòng
+                        newCustomerDiscount = {
+                            applied: true,
+                            percentage: 10,
+                            amount: discountAmount,
+                        };
+                    }
+                }
+            } catch (discountError) {
+                console.error('❌ Error checking new customer discount:', discountError);
+                // Nếu lỗi, không áp dụng discount
+            }
+        }
+
+        // Tính tổng giá sau khi áp dụng giảm giá khách hàng mới
+        // Giá phòng (đã giảm sinh nhật) - giảm giá khách hàng mới (từ giá gốc)
+        const finalTotalPrice = result.totalPrice - newCustomerDiscount.amount;
+
+        console.log(`💰 Price calculation in calculatePrice API:`, {
+            baseRoomPrice,
+            nights,
+            pricePerNight,
+            roomPriceAfterBirthdayDiscount: result.totalPrice,
+            birthdayDiscountAmount: result.discountAmount,
+            newCustomerDiscountAmount: newCustomerDiscount.amount,
+            finalTotalPrice,
+        });
+
+        sendJsonSuccess(res, {
+            ...result,
+            totalPrice: finalTotalPrice,
+            newCustomerDiscount,
+        }, httpStatus.OK.statusCode, httpStatus.OK.message);
     }
     catch(error) {
         next (error);

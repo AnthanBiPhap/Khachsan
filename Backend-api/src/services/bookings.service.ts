@@ -247,8 +247,15 @@ const create = async (payload: any) => {
     isMainGuest: guest.isMainGuest !== undefined ? guest.isMainGuest : index === 0
   }));
 
-  // Tính lại giá phòng với giảm giá sinh nhật (nếu có)
+  // Tính lại giá phòng với giảm giá sinh nhật (nếu có) và giảm giá khách hàng mới
   let finalTotalPrice = payload.totalPrice;
+  let baseRoomPrice = 0; // Giá gốc phòng (chưa giảm gì)
+  let newCustomerDiscount = {
+    applied: false,
+    percentage: 0,
+    amount: 0,
+  };
+  
   try {
     console.log(`🎂 Checking birthday discount for booking:`, {
       roomId,
@@ -269,6 +276,11 @@ const create = async (payload: any) => {
     if (room && room.typeId) {
       const pricePerNight = (room.typeId as any).pricePerNight;
       const extraHourPrice = (room.typeId as any).extraHourPrice || 0;
+      
+      // Tính giá gốc phòng (chưa giảm gì)
+      const nights = Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24)) || 1;
+      baseRoomPrice = nights * pricePerNight;
+      
       const pricingInfo = await calculateRoomPriceWithBirthdayDiscount(
         pricePerNight,
         new Date(checkIn),
@@ -277,14 +289,62 @@ const create = async (payload: any) => {
         guestsWithMainFlag
       );
       
-      // Tính lại tổng giá: giá phòng (đã có giảm giá sinh nhật) + giá dịch vụ + giá extra hours
+      // Tính giá dịch vụ và extra hours
       const servicesTotal = services.reduce((sum: number, s: any) => sum + (s.price * (s.quantity || 1)), 0);
       const extraHoursTotal = (extendHours || 0) * extraHourPrice;
-      finalTotalPrice = pricingInfo.totalPrice + servicesTotal + extraHoursTotal;
+      
+      // Tính giảm giá khách hàng mới từ giá gốc phòng (10%)
+      if (payload.customerId) {
+        try {
+          const customer = await User.findById(payload.customerId).select('createdAt');
+          if (customer && customer.createdAt) {
+            const accountCreatedAt = new Date(customer.createdAt);
+            const now = new Date();
+            const daysSinceRegistration = Math.floor(
+              (now.getTime() - accountCreatedAt.getTime()) / (1000 * 60 * 60 * 24)
+            );
+
+            console.log(`🎁 Checking new customer discount:`, {
+              customerId: payload.customerId,
+              accountCreatedAt: accountCreatedAt.toISOString(),
+              now: now.toISOString(),
+              daysSinceRegistration,
+              eligible: daysSinceRegistration > 2,
+              baseRoomPrice,
+            });
+
+            // Nếu đăng ký hơn 2 ngày (3 ngày trở lên) thì được giảm giá 10% từ giá gốc phòng
+            if (daysSinceRegistration > 2) {
+              const discountAmount = Math.round(baseRoomPrice * 0.1); // Giảm 10% từ giá gốc phòng
+              newCustomerDiscount = {
+                applied: true,
+                percentage: 10,
+                amount: discountAmount,
+              };
+
+              console.log(`✅ New customer discount applied:`, {
+                baseRoomPrice,
+                discountAmount,
+                daysSinceRegistration,
+              });
+            }
+          }
+        } catch (discountError) {
+          console.error('❌ Error checking new customer discount:', discountError);
+          // Nếu lỗi, không áp dụng discount
+        }
+      }
+      
+      // Tính tổng giá: giá phòng (đã giảm sinh nhật) - giảm giá khách hàng mới + dịch vụ + extra hours
+      finalTotalPrice = pricingInfo.totalPrice - newCustomerDiscount.amount + servicesTotal + extraHoursTotal;
       
       console.log(`💰 Price calculation:`, {
+        baseRoomPrice,
         pricePerNight,
-        roomPriceWithDiscount: pricingInfo.totalPrice,
+        nights,
+        roomPriceWithBirthdayDiscount: pricingInfo.totalPrice,
+        birthdayDiscountAmount: pricingInfo.discountAmount,
+        newCustomerDiscountAmount: newCustomerDiscount.amount,
         servicesTotal,
         extraHoursTotal,
         extraHours: extendHours || 0,
@@ -296,6 +356,7 @@ const create = async (payload: any) => {
       
       console.log(`🎂 Birthday discount result:`, {
         originalPrice: payload.totalPrice,
+        baseRoomPrice,
         roomPriceWithDiscount: pricingInfo.totalPrice,
         servicesTotal,
         extraHoursTotal,
@@ -307,7 +368,7 @@ const create = async (payload: any) => {
       });
     }
   } catch (pricingError) {
-    console.error('❌ Error calculating birthday discount:', pricingError);
+    console.error('❌ Error calculating discounts:', pricingError);
     // Nếu lỗi, sử dụng giá gốc
   }
 
@@ -366,6 +427,7 @@ const create = async (payload: any) => {
       price: s.price,
       quantity: s.quantity,
     })),
+    newCustomerDiscount: newCustomerDiscount.applied ? newCustomerDiscount : undefined,
   });
 
   try {

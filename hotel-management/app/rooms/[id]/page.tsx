@@ -91,6 +91,11 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
     breakdown: Array<{ date: Date; price: number; isBirthday: boolean }>;
     discountApplied: boolean;
     discountAmount: number;
+    newCustomerDiscount?: {
+      applied: boolean;
+      percentage: number;
+      amount: number;
+    };
   } | null>(null);
 
   // Load room
@@ -207,6 +212,9 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
     return diff > 0 ? diff / (1000 * 60 * 60 * 24) : 0;
   };
 
+  // Memoize guestInfo string để tránh useEffect chạy lại không cần thiết
+  const guestInfoString = useMemo(() => JSON.stringify(guestInfo), [guestInfo]);
+
   // Fetch pricing info with birthday discount
   useEffect(() => {
     const fetchPricingInfo = async () => {
@@ -221,11 +229,12 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
           checkIn: new Date(checkIn).toISOString(),
           checkOut: new Date(checkOut).toISOString(),
           customerId: userData?._id || '',
-          guests: JSON.stringify(guestInfo)
+          guests: guestInfoString
         })}`);
 
         if (response.ok) {
           const data = await response.json();
+          console.log('💰 Pricing info from API:', data?.data);
           setPricingInfo(data?.data || null);
         } else {
           setPricingInfo(null);
@@ -236,8 +245,13 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
       }
     };
 
-    fetchPricingInfo();
-  }, [room, checkIn, checkOut, guestInfo, userData]);
+    // Debounce để tránh gọi API quá nhiều lần
+    const timeoutId = setTimeout(() => {
+      fetchPricingInfo();
+    }, 300); // Đợi 300ms sau khi dependencies thay đổi
+
+    return () => clearTimeout(timeoutId);
+  }, [room, checkIn, checkOut, guestInfoString, userData]);
 
   const totalPrice = useMemo(() => {
     if (!room) return 0;
@@ -254,7 +268,16 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
     
     // Nếu có pricing info với giảm giá, sử dụng giá đã giảm + extra hours
     if (pricingInfo) {
-      return pricingInfo.totalPrice + serviceTotal + extraHoursPrice;
+      const calculatedTotal = pricingInfo.totalPrice + serviceTotal + extraHoursPrice;
+      console.log('💰 Frontend totalPrice calculation:', {
+        pricingInfoTotalPrice: pricingInfo.totalPrice,
+        serviceTotal,
+        extraHoursPrice,
+        calculatedTotal,
+        birthdayDiscount: pricingInfo.discountAmount,
+        newCustomerDiscount: pricingInfo.newCustomerDiscount?.amount,
+      });
+      return calculatedTotal;
     }
 
     // Nếu không có pricing info, tính giá bình thường + extra hours
@@ -718,29 +741,30 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                 <h3 className="text-lg font-bold text-gray-800 mb-4">💳 Tóm tắt đặt phòng</h3>
                 
                 <div className="space-y-3 mb-6">
-                  {pricingInfo && pricingInfo.discountApplied ? (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Phòng {room.roomNumber}</span>
-                        <span className="font-medium">
-                          {getNights()} đêm × {room.typeId.pricePerNight.toLocaleString()} VNĐ
-                        </span>
-                      </div>
-                      <div className="flex justify-between text-sm text-green-600">
-                        <span>🎂 Giảm giá sinh nhật (50%)</span>
-                        <span className="font-medium">
-                          -{pricingInfo.discountAmount.toLocaleString()} VNĐ
-                        </span>
-                      </div>
-                    </div>
-                  ) : (
+                  <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Phòng {room.roomNumber}</span>
                       <span className="font-medium">
                         {getNights()} đêm × {room.typeId.pricePerNight.toLocaleString()} VNĐ
                       </span>
                     </div>
-                  )}
+                    {pricingInfo && pricingInfo.discountApplied && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>🎂 Giảm giá sinh nhật (50%)</span>
+                        <span className="font-medium">
+                          -{pricingInfo.discountAmount.toLocaleString()} VNĐ
+                        </span>
+                      </div>
+                    )}
+                    {pricingInfo && pricingInfo.newCustomerDiscount && pricingInfo.newCustomerDiscount.applied && (
+                      <div className="flex justify-between text-sm text-blue-600">
+                        <span>🎁 Khách hàng thân thiết ({pricingInfo.newCustomerDiscount.percentage}%)</span>
+                        <span className="font-medium">
+                          -{pricingInfo.newCustomerDiscount.amount.toLocaleString()} VNĐ
+                        </span>
+                      </div>
+                    )}
+                  </div>
                   
                   {extraHours > 0 && (
                     <div className="flex justify-between text-sm">
@@ -835,6 +859,16 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
               </p>
               <p className="text-xs text-green-600 mt-1">
                 Tiết kiệm: {pricingInfo.discountAmount.toLocaleString()} VNĐ
+              </p>
+            </div>
+          )}
+          {pricingInfo && pricingInfo.newCustomerDiscount && pricingInfo.newCustomerDiscount.applied && (
+            <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-700 font-medium">
+                🎁 Khách hàng thân thiết! Bạn được giảm {pricingInfo.newCustomerDiscount.percentage}% giá phòng
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                Tiết kiệm: {pricingInfo.newCustomerDiscount.amount.toLocaleString()} VNĐ
               </p>
             </div>
           )}

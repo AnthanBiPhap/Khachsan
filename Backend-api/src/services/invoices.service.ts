@@ -186,7 +186,7 @@ const printInvoice = async (invoiceId: string) => {
   const invoice = await Invoice.findById(invoiceId)
     .populate({
       path: "bookingId",
-      select: "_id checkIn checkOut roomId services guestInfo source guests guestCount totalPrice paidAmount remainingAmount paymentStatus",
+      select: "_id checkIn checkOut roomId services guestInfo source guests guestCount totalPrice paidAmount remainingAmount paymentStatus newCustomerDiscount",
       populate: { path: "roomId", select: "roomNumber" },
     })
     .populate({
@@ -537,7 +537,18 @@ const printInvoice = async (invoiceId: string) => {
   // Hiển thị tóm tắt thanh toán
   doc.fontSize(14).text("TÓM TẮT THANH TOÁN", { underline: true }).moveDown(0.5);
   doc.fontSize(12).text(`Trạng thái: ${paymentLabel}`);
-  doc.text(`Tổng giá trị: ${totalFormatted} VND`);
+  
+  // Hiển thị giảm giá khách hàng thân thiết nếu có
+  if (booking?.newCustomerDiscount && booking.newCustomerDiscount.applied) {
+    const discountAmount = booking.newCustomerDiscount.amount || 0;
+    const discountPercentage = booking.newCustomerDiscount.percentage || 0;
+    doc.fontSize(12)
+      .fillColor('#1890ff')
+      .text(`Giảm giá khách hàng thân thiết (${discountPercentage}%): -${nf.format(discountAmount)} VND`)
+      .fillColor('black');
+  }
+  
+  doc.fontSize(12).text(`Tổng giá trị: ${totalFormatted} VND`);
   doc.text(`Đã thanh toán: ${nf.format(paidAmount)} VND`);
   doc.text(`Còn lại: ${nf.format(remainingAmount)} VND`).moveDown(0.5);
 

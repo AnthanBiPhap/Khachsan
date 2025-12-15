@@ -94,6 +94,14 @@ const bookingSchema = new Schema(
       type: String,
       trim: true,
     },
+    newCustomerDiscount: {
+      type: {
+        applied: { type: Boolean, default: false },
+        percentage: { type: Number, default: 0 },
+        amount: { type: Number, default: 0 },
+      },
+      required: false,
+    },
   },
   {
     timestamps: true,

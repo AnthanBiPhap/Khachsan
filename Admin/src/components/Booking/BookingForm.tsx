@@ -78,6 +78,9 @@ export default function BookingForm({
   // Walk-in khi không có customerId (đặt trực tiếp tại quầy)
   // const isWalkIn = !booking?.customerId;
 
+  // Memoize guests string để tránh useEffect chạy lại không cần thiết
+  const guestsString = useMemo(() => JSON.stringify(guests), [guests]);
+
   // Fetch pricing info with birthday discount
   useEffect(() => {
     const fetchPricingInfo = async () => {
@@ -100,7 +103,7 @@ export default function BookingForm({
             checkIn: checkIn.toISOString(),
             checkOut: checkOut.toISOString(),
             customerId: customerId || undefined,
-            guests: JSON.stringify(guests)
+            guests: guestsString
           }
         });
         setPricingInfo(response.data?.data || null);
@@ -110,8 +113,13 @@ export default function BookingForm({
       }
     };
 
-    fetchPricingInfo();
-  }, [selectedRoom, checkIn, checkOut, guests, form]);
+    // Debounce để tránh gọi API quá nhiều lần
+    const timeoutId = setTimeout(() => {
+      fetchPricingInfo();
+    }, 300); // Đợi 300ms sau khi dependencies thay đổi
+
+    return () => clearTimeout(timeoutId);
+  }, [selectedRoom, checkIn, checkOut, guestsString, form]);
 
   const roomPrice = useMemo(() => {
     if (!selectedRoom || !checkIn || !checkOut) return 0;
