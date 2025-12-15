@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,6 +8,9 @@ import { Mail, Phone, MapPin, Clock, Facebook, Instagram, MessageSquare } from '
 import Image from 'next/image';
 import Link from 'next/link';
 import { Footer } from '@/components/footer';
+import { contactService } from '@/services/contactService';
+import { contactInfoService, type ContactInfo } from '@/services/contactInfoService';
+import { toast } from 'sonner';
 
 export default function ContactPage() {
   const [formData, setFormData] = useState({
@@ -16,13 +19,27 @@ export default function ContactPage() {
     message: '',
     subject: 'general'
   });
+  const [loading, setLoading] = useState(false);
+  // Khởi tạo với null - chỉ lấy từ API, không hardcode
+  const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
+  const [loadingInfo, setLoadingInfo] = useState(true);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement form submission logic
-    console.log('Form submitted:', formData);
-    alert('Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm nhất có thể.');
-    setFormData({ name: '', contact: '', message: '', subject: 'general' });
+    
+    if (loading) return;
+    
+    setLoading(true);
+    
+    try {
+      await contactService.sendContact(formData);
+      toast.success('Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi sớm nhất có thể.');
+      setFormData({ name: '', contact: '', message: '', subject: 'general' });
+    } catch (error: any) {
+      toast.error(error.message || 'Không thể gửi tin nhắn. Vui lòng thử lại.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
@@ -32,6 +49,103 @@ export default function ContactPage() {
       [name]: value
     }));
   };
+
+  const loadContactInfo = useCallback(async () => {
+    try {
+      setLoadingInfo(true);
+      console.log('🔄 Loading contact info from API...');
+      const info = await contactInfoService.getContactInfo();
+      // Luôn cập nhật từ API - không dùng giá trị mặc định
+      if (info) {
+        console.log('✅ Loaded contact info from API:', info);
+        console.log('📞 Phone number from API:', info.phone);
+        // Force update bằng cách tạo object mới
+        setContactInfo({ ...info });
+      } else {
+        console.warn('⚠️ API returned empty data');
+      }
+    } catch (error: any) {
+      console.error('❌ Error loading contact info:', error);
+      console.error('Error details:', error.message);
+      console.error('Error stack:', error.stack);
+      // Hiển thị error message chi tiết hơn
+      toast.error(error.message || 'Không thể tải thông tin liên hệ');
+      // Không set giá trị mặc định - để user thấy lỗi hoặc loading
+    } finally {
+      setLoadingInfo(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Load ngay lập tức
+    loadContactInfo();
+    
+    // Reload mỗi 5 giây để cập nhật dữ liệu mới khi admin sửa (giảm từ 10s xuống 5s)
+    const interval = setInterval(() => {
+      console.log('🔄 Auto-reloading contact info...');
+      loadContactInfo();
+    }, 5000);
+    
+    return () => clearInterval(interval);
+  }, [loadContactInfo]);
+  
+  // Thêm listener để reload khi focus vào tab (khi user quay lại tab)
+  useEffect(() => {
+    const handleFocus = () => {
+      console.log('👁️ Tab focused, reloading contact info...');
+      loadContactInfo();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [loadContactInfo]);
+
+  // Hiển thị loading hoặc đợi dữ liệu từ API
+  if (loadingInfo && !contactInfo) {
+    return (
+      <div className="bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Đang tải thông tin liên hệ...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Nếu không có dữ liệu sau khi load xong, hiển thị error với option retry
+  if (!contactInfo && !loadingInfo) {
+    return (
+      <div className="bg-white min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md px-4">
+          <div className="text-red-600 text-4xl mb-4">⚠️</div>
+          <p className="text-red-600 font-semibold mb-2 text-lg">Không thể tải thông tin liên hệ từ server.</p>
+          <p className="text-gray-600 text-sm mb-4">
+            Vui lòng kiểm tra:
+            <br />• Backend server đang chạy (http://localhost:8080)
+            <br />• Kết nối mạng
+            <br />• Mở Console (F12) để xem chi tiết lỗi
+          </p>
+          <div className="space-x-2">
+            <Button 
+              onClick={() => {
+                setLoadingInfo(true);
+                loadContactInfo();
+              }} 
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              🔄 Thử lại
+            </Button>
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="bg-gray-600 hover:bg-gray-700"
+            >
+              🔃 Reload trang
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white">
@@ -56,8 +170,8 @@ export default function ContactPage() {
                 <div>
                   <h3 className="font-medium text-gray-900">Điện thoại đặt phòng</h3>
                   <p className="text-gray-600">
-                    <a href="tel:+84912345678" className="hover:text-blue-600 transition-colors">
-                        0704627402
+                    <a href={`tel:${contactInfo.phone}`} className="hover:text-blue-600 transition-colors">
+                        {contactInfo.phone}
                     </a>
                     <span className="text-sm text-green-600 ml-2">(Hỗ trợ 24/7)</span>
                   </p>
@@ -69,10 +183,10 @@ export default function ContactPage() {
                 <div>
                   <h3 className="font-medium text-gray-900">Email</h3>
                   <a 
-                    href="mailto:info@mikohotel.com" 
+                    href={`mailto:${contactInfo.email}`}
                     className="text-blue-600 hover:underline"
                   >
-                    info@mikohotel.com
+                    {contactInfo.email}
                   </a>
                 </div>
               </div>
@@ -81,14 +195,7 @@ export default function ContactPage() {
                 <MapPin className="h-5 w-5 text-blue-600 mt-1 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-medium text-gray-900">Địa chỉ</h3>
-                  <a 
-                    href="https://maps.app.goo.gl/example" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:underline"
-                  >
-                    Thanh khê, Hùng Vương, Đà Nẵng
-                  </a>
+                  <span className="text-gray-600">{contactInfo.address}</span>
                 </div>
               </div>
 
@@ -96,8 +203,8 @@ export default function ContactPage() {
                 <Clock className="h-5 w-5 text-blue-600 mt-1 mr-3 flex-shrink-0" />
                 <div>
                   <h3 className="font-medium text-gray-900">Giờ làm việc</h3>
-                  <p className="text-gray-600">Lễ tân 24/7</p>
-                  <p className="text-gray-600">Hỗ trợ online: 8:00 - 22:00 hàng ngày</p>
+                  <p className="text-gray-600">{contactInfo.workingHours.reception}</p>
+                  <p className="text-gray-600">{contactInfo.workingHours.onlineSupport}</p>
                 </div>
               </div>
             </div>
@@ -107,53 +214,68 @@ export default function ContactPage() {
           <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-2xl font-semibold mb-6 text-gray-800">Kết nối với chúng tôi</h2>
             <div className="flex space-x-4">
-              <a 
-                href="https://facebook.com/mikohotel" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition-colors"
-                aria-label="Facebook"
-              >
-                <Facebook className="h-6 w-6" />
-              </a>
-              <a 
-                href="https://zalo.me/84912345678" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="bg-blue-500 text-white p-3 rounded-full hover:bg-blue-600 transition-colors"
-                aria-label="Zalo"
-              >
-                <MessageSquare className="h-6 w-6" />
-              </a>
-              <a 
-                href="https://instagram.com/mikohotel" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="bg-pink-600 text-white p-3 rounded-full hover:bg-pink-700 transition-colors"
-                aria-label="Instagram"
-              >
-                <Instagram className="h-6 w-6" />
-              </a>
+              {contactInfo.socialMedia.facebook && (
+                <a 
+                  href={contactInfo.socialMedia.facebook}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="bg-blue-600 text-white p-3 rounded-full hover:bg-blue-700 transition-colors"
+                  aria-label="Facebook"
+                >
+                  <Facebook className="h-6 w-6" />
+                </a>
+              )}
+              {contactInfo.socialMedia.zalo && (
+                <a 
+                  href={contactInfo.socialMedia.zalo}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="bg-blue-500 text-white p-3 rounded-full hover:bg-blue-600 transition-colors"
+                  aria-label="Zalo"
+                >
+                  <MessageSquare className="h-6 w-6" />
+                </a>
+              )}
+              {contactInfo.socialMedia.instagram && (
+                <a 
+                  href={contactInfo.socialMedia.instagram}
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="bg-pink-600 text-white p-3 rounded-full hover:bg-pink-700 transition-colors"
+                  aria-label="Instagram"
+                >
+                  <Instagram className="h-6 w-6" />
+                </a>
+              )}
             </div>
             
-            <div className="mt-6">
-              <h3 className="font-medium text-gray-900 mb-2">Quét mã Zalo</h3>
-              <div className="bg-gray-100 p-4 rounded-lg inline-block">
-                <div className="relative w-32 h-32">
-                  <Image
-                    src="/zalo-qr.jpg"
-                    alt="Zalo QR Code"
-                    fill
-                    className="object-contain rounded"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.onerror = null;
-                      target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxyZWN0IHdpZHRoPSIxMDAlIiBoZWlnaHQ9IjEwMCUiIGZpbGw9IiNlZWVlZWUiLz48dGV4dCB4PSI1MCUiIHk9IjUwJSIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjE0IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBhbGlnbm1lbnQtYmFzZWxpbmU9Im1pZGRsZSIgZmlsbD0iIzk5OSI+UUVSIENvZGU8L3RleHQ+PC9zdmc+';
-                    }}
-                  />
+            {contactInfo.zaloQR && (
+              <div className="mt-6">
+                <h3 className="font-medium text-gray-900 mb-2">Quét mã Zalo</h3>
+                <div className="bg-gray-100 p-4 rounded-lg inline-block">
+                  <div className="relative w-32 h-32">
+                    <Image
+                      src={
+                        contactInfo.zaloQR && contactInfo.zaloQR.startsWith('http')
+                          ? contactInfo.zaloQR 
+                          : contactInfo.zaloQR && contactInfo.zaloQR.startsWith('/uploads')
+                          ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}${contactInfo.zaloQR}`
+                          : '/zalo-qr.jpg' // Ảnh mặc định từ public folder
+                      }
+                      alt="Zalo QR Code"
+                      fill
+                      className="object-contain rounded"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        // Fallback về ảnh mặc định nếu lỗi
+                        target.src = '/zalo-qr.jpg';
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
@@ -231,8 +353,12 @@ export default function ContactPage() {
               </div>
 
               <div className="pt-2">
-                <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
-                  Gửi tin nhắn
+                <Button 
+                  type="submit" 
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                  disabled={loading}
+                >
+                  {loading ? 'Đang gửi...' : 'Gửi tin nhắn'}
                 </Button>
               </div>
             </form>
@@ -243,7 +369,7 @@ export default function ContactPage() {
             <h2 className="text-2xl font-semibold mb-4 text-gray-800">Vị trí của chúng tôi</h2>
             <div className="aspect-w-16 aspect-h-9">
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3834.641108987922!2d108.21948517490328!3d16.032187484641973!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x314219ee598df9c5%3A0xaadb53409be7c909!2zVHLGsOG7nW5nIMSQ4bqhaSBo4buNYyBLaeG6v24gdHLDumMgxJDDoCBO4bq1bmc!5e0!3m2!1svi!2s!4v1759427019279!5m2!1svi!2s"
+                src={contactInfo.mapEmbedUrl}
                 width="100%"
                 height="450"
                 style={{ border: 0 }}
@@ -253,16 +379,6 @@ export default function ContactPage() {
                 title="Google Maps - Miko Hotel"
                 referrerPolicy="no-referrer-when-downgrade"
               ></iframe>
-            </div>
-            <div className="mt-4 text-center">
-              <a 
-                href="https://maps.app.goo.gl/example" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:underline text-sm"
-              >
-                Xem trên Google Maps →
-              </a>
             </div>
           </div>
         </div>

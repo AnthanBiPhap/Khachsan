@@ -2098,6 +2098,104 @@ const sendPaymentConfirmation = async (data: PaymentConfirmationEmailData) => {
   }
 };
 
+interface ContactReplyEmailData {
+  to: string;
+  customerName: string;
+  subject: string;
+  originalMessage: string;
+  replyMessage: string;
+  repliedBy?: string;
+}
+
+/**
+ * Gửi email phản hồi liên hệ từ admin đến khách hàng
+ */
+const sendContactReply = async (data: ContactReplyEmailData) => {
+  try {
+    console.log(`📧 Email service: Bắt đầu gửi email phản hồi đến ${data.to}`);
+    
+    const transporter = createTransporter();
+    
+    // Validate email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(data.to)) {
+      console.warn(`⚠️ Email không hợp lệ: ${data.to}, bỏ qua gửi email`);
+      return { success: false, message: "Email không hợp lệ" };
+    }
+
+    const subjectLabels: Record<string, string> = {
+      booking: "Đặt phòng",
+      service: "Thắc mắc dịch vụ",
+      issue: "Báo sự cố",
+      feedback: "Góp ý",
+      general: "Thông tin chung",
+    };
+
+    const subjectLabel = subjectLabels[data.subject] || "Thông tin chung";
+
+    const mailOptions = {
+      from: `"Miko Hotel" <${env.GMAIL_USER}>`,
+      to: data.to,
+      subject: `Phản hồi từ Miko Hotel - ${subjectLabel}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background-color: #1890ff; color: white; padding: 20px; text-align: center; border-radius: 5px 5px 0 0; }
+            .content { background-color: #f9f9f9; padding: 20px; border-radius: 0 0 5px 5px; }
+            .message-box { background-color: white; padding: 15px; margin: 15px 0; border-left: 4px solid #1890ff; }
+            .reply-box { background-color: #e6f7ff; padding: 15px; margin: 15px 0; border-left: 4px solid #52c41a; }
+            .footer { text-align: center; margin-top: 20px; color: #666; font-size: 12px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>Miko Hotel</h1>
+              <p>Phản hồi liên hệ</p>
+            </div>
+            <div class="content">
+              <p>Xin chào <strong>${data.customerName}</strong>,</p>
+              
+              <p>Cảm ơn bạn đã liên hệ với chúng tôi. Dưới đây là phản hồi của chúng tôi:</p>
+              
+              <div class="message-box">
+                <h3>Tin nhắn của bạn:</h3>
+                <p style="white-space: pre-wrap;">${data.originalMessage}</p>
+              </div>
+              
+              <div class="reply-box">
+                <h3>Phản hồi từ Miko Hotel:</h3>
+                <p style="white-space: pre-wrap;">${data.replyMessage}</p>
+              </div>
+              
+              <p>Nếu bạn có thêm câu hỏi hoặc cần hỗ trợ thêm, vui lòng liên hệ với chúng tôi.</p>
+              
+              <p>Trân trọng,<br><strong>Đội ngũ Miko Hotel</strong></p>
+            </div>
+            <div class="footer">
+              <p>Email này được gửi tự động từ hệ thống Miko Hotel.</p>
+              <p>Vui lòng không trả lời email này.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email phản hồi đã được gửi thành công đến ${data.to}`);
+    return { success: true, messageId: info.messageId };
+  } catch (error: any) {
+    console.error(`❌ Lỗi khi gửi email phản hồi đến ${data.to}:`, error);
+    throw error;
+  }
+};
+
 export default {
   sendBookingConfirmation,
   sendGroupBookingConfirmation,
@@ -2112,5 +2210,6 @@ export default {
   sendPasswordResetConfirmation,
   sendBookingCancellation,
   sendPaymentConfirmation,
+  sendContactReply,
 };
 

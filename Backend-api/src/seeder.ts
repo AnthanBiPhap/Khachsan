@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import User from "./models/users.model";
 import Service from "./models/services.model";
+import ContactInfo from "./models/contactInfo.model";
 
 export const seedAdmin = async () => {
   try {
@@ -86,6 +87,25 @@ export const seedServices = async () => {
     console.log("Services mẫu đã được tạo thành công!");
   } catch (err) {
     console.error("Lỗi khi seed services:", err);
+  }
+};
+
+export const seedContactInfo = async () => {
+  try {
+    // Kiểm tra xem đã có contactInfo chưa
+    const existingContactInfo = await ContactInfo.findOne();
+    if (existingContactInfo) {
+      console.log("ContactInfo đã tồn tại, bỏ qua seed.");
+      return;
+    }
+
+    // Tạo contactInfo mặc định (sẽ dùng default values từ model)
+    const contactInfo = new ContactInfo();
+    await contactInfo.save();
+
+    console.log("ContactInfo mặc định đã được tạo thành công!");
+  } catch (err) {
+    console.error("Lỗi khi seed contactInfo:", err);
   }
 };
 

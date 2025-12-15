@@ -17,6 +17,7 @@ import {
   DeploymentUnitOutlined,
   BellOutlined,
   MessageOutlined,
+  PhoneOutlined,
 } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { Layout, Menu, theme, Button, Space, Badge } from 'antd';
@@ -65,6 +66,8 @@ const allMenuItems = [
   createMenuItem('Service Bookings', '/service-bookings', <ShoppingCartOutlined />),
   createMenuItem('Locations', '/locations', <EnvironmentOutlined />),
   createMenuItem('Reviews', '/reviews', <StarOutlined />),
+  createMenuItem('Contacts', '/contacts', <MessageOutlined />),
+  createMenuItem('Contact Info', '/contact-info', <PhoneOutlined />),
   createMenuItem('Invoices', '/invoices', <FileTextOutlined />),
   createMenuItem('Payments', '/payments', <CreditCardOutlined />),
   
@@ -78,9 +81,9 @@ const getMenuItemsByRole = (userRole: string): MenuItem[] => {
     // Admin không có menu Chat
     return allMenuItems.filter(item => item.key !== '/chat');
   } else if (userRole === 'staff') {
-    // Staff chỉ được xem: Users, Bookings, Booking Status, Guests, Service Bookings, Invoices, Group Bookings, Chat
+    // Staff chỉ được xem: Users, Bookings, Booking Status, Guests, Service Bookings, Invoices, Group Bookings, Chat, Contacts, Contact Info
     return allMenuItems.filter(item => 
-      ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms', '/room-types'].includes(item.key)
+      ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms', '/room-types', '/contacts', '/contact-info'].includes(item.key)
     );
   } else {
     // User thường chỉ xem Dashboard

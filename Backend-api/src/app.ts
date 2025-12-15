@@ -15,6 +15,8 @@ import paymentRoute from "./router/v1/payments.route";
 import groupBookingRoute from "./router/v1/groupBookings.route";
 import notificationRoute from "./router/v1/notifications.route";
 import chatRoute from "./router/v1/chat.route";
+import contactRoute from "./router/v1/contacts.route";
+import contactInfoRoute from "./router/v1/contactInfo.route";
 import cors from "cors";
 
 const app = express();
@@ -22,6 +24,25 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
+
+// Serve static files từ thư mục uploads
+import path from "path";
+import fs from "fs";
+
+// Đảm bảo thư mục uploads tồn tại
+const uploadsDir = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+// Serve static files từ thư mục uploads
+app.use("/uploads", express.static(uploadsDir, {
+  setHeaders: (res, filePath) => {
+    // Set CORS headers cho static files
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET');
+  }
+}));
 app.use("/api/v1", userRoute);
 app.use("/api/v1/auth", authRoute);
 app.use("/api/v1/get-profile", authRoute);
@@ -39,6 +60,8 @@ app.use("/api/v1", groupBookingRoute);
 app.use("/api/v1", notificationRoute);
 app.use("/api/v1", streamRoute);
 app.use("/api/v1/chat", chatRoute);
+app.use("/api/v1", contactRoute);
+app.use("/api/v1", contactInfoRoute);
 // Hello World
 app.get("/", (req: Request, res: Response) => {
   res.send("Hello World!");
