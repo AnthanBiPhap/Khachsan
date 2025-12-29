@@ -43,12 +43,13 @@ export const validateCoupon = async (
   applicableTo: "all" | "room" | "service" = "all",
   roomAmount?: number,
   serviceAmount?: number,
-  pricePerNight?: number
+  pricePerNight?: number,
+  checkInDate?: string | Date
 ): Promise<ValidateCouponResponse> => {
   try {
     const url = `${API_URL}/coupons/validate/${code.toUpperCase()}`;
     console.log('🔗 Validating coupon - URL:', url);
-    console.log('🔗 Validating coupon - Body:', { orderAmount, applicableTo, roomAmount, serviceAmount, pricePerNight });
+    console.log('🔗 Validating coupon - Body:', { orderAmount, applicableTo, roomAmount, serviceAmount, pricePerNight, checkInDate });
     
     const response = await fetch(url, {
       method: "POST",
@@ -61,6 +62,7 @@ export const validateCoupon = async (
         roomAmount,
         serviceAmount,
         pricePerNight,
+        checkInDate: checkInDate ? (typeof checkInDate === 'string' ? checkInDate : checkInDate.toISOString()) : undefined,
       }),
     });
 

@@ -223,7 +223,8 @@ const validateCoupon = async (
   applicableTo: "all" | "room" | "service" = "all",
   roomAmount?: number,
   serviceAmount?: number,
-  pricePerNight?: number
+  pricePerNight?: number,
+  checkInDate?: string | Date
 ) => {
   const coupon = await getByCode(code);
   
@@ -235,17 +236,44 @@ const validateCoupon = async (
     roomAmount,
     serviceAmount,
     pricePerNight,
+    checkInDate,
   });
 
   // Kiểm tra trạng thái
-  // Chỉ kiểm tra status, không kiểm tra startDate/endDate
-  // Admin có thể set status = "inactive" hoặc "expired" để ẩn coupon
   if (coupon.status !== "active") {
     throw createError(400, "Coupon không còn hiệu lực");
   }
 
-  // Không kiểm tra startDate/endDate - coupon sẽ luôn có thể sử dụng nếu status = "active"
-  // Admin có thể tự quản lý status để ẩn/hiện coupon
+  // Kiểm tra ngày hiệu lực của coupon
+  const now = new Date();
+  const startDate = new Date(coupon.startDate);
+  const endDate = new Date(coupon.endDate);
+  
+  // Kiểm tra ngày hiện tại có nằm trong khoảng hiệu lực không
+  if (now < startDate) {
+    throw createError(400, `Coupon chưa có hiệu lực. Coupon có hiệu lực từ ${startDate.toLocaleDateString('vi-VN')}`);
+  }
+  
+  if (now > endDate) {
+    throw createError(400, `Coupon đã hết hiệu lực. Coupon có hiệu lực đến ${endDate.toLocaleDateString('vi-VN')}`);
+  }
+
+  // Nếu có checkInDate, kiểm tra ngày đặt phòng có nằm trong khoảng hiệu lực không
+  if (checkInDate) {
+    const checkIn = new Date(checkInDate);
+    // Chỉ so sánh ngày, không so sánh giờ
+    const checkInDateOnly = new Date(checkIn.getFullYear(), checkIn.getMonth(), checkIn.getDate());
+    const startDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+    const endDateOnly = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate());
+    
+    if (checkInDateOnly < startDateOnly) {
+      throw createError(400, `Ngày đặt phòng (${checkInDateOnly.toLocaleDateString('vi-VN')}) phải nằm trong khoảng hiệu lực của coupon (${startDateOnly.toLocaleDateString('vi-VN')} - ${endDateOnly.toLocaleDateString('vi-VN')})`);
+    }
+    
+    if (checkInDateOnly > endDateOnly) {
+      throw createError(400, `Ngày đặt phòng (${checkInDateOnly.toLocaleDateString('vi-VN')}) phải nằm trong khoảng hiệu lực của coupon (${startDateOnly.toLocaleDateString('vi-VN')} - ${endDateOnly.toLocaleDateString('vi-VN')})`);
+    }
+  }
 
   // Kiểm tra số lần sử dụng
   if (coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) {

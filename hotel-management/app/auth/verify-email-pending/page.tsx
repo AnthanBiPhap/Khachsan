@@ -46,6 +46,8 @@ export default function VerifyEmailPendingPage() {
             </ul>
           </div>
           
+
+          
           <div className="space-y-3">
             <Button
               onClick={() => router.push('/auth/login')}

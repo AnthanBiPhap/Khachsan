@@ -124,7 +124,7 @@ export function ServicesSection() {
       currency: 'VND',
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
-    }).format(price)
+    }).format(price) 
   }
 
   const getClockIcon = (index: number) => {

@@ -818,7 +818,8 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                         applicableTo,
                         roomPrice, // Giá phòng riêng (tổng số đêm)
                         serviceTotal, // Giá dịch vụ riêng - QUAN TRỌNG: phải có giá trị
-                        pricePerNight // Giá 1 đêm (giá gốc) - coupon chỉ giảm trên 1 đêm
+                        pricePerNight, // Giá 1 đêm (giá gốc) - coupon chỉ giảm trên 1 đêm
+                        checkIn // Ngày check-in để kiểm tra coupon có hiệu lực trong khoảng thời gian này không
                       );
                       
                       console.log('🎟️ Frontend - Coupon validation result:', {

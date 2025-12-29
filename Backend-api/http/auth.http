@@ -3,11 +3,11 @@ POST http://localhost:8080/api/v1/auth/login
 Content-Type: application/json
 
 {
-    "email": "staff@gmail.com",
+    "email": "caohongngungoc@gmail.com",
     "password": "123456"
 }
 
 ### get profile
 GET http://localhost:8080/api/v1/auth/get-profile
 Content-Type: application/json
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OTE5NDQyZmYyY2UwOTdkN2QzMTY1N2IiLCJlbWFpbCI6InN0YWZmQGdtYWlsLmNvbSIsImlhdCI6MTc2MzI2MzU1OSwiZXhwIjoxNzYzMzQ5OTU5fQ.Xb0MJMBJ8_KcfcKEZSAAWL-3TWsITo9OKBHk81ctADc
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OTUxMzI2OTZjNzUzNmIyZWY0ZWY1NGEiLCJlbWFpbCI6ImNhb2hvbmduZ3VuZ29jQGdtYWlsLmNvbSIsImlhdCI6MTc2NjkzMjc4NywiZXhwIjoxNzY3MDE5MTg3fQ.F24PQ2W2Ly-GwtKoqNYtn40ay8Wc1UlNjR9eMDuDfTM

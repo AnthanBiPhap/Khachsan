@@ -79,7 +79,7 @@ const getByCode = async (req: Request, res: Response, next: NextFunction) => {
 const validate = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { code } = req.params;
-    const { orderAmount, applicableTo, roomAmount, serviceAmount, pricePerNight } = req.body;
+    const { orderAmount, applicableTo, roomAmount, serviceAmount, pricePerNight, checkInDate } = req.body;
 
     console.log('📥 Validate coupon controller - Request body:', {
       code,
@@ -88,6 +88,7 @@ const validate = async (req: Request, res: Response, next: NextFunction) => {
       roomAmount,
       serviceAmount,
       pricePerNight,
+      checkInDate,
     });
 
     if (!orderAmount || orderAmount <= 0) {
@@ -104,7 +105,8 @@ const validate = async (req: Request, res: Response, next: NextFunction) => {
       applicableTo || "all",
       roomAmount,
       serviceAmount,
-      pricePerNight
+      pricePerNight,
+      checkInDate
     );
     
     console.log('📤 Validate coupon controller - Result:', {

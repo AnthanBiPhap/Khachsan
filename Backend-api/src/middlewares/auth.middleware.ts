@@ -9,21 +9,21 @@ interface decodedJWT extends JwtPayload {
  }
 
 export const authenticateToken = async (req: Request, res: Response, next: NextFunction) => {
-  //Get the jwt token from the head
+  // Lấy JWT token từ header
   const authHeader = req.headers['authorization'];
   if(!authHeader) {
     return next(createError(401, 'Unauthorized'));
   }
     const token = authHeader && authHeader.split(' ')[1];
 
-     //If token is not valid, respond with 401 (unauthorized)
+     // Nếu token không hợp lệ, trả về 401 (unauthorized)
     if (!token) {
       return next(createError(401, 'Unauthorized'));
     }
 
     try {
       const decoded = jwt.verify(token, env.JWT_SECRET as string) as decodedJWT;
-      //try verify user exits in database (chỉ lấy user chưa bị xóa)
+      // Kiểm tra user có tồn tại trong database (chỉ lấy user chưa bị xóa)
       const user = await User
       .findOne({
         _id: decoded._id,
@@ -40,7 +40,7 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
         return next(createError(403, 'Tài khoản của bạn đã bị vô hiệu hóa. Vui lòng liên hệ quản trị viên.'));
       }
       
-      //Đăng ký biến user global trong app
+      // Đăng ký biến user global trong app
       res.locals.user = user;
 
       next();
@@ -57,8 +57,8 @@ export const authenticateToken = async (req: Request, res: Response, next: NextF
 };
 
 export const authorize = (roles: string[] = []) => {
-    // roles param can be a single role string (e.g. Role.user or 'user') 
-    // or an array of roles (e.g. [Role.Admin, Role.user] or ['Admin', 'user'])
+    // Tham số roles có thể là một chuỗi role đơn (ví dụ: 'user' hoặc 'admin')
+    // hoặc một mảng các roles (ví dụ: ['admin', 'user'])
     if (typeof roles === 'string') {
         roles = [roles];
     }
@@ -67,7 +67,7 @@ export const authorize = (roles: string[] = []) => {
       if (roles.length && res.locals.user.role && !roles.includes(res.locals.user.role)) {
         return next(createError(403, 'Forbidden'));
       }
-        // authentication and authorization successful
+        // Xác thực và phân quyền thành công
         next();
     }
 }
