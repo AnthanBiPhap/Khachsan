@@ -257,7 +257,7 @@ const Defaultlayout: React.FC = () => {
           mode="inline" 
           items={menuItems} 
           onClick={handleMenuClick}
-          style={{ borderRight: 0 }}
+          style={{ borderRight: 0, background: 'transparent' }}
         />
       </Sider>
       <Layout style={{ marginLeft: collapsed ? 80 : 200, transition: 'margin-left 0.2s' }}>
