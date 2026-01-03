@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Drawer, List, Badge, Typography, Space, Tag, Empty, Button, Spin, message } from 'antd';
-import { BellOutlined, CalendarOutlined, UserOutlined, HomeOutlined, DollarOutlined, CheckCircleOutlined, DeleteOutlined } from '@ant-design/icons';
+import { BellOutlined, CalendarOutlined, UserOutlined, HomeOutlined, DollarOutlined, DeleteOutlined } from '@ant-design/icons';
 import dayjs from 'dayjs';
-import { fetchMyNotifications, markAsRead, markAllAsRead, deleteNotification, fetchUnreadCount, type Notification } from '../../services/notifications.service';
+import { fetchMyNotifications, deleteNotification, fetchUnreadCount, type Notification } from '../../services/notifications.service';
 import { useAuthStore } from '../../stores/authStore';
 
 const { Text } = Typography;
@@ -11,8 +11,14 @@ interface NotificationCenterProps {
   open: boolean;
   onClose: () => void;
   onNotificationClick?: (bookingId: string) => void;
-  onRefresh?: () => void;
+  onRefresh?: (count?: number) => void;
 }
+
+const toUserIdString = (val: unknown): string => {
+  if (typeof val === 'string') return val;
+  const obj = val as { _id?: string };
+  return obj?._id?.toString?.() || '';
+};
 
 const NotificationCenter: React.FC<NotificationCenterProps> = ({
   open,
@@ -29,12 +35,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     if (!user?._id) return false;
     
     const currentUserId = user._id.toString();
-    const recipient = notification.recipients.find(
-      (r: any) => {
-        const recipientUserId = r.userId?.toString() || r.userId?._id?.toString() || r.userId;
-        return recipientUserId === currentUserId;
-      }
-    );
+    const recipient = notification.recipients.find((r) => toUserIdString(r.userId) === currentUserId);
     return recipient?.read || false;
   };
 
@@ -59,7 +60,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     if (open) {
       loadNotifications();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, user?._id]);
 
   const formatPrice = (price: number) => {
@@ -88,32 +88,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
     );
   };
 
-  const handleMarkAsRead = async (notificationId: string) => {
-    try {
-      await markAsRead(notificationId);
-      const count = await fetchUnreadCount();
-      setUnreadCount(count);
-      await loadNotifications();
-      if (onRefresh) onRefresh();
-      message.success('Đã đánh dấu đã đọc');
-    } catch (error) {
-      message.error('Không thể đánh dấu đã đọc');
-    }
-  };
-
-  const handleMarkAllAsRead = async () => {
-    try {
-      await markAllAsRead();
-      const count = await fetchUnreadCount();
-      setUnreadCount(count);
-      await loadNotifications();
-      if (onRefresh) onRefresh();
-      message.success('Đã đánh dấu tất cả đã đọc');
-    } catch (error) {
-      message.error('Không thể đánh dấu tất cả đã đọc');
-    }
-  };
-
   const handleDelete = async (notificationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -122,6 +96,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
       if (onRefresh) onRefresh();
       message.success('Đã xóa thông báo');
     } catch (error) {
+      console.error('Error delete notification:', error);
       message.error('Không thể xóa thông báo');
     }
   };
@@ -137,15 +112,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
               <Badge count={unreadCount} style={{ backgroundColor: '#52c41a' }} />
             )}
           </Space>
-          {unreadCount > 0 && (
-            <Button
-              type="link"
-              size="small"
-              onClick={handleMarkAllAsRead}
-            >
-              Đánh dấu tất cả đã đọc
-            </Button>
-          )}
         </Space>
       }
       placement="right"
@@ -178,7 +144,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
             let roomNumber = 'N/A';
             let checkInDate = 'N/A';
             let checkOutDate = 'N/A';
-            let navigateUrl = '/bookings';
 
             if (isGroupBooking && notif.metadata) {
               // Group booking
@@ -186,12 +151,11 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
               roomNumber = `${notif.metadata.roomCount || 0} phòng`;
               checkInDate = bookingData?.checkIn ? dayjs(bookingData.checkIn).format('DD/MM/YYYY') : 'N/A';
               checkOutDate = bookingData?.checkOut ? dayjs(bookingData.checkOut).format('DD/MM/YYYY') : 'N/A';
-              navigateUrl = '/group-bookings';
             } else if (bookingData) {
               // Regular booking
               customerName =
                 bookingData?.customerId?.fullName ||
-                bookingData?.guests?.find((g: any) => g.isMainGuest)?.fullName ||
+                bookingData?.guests?.find((g: { isMainGuest?: boolean; fullName?: string }) => g.isMainGuest)?.fullName ||
                 'Khách hàng';
               roomNumber = bookingData?.roomId?.roomNumber || 'N/A';
               checkInDate = bookingData?.checkIn ? dayjs(bookingData.checkIn).format('DD/MM/YYYY') : 'N/A';
@@ -236,20 +200,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({
                   e.currentTarget.style.boxShadow = 'none';
                 }}
                 actions={[
-                  !isRead && (
-                    <Button
-                      key="mark-read"
-                      type="text"
-                      size="small"
-                      icon={<CheckCircleOutlined />}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleMarkAsRead(notif._id);
-                      }}
-                    >
-                      Đánh dấu đã đọc
-                    </Button>
-                  ),
                   <Button
                     key="delete"
                     type="text"

@@ -1,6 +1,7 @@
 import createError from "http-errors";
 import Notification from "../models/notifications.model";
 import User from "../models/users.model";
+import { Types } from "mongoose";
 
 /**
  * Tạo notification mới: nếu không có recipients thì mặc định gửi cho tất cả admin và staff,
@@ -195,10 +196,14 @@ const markAsRead = async (id: string, userId: string) => {
  * Đánh dấu tất cả notifications chưa đọc của user là đã đọc
  */
 const markAllAsRead = async (userId: string) => {
-  // Cập nhật tất cả notifications có recipient là userId và chưa đọc
-  const result = await Notification.updateMany(
+  const userObjId = new Types.ObjectId(userId);
+  const userIdStr = userId.toString();
+
+  // Update theo ObjectId
+  const byObjectId = await Notification.updateMany(
     {
-      "recipients.userId": userId,
+      status: { $ne: "deleted" },
+      "recipients.userId": userObjId,
       "recipients.read": false,
     },
     {
@@ -208,23 +213,54 @@ const markAllAsRead = async (userId: string) => {
       },
     },
     {
-      // Sử dụng arrayFilters để chỉ cập nhật phần tử recipient phù hợp
-      arrayFilters: [{ "elem.userId": userId, "elem.read": false }],
+      arrayFilters: [
+        {
+          "elem.read": false,
+          "elem.userId": userObjId,
+        },
+      ],
     }
   );
 
-  return result;
+  // Update theo string (phòng khi userId lưu dạng string)
+  const byStringId = await Notification.updateMany(
+    {
+      status: { $ne: "deleted" },
+      "recipients.userId": userIdStr,
+      "recipients.read": false,
+    },
+    {
+      $set: {
+        "recipients.$[elem].read": true,
+        "recipients.$[elem].readAt": new Date(),
+      },
+    },
+    {
+      arrayFilters: [
+        {
+          "elem.read": false,
+          "elem.userId": userIdStr,
+        },
+      ],
+    }
+  );
+
+  return { byObjectId, byStringId };
 };
 
 /**
  * Đếm số notifications chưa đọc của user
  */
 const getUnreadCount = async (userId: string) => {
+  const userObjId = new Types.ObjectId(userId);
   // Đếm số notification có recipient là userId và chưa đọc, không bao gồm đã xóa
   const count = await Notification.countDocuments({
     status: { $ne: "deleted" },
-    "recipients.userId": userId,
     "recipients.read": false,
+    $or: [
+      { "recipients.userId": userObjId },
+      { "recipients.userId": userId.toString() },
+    ],
   });
 
   return count;

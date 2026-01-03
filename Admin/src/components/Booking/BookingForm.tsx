@@ -58,6 +58,10 @@ export default function BookingForm({
   loading,
 }: BookingFormProps) {
   const [form] = Form.useForm();
+  const isEdit = !!booking;
+  const watchCheckIn = Form.useWatch('checkIn', form);
+  const watchCheckOut = Form.useWatch('checkOut', form);
+  const watchExtraHours = Form.useWatch('extraHours', form);
   const [services, setServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<ServiceItem[]>([]);
   const [checkIn, setCheckIn] = useState<Dayjs | null>(null);
@@ -67,6 +71,8 @@ export default function BookingForm({
   const [availableRooms, setAvailableRooms] = useState<Room[]>([]);
   const [guests, setGuests] = useState<GuestInfo[]>([]);
   const [guestCount, setGuestCount] = useState<number>(1);
+  const [extendBlocked, setExtendBlocked] = useState<boolean>(false);
+  const [maxExtraHoursEffective, setMaxExtraHoursEffective] = useState<number>(6);
   const [loadingAvailableRooms, setLoadingAvailableRooms] = useState<boolean>(false);
   const [pricingInfo, setPricingInfo] = useState<{
     totalPrice: number;
@@ -153,8 +159,37 @@ export default function BookingForm({
     [roomPrice, servicesPrice, extraHours, extraHourPrice]
   );
 
+  // Disable ngày quá khứ / check-out phải sau check-in
+  const disabledCheckInDate = (current: Dayjs) => {
+    if (!current) return false;
+    return current.startOf('day').valueOf() < dayjs().startOf('day').valueOf();
+  };
+
+  const disabledCheckOutDate = (current: Dayjs) => {
+    if (!current) return false;
+    const currentStart = current.startOf('day').valueOf();
+    const todayStart = dayjs().startOf('day').valueOf();
+    if (!checkIn) {
+      return currentStart < todayStart;
+    }
+    const checkInStart = checkIn.startOf('day').valueOf();
+    return currentStart <= checkInStart;
+  };
+
   // Giới hạn số khách theo sức chứa loại phòng (mặc định 10 nếu chưa chọn phòng)
   const maxGuestAllowed = selectedRoom?.typeId?.capacity || 10;
+
+  useEffect(() => {
+    setCheckIn(watchCheckIn || null);
+  }, [watchCheckIn]);
+
+  useEffect(() => {
+    setCheckOut(watchCheckOut || null);
+  }, [watchCheckOut]);
+
+  useEffect(() => {
+    setExtraHours(watchExtraHours || 0);
+  }, [watchExtraHours]);
 
   useEffect(() => {
     if (guestCount > maxGuestAllowed) {
@@ -162,12 +197,18 @@ export default function BookingForm({
     }
   }, [maxGuestAllowed]);
 
+  useEffect(() => {
+    // reset block state when room changes
+    setExtendBlocked(false);
+    setMaxExtraHoursEffective(maxExtraHours);
+  }, [selectedRoom?._id, maxExtraHours]);
+
   // Giới hạn giờ thêm theo maxExtendHours của loại phòng
   useEffect(() => {
     if (extraHours > maxExtraHours) {
       setExtraHours(maxExtraHours);
     }
-  }, [maxExtraHours]);
+  }, [maxExtraHours, extraHours]);
 
   // Hiển thị số liệu thanh toán theo dữ liệu hiện tại trên form / dữ liệu booking
   const displayTotalAmount = booking?.totalPrice ?? totalPrice;
@@ -225,13 +266,17 @@ export default function BookingForm({
             // Update selected room với full data từ API
             setSelectedRoom(foundRoom);
             form.setFieldValue("roomId", foundRoom._id);
-          } else if (!booking) {
-            // Chỉ reset nếu không phải đang edit booking (phòng đã bị đặt bởi booking/group booking khác)
+            setExtendBlocked(false);
+            setMaxExtraHoursEffective(foundRoom.typeId?.maxExtendHours ?? maxExtraHours);
+          } else if (booking) {
+            // Phòng đang sửa không còn trống cho khoảng thời gian mới (kể cả gia hạn)
+            setExtendBlocked(true);
+            setMaxExtraHoursEffective(extraHours); // giữ nguyên số giờ hiện tại, không cho tăng thêm
+          } else {
+            // Chỉ reset nếu không phải đang edit booking
             setSelectedRoom(null);
             form.setFieldValue("roomId", undefined);
           }
-          // Nếu đang edit và phòng không có trong available (do conflict), giữ lại phòng đã chọn
-          // nhưng không reset (vì đó là phòng của booking hiện tại)
         }
       } catch (err) {
         console.error("Error fetching available rooms:", err);
@@ -365,6 +410,17 @@ export default function BookingForm({
       const values = await form.validateFields();
       if (!selectedRoom || !checkIn || !checkOut)
         return message.error("Vui lòng chọn phòng");
+
+      // Validate ngày không hợp lệ
+      const today = dayjs().startOf('day');
+      if (checkIn.startOf('day').valueOf() < today.valueOf()) {
+        return message.error("Ngày nhận phòng không được trước ngày hiện tại");
+      }
+      const checkInStart = checkIn.startOf('day').valueOf();
+      const checkOutStart = checkOut.startOf('day').valueOf();
+      if (checkOutStart <= checkInStart) {
+        return message.error("Ngày trả phòng phải sau ngày nhận phòng");
+      }
 
       // Validate bắt buộc cho từng khách
       for (let i = 0; i < guests.length; i++) {
@@ -709,7 +765,8 @@ export default function BookingForm({
                 <DatePicker
                   style={{ width: "100%" }}
                   format="DD/MM/YYYY"
-                  onChange={setCheckIn}
+                  disabledDate={disabledCheckInDate}
+                  disabled={isEdit}
                   placeholder="Chọn ngày nhận phòng"
                 />
               </Form.Item>
@@ -731,7 +788,8 @@ export default function BookingForm({
                 <DatePicker
                   style={{ width: "100%" }}
                   format="DD/MM/YYYY"
-                  onChange={setCheckOut}
+                  disabledDate={disabledCheckOutDate}
+                  disabled={isEdit}
                   placeholder="Chọn ngày trả phòng"
                 />
               </Form.Item>
@@ -770,7 +828,7 @@ export default function BookingForm({
                       ? "Không có phòng trống trong khoảng thời gian này"
                       : "Chọn phòng"
                   }
-                  disabled={!checkIn || !checkOut || loadingAvailableRooms}
+                  disabled={isEdit || !checkIn || !checkOut || loadingAvailableRooms}
                   loading={loadingAvailableRooms}
                   options={availableRooms.map((r) => ({
                     label: `${r.roomNumber} - ${r.typeId?.name} (${r.typeId?.capacity || 0} người)`,
@@ -785,23 +843,26 @@ export default function BookingForm({
                 />
               </Form.Item>
             </Col>
-            <Col span={6}>
+            <Col span={12}>
               <Form.Item
                 name="extraHours"
                 label={
-                  <Space>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'nowrap' }}>
                     <ClockCircleOutlined />
                     <span>Thêm giờ</span>
-                    <Tag color="blue">Max {maxExtraHours}h</Tag>
-                  </Space>
+                    <Tag color={extendBlocked ? 'red' : 'blue'}>
+                      {extendBlocked ? 'Phòng đã có khách kế tiếp' : `Max ${maxExtraHoursEffective}h`}
+                    </Tag>
+                  </div>
                 }
               >
                 <InputNumber
                   min={0}
-                  max={maxExtraHours}
+                  max={maxExtraHoursEffective}
                   style={{ width: "100%" }}
                   value={extraHours}
                   onChange={(v) => setExtraHours(v || 0)}
+                  disabled={extendBlocked}
                   placeholder="Giờ thêm"
                 />
               </Form.Item>

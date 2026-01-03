@@ -9,7 +9,6 @@ import {
   ToolOutlined,
   ShoppingCartOutlined,
   EnvironmentOutlined,
-  StarOutlined,
   FileDoneOutlined,
   CreditCardOutlined,
   UserOutlined,
@@ -103,7 +102,7 @@ const Defaultlayout: React.FC = () => {
   } = theme.useToken();
 
   // WebSocket connection và notifications
-  const { isConnected, notifications, clearNotifications } = useWebSocket();
+  const { isConnected, notifications } = useWebSocket();
   const [shownNotificationIds, setShownNotificationIds] = useState<Set<string>>(new Set());
   const [notificationCenterOpen, setNotificationCenterOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -183,9 +182,12 @@ const Defaultlayout: React.FC = () => {
     });
   }, [notifications, shownNotificationIds]);
 
-  const handleNotificationCenterRefresh = useCallback(() => {
-    // Refresh unread count khi có thay đổi
-    loadUnreadCount();
+  const handleNotificationCenterRefresh = useCallback((count?: number) => {
+    if (typeof count === 'number') {
+      setUnreadCount(count);
+    } else {
+      loadUnreadCount();
+    }
   }, [loadUnreadCount]);
 
   const handleMenuClick = (e: { key: string }) => {
@@ -317,7 +319,7 @@ const Defaultlayout: React.FC = () => {
         <NotificationCenter
           open={notificationCenterOpen}
           onClose={() => setNotificationCenterOpen(false)}
-          onNotificationClick={(bookingId) => {
+          onNotificationClick={() => {
             setNotificationCenterOpen(false);
             // Navigate sẽ được xử lý trong NotificationCenter component
           }}
