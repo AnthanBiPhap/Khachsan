@@ -14,7 +14,8 @@ import dayjs from "dayjs";
 export const couponsColumns = (
   handleEdit: (record: Coupon) => void,
   handleDelete: (id: string) => void,
-  handleDetail?: (record: Coupon) => void
+  handleDetail?: (record: Coupon) => void,
+  isStaff: boolean = false
 ): ColumnsType<Coupon> => [
   {
     title: "Mã Coupon",
@@ -169,23 +170,27 @@ export const couponsColumns = (
             Chi tiết
           </Button>
         )}
-        <Button
-          type="link"
-          icon={<EditOutlined />}
-          onClick={() => handleEdit(record)}
-          size="small"
-        >
-          Sửa
-        </Button>
-        <Button
-          type="link"
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => handleDelete(record._id)}
-          size="small"
-        >
-          Xóa
-        </Button>
+        {!isStaff && (
+          <>
+            <Button
+              type="link"
+              icon={<EditOutlined />}
+              onClick={() => handleEdit(record)}
+              size="small"
+            >
+              Sửa
+            </Button>
+            <Button
+              type="link"
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => handleDelete(record._id)}
+              size="small"
+            >
+              Xóa
+            </Button>
+          </>
+        )}
       </Space>
     ),
   },

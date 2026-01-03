@@ -289,11 +289,18 @@ export default function UserPage() {
       title: "Vai trò",
       dataIndex: "role",
       key: "role",
-      render: (role) => (
-        <Tag color={role === "admin" ? "volcano" : "geekblue"}>
-          {role.toUpperCase()}
-        </Tag>
-      ),
+      render: (role) => {
+        const roleConfig: Record<string, string> = {
+          admin: "volcano",
+          staff: "cyan",
+          user: "geekblue",
+        };
+        return (
+          <Tag color={roleConfig[role] || "default"}>
+            {role.toUpperCase()}
+          </Tag>
+        );
+      },
     },
     {
       title: "Trạng thái",

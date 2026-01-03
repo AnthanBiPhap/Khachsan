@@ -16,9 +16,9 @@ import {
   Input, 
   Select, 
   DatePicker, 
-  Progress,
   Badge,
-  Divider
+  Divider,
+  Space
 } from "antd"
 import {
   DollarOutlined,
@@ -31,7 +31,15 @@ import {
   DownloadOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
-  ReloadOutlined
+  ReloadOutlined,
+  BarChartOutlined,
+  TeamOutlined,
+  WalletOutlined,
+  TrophyOutlined,
+  LineChartOutlined,
+  PieChartOutlined,
+  ProfileOutlined,
+  ThunderboltOutlined
 } from "@ant-design/icons"
 import axios from "axios"
 import {
@@ -1072,7 +1080,12 @@ const Dashboard: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card hoverable className="shadow-md">
             <Statistic
-              title="📊 Tổng đặt phòng"
+              title={
+                <Space>
+                  <BarChartOutlined />
+                  <span>Tổng đặt phòng</span>
+                </Space>
+              }
               value={stats.totalBookings}
               prefix={<CalendarOutlined />}
               valueStyle={{ color: "#1890ff" }}
@@ -1083,7 +1096,12 @@ const Dashboard: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card hoverable className="shadow-md">
             <Statistic
-              title="👥 Khách đang ở"
+              title={
+                <Space>
+                  <TeamOutlined />
+                  <span>Khách đang ở</span>
+                </Space>
+              }
               value={stats.currentGuests}
               prefix={<UserOutlined />}
               valueStyle={{ color: "#52c41a" }}
@@ -1094,7 +1112,12 @@ const Dashboard: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card hoverable className="shadow-md">
             <Statistic
-              title="💰 Doanh thu hôm nay"
+              title={
+                <Space>
+                  <WalletOutlined />
+                  <span>Doanh thu hôm nay</span>
+                </Space>
+              }
               value={stats.todayRevenue}
               prefix={<DollarOutlined />}
               valueStyle={{ color: "#3f8600" }}
@@ -1106,34 +1129,15 @@ const Dashboard: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card hoverable className="shadow-md">
             <Statistic
-              title="📅 Doanh thu tháng này"
+              title={
+                <Space>
+                  <CalendarOutlined />
+                  <span>Doanh thu tháng này</span>
+                </Space>
+              }
               value={stats.monthRevenue}
               prefix={<DollarOutlined />}
               valueStyle={{ color: "#722ed1" }}
-              formatter={(value: any) => `${Number(value).toLocaleString("vi-VN")} VND`}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card hoverable className="shadow-md">
-            <Statistic
-              title="📆 Doanh thu năm này"
-              value={stats.yearRevenue}
-              prefix={<DollarOutlined />}
-              valueStyle={{ color: "#eb2f96" }}
-              formatter={(value: any) => `${Number(value).toLocaleString("vi-VN")} VND`}
-              loading={loading}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card hoverable className="shadow-md">
-            <Statistic
-              title="💎 Tổng tiền toàn bộ"
-              value={stats.totalRevenue}
-              prefix={<DollarOutlined />}
-              valueStyle={{ color: "#f5222d" }}
               formatter={(value: any) => `${Number(value).toLocaleString("vi-VN")} VND`}
               loading={loading}
             />
@@ -1145,7 +1149,46 @@ const Dashboard: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card hoverable className="shadow-md">
             <Statistic
-              title="💸 Đã thanh toán"
+              title={
+                <Space>
+                  <CalendarOutlined />
+                  <span>Doanh thu năm này</span>
+                </Space>
+              }
+              value={stats.yearRevenue}
+              prefix={<DollarOutlined />}
+              valueStyle={{ color: "#eb2f96" }}
+              formatter={(value: any) => `${Number(value).toLocaleString("vi-VN")} VND`}
+              loading={loading}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card hoverable className="shadow-md">
+            <Statistic
+              title={
+                <Space>
+                  <TrophyOutlined />
+                  <span>Tổng tiền toàn bộ</span>
+                </Space>
+              }
+              value={stats.totalRevenue}
+              prefix={<DollarOutlined />}
+              valueStyle={{ color: "#f5222d" }}
+              formatter={(value: any) => `${Number(value).toLocaleString("vi-VN")} VND`}
+              loading={loading}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card hoverable className="shadow-md">
+            <Statistic
+              title={
+                <Space>
+                  <CheckCircleOutlined />
+                  <span>Đã thanh toán</span>
+                </Space>
+              }
               value={stats.paidBookings}
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: "#52c41a" }}
@@ -1156,7 +1199,12 @@ const Dashboard: React.FC = () => {
         <Col xs={24} sm={12} lg={6}>
           <Card hoverable className="shadow-md">
             <Statistic
-              title="🕒 Chờ thanh toán"
+              title={
+                <Space>
+                  <ClockCircleOutlined />
+                  <span>Chờ thanh toán</span>
+                </Space>
+              }
               value={stats.pendingBookings}
               prefix={<ClockCircleOutlined />}
               valueStyle={{ color: "#faad14" }}
@@ -1164,25 +1212,34 @@ const Dashboard: React.FC = () => {
             />
           </Card>
         </Col>
+      </Row>
+
+      <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} sm={12} lg={6}>
           <Card hoverable className="shadow-md">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600 mb-2">
-                {stats.paymentRate.toFixed(1)}%
-              </div>
-              <div className="text-gray-600 mb-2">📈 Tỷ lệ thanh toán</div>
-              <Progress 
-                percent={Math.round(stats.paymentRate * 10) / 10} 
-                strokeColor="#52c41a"
-                size="small"
-              />
-            </div>
+            <Statistic
+              title={
+                <Space>
+                  <LineChartOutlined />
+                  <span>Tỷ lệ thanh toán</span>
+                </Space>
+              }
+              value={stats.paymentRate}
+              suffix="%"
+              valueStyle={{ color: "#13c2c2" }}
+              loading={loading}
+            />
           </Card>
         </Col>
         <Col xs={24} sm={12} lg={6}>
           <Card hoverable className="shadow-md">
             <Statistic
-              title="💵 Trung bình/booking"
+              title={
+                <Space>
+                  <DollarOutlined />
+                  <span>Trung bình/booking</span>
+                </Space>
+              }
               value={stats.averageBookingValue}
               prefix={<DollarOutlined />}
               valueStyle={{ color: "#13c2c2" }}
@@ -1196,7 +1253,17 @@ const Dashboard: React.FC = () => {
       {/* Charts */}
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} lg={12}>
-          <Card title="📈 Doanh thu 7 ngày qua" loading={loading} className="shadow-md">
+          <Card 
+            title={
+              <Space>
+                <LineChartOutlined />
+                <span>Doanh thu 7 ngày qua</span>
+              </Space>
+            } 
+            loading={loading} 
+            className="shadow-md"
+            style={{ height: "100%" }}
+          >
             {!loading && revenueData.length === 0 ? (
               <Empty description="Chưa có dữ liệu doanh thu" />
             ) : (
@@ -1221,7 +1288,17 @@ const Dashboard: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="🥧 Phân bổ nguồn đặt" loading={loading} className="shadow-md">
+          <Card 
+            title={
+              <Space>
+                <PieChartOutlined />
+                <span>Phân bổ nguồn đặt</span>
+              </Space>
+            } 
+            loading={loading} 
+            className="shadow-md"
+            style={{ height: "100%" }}
+          >
             {!loading && bookingSourceData.length === 0 ? (
               <Empty description="Chưa có dữ liệu đặt phòng" />
             ) : (
@@ -1251,7 +1328,16 @@ const Dashboard: React.FC = () => {
 
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} lg={12}>
-          <Card title="🏠 Tình trạng phòng (Tổng quan)" loading={loading} className="shadow-md">
+          <Card 
+            title={
+              <Space>
+                <HomeOutlined />
+                <span>Tình trạng phòng (Tổng quan)</span>
+              </Space>
+            }
+            loading={loading} 
+            className="shadow-md"
+          >
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={roomStatusData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -1269,7 +1355,16 @@ const Dashboard: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} lg={12}>
-          <Card title="📅 Phòng trống hôm nay" loading={loading} className="shadow-md">
+          <Card 
+            title={
+              <Space>
+                <HomeOutlined />
+                <span>Phòng trống hôm nay</span>
+              </Space>
+            } 
+            loading={loading} 
+            className="shadow-md"
+          >
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={availableRoomsTodayData}>
                 <CartesianGrid strokeDasharray="3 3" />
@@ -1290,7 +1385,17 @@ const Dashboard: React.FC = () => {
 
       <Row gutter={[16, 16]} className="mb-6">
         <Col xs={24} lg={12}>
-          <Card title="⭐ Dịch vụ phổ biến (Top 5)" loading={loading} className="shadow-md">
+          <Card 
+            title={
+              <Space>
+                <StarOutlined />
+                <span>Dịch vụ phổ biến (Top 5)</span>
+              </Space>
+            }
+            loading={loading} 
+            className="shadow-md"
+            style={{ height: "100%" }}
+          >
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={popularServices} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" />
@@ -1309,9 +1414,15 @@ const Dashboard: React.FC = () => {
         </Col>
         <Col xs={24} lg={12}>
           <Card 
-            title="🏠 Số phòng trống theo khoảng thời gian" 
+            title={
+              <Space>
+                <HomeOutlined />
+                <span>Số phòng trống theo khoảng thời gian</span>
+              </Space>
+            } 
             loading={loading} 
             className="shadow-md"
+            style={{ height: "100%" }}
           >
             <div className="space-y-4">
               <div>
@@ -1383,9 +1494,15 @@ const Dashboard: React.FC = () => {
       <Row gutter={[16, 16]}>
         <Col xs={24} xl={16}>
           <Card 
-            title={`📋 Danh sách đặt phòng (${filteredBookings.length + filteredGroupBookings.length} kết quả)`} 
+            title={
+              <Space>
+                <ProfileOutlined />
+                <span>Danh sách đặt phòng ({filteredBookings.length + filteredGroupBookings.length} kết quả)</span>
+              </Space>
+            } 
             loading={loading} 
             className="shadow-md"
+            style={{ height: "100%" }}
             extra={
               <Badge count={filteredBookings.length + filteredGroupBookings.length} showZero color="#1890ff" />
             }
@@ -1421,7 +1538,17 @@ const Dashboard: React.FC = () => {
           </Card>
         </Col>
         <Col xs={24} xl={8}>
-          <Card title="⚡ Thao tác nhanh" loading={loading} className="shadow-md">
+          <Card 
+            title={
+              <Space>
+                <ThunderboltOutlined />
+                <span>Thao tác nhanh</span>
+              </Space>
+            }
+            loading={loading} 
+            className="shadow-md"
+            style={{ height: "100%" }}
+          >
             <div className="space-y-4">
               <div className="flex justify-between items-center p-3 bg-blue-50 rounded-lg">
                 <div>

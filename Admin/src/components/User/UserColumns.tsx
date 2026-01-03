@@ -79,14 +79,19 @@ export const getUserColumns = (
     ),
     dataIndex: "role",
     key: "role",  
-    render: (role) => (
-      <Tag 
-        color={role === "admin" ? "volcano" : "geekblue"}
-        icon={<CrownOutlined />}
-      >
-        {role.toUpperCase()}
-      </Tag>
-    ),
+    render: (role) => {
+      const roleConfig: Record<string, { color: string; icon: React.ReactNode }> = {
+        admin: { color: "volcano", icon: <CrownOutlined /> },
+        staff: { color: "cyan", icon: <TeamOutlined /> },
+        user: { color: "geekblue", icon: <UserOutlined /> },
+      };
+      const config = roleConfig[role] || { color: "default", icon: <UserOutlined /> };
+      return (
+        <Tag color={config.color} icon={config.icon}>
+          {role.toUpperCase()}
+        </Tag>
+      );
+    },
   },
   {
     title: (

@@ -82,9 +82,10 @@ const getMenuItemsByRole = (userRole: string): MenuItem[] => {
     // Admin không có menu Chat
     return allMenuItems.filter(item => item.key !== '/chat');
   } else if (userRole === 'staff') {
-    // Staff chỉ được xem: Users, Bookings, Booking Status, Guests, Service Bookings, Invoices, Group Bookings, Chat, Contacts, Contact Info, Coupons
+    // Staff chỉ được xem: Users, Bookings, Booking Status, Guests, Service Bookings, Invoices, Group Bookings, Chat, Contacts, Coupons
+    // Không có Contact Info
     return allMenuItems.filter(item => 
-      ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms', '/room-types', '/contacts', '/contact-info', '/coupons'].includes(item.key)
+      ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms', '/room-types', '/contacts', '/coupons'].includes(item.key)
     );
   } else {
     // User thường chỉ xem Dashboard

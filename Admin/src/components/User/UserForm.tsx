@@ -165,6 +165,15 @@ export default function UserForm({ open, user, onCancel, onSave }: UserFormProps
                     { 
                       label: (
                         <Space>
+                          <TeamOutlined style={{ color: '#13c2c2' }} />
+                          <span>Staff</span>
+                        </Space>
+                      ), 
+                      value: "staff" 
+                    },
+                    { 
+                      label: (
+                        <Space>
                           <UserOutlined style={{ color: '#1890ff' }} />
                           <span>User</span>
                         </Space>

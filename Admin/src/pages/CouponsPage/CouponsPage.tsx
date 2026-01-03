@@ -27,11 +27,14 @@ import {
 import { couponsColumns } from "../../components/Coupons/CouponsColumns";
 import CouponForm from "../../components/Coupons/CouponForm";
 import dayjs from "dayjs";
+import { useAuthStore } from "../../stores/authStore";
 
 const { Search } = Input;
 const { Title } = Typography;
 
 export default function CouponsPage() {
+  const { user } = useAuthStore();
+  const isStaff = user?.role === 'staff';
   const [items, setItems] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(false);
   const [pagination, setPagination] = useState({
@@ -129,16 +132,18 @@ export default function CouponsPage() {
               Quản lý Coupon
             </Title>
           </Space>
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setEditing(null);
-              setOpenForm(true);
-            }}
-          >
-            Tạo coupon mới
-          </Button>
+          {!isStaff && (
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setEditing(null);
+                setOpenForm(true);
+              }}
+            >
+              Tạo coupon mới
+            </Button>
+          )}
         </Space>
       </Card>
 
@@ -190,7 +195,8 @@ export default function CouponsPage() {
           (record) => {
             setDetailItem(record);
             setOpenDetail(true);
-          }
+          },
+          isStaff
         )}
         dataSource={items}
         rowKey="_id"
