@@ -68,7 +68,7 @@ export default function BookingStatusFilter({ filters, onFiltersChange }: Bookin
         <Select.Option value="check_out">Trả phòng</Select.Option>
         <Select.Option value="cancelled">Đã hủy</Select.Option>
         <Select.Option value="failed">Thất bại</Select.Option>
-        <Select.Option value="refunded">Hoàn tiền</Select.Option>
+        <Select.Option value="refunded">Đã hoàn tiền</Select.Option>
         <Select.Option value="refund_requested">Yêu cầu hoàn tiền</Select.Option>
         <Select.Option value="extend_check_out">Gia hạn trả phòng</Select.Option>
       </Select>

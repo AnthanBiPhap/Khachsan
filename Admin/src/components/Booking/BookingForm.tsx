@@ -969,6 +969,9 @@ export default function BookingForm({
               <Select.Option value="paid">
                 <Tag color="green" style={{ display: 'flex', justifyContent: 'center' }}>Đã thanh toán đủ</Tag>
               </Select.Option>
+              <Select.Option value="refund_requested">
+                <Tag color="purple" style={{ display: 'flex', justifyContent: 'center' }}>Yêu cầu hoàn tiền</Tag>
+              </Select.Option>
               <Select.Option value="failed">
                 <Tag color="red" style={{ display: 'flex', justifyContent: 'center' }}>Thanh toán thất bại</Tag>
               </Select.Option>

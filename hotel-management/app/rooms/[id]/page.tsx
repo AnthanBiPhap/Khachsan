@@ -373,6 +373,11 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
   };
 
   const handleConfirmBooking = () => {
+    if (!userData) {
+      message.error("Vui lòng đăng nhập để đặt phòng và thanh toán");
+      router.push("/login");
+      return;
+    }
     if (!validateGuestInfo()) {
       return;
     }
@@ -400,6 +405,11 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
   // Trong handlePayment - sử dụng Stripe Checkout để tránh tạo booking trùng lặp
   const handlePayment = async () => {
     if (!room) return;
+    if (!userData) {
+      message.error("Vui lòng đăng nhập để thanh toán");
+      router.push("/login");
+      return;
+    }
 
     try {
       const checkInDate = getCheckInDate();
@@ -991,7 +1001,7 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                   <Button
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3"
                     onClick={handleConfirmBooking}
-                    disabled={!checkIn || !checkOut || guestInfo.length === 0}
+                    disabled={!checkIn || !checkOut || guestInfo.length === 0 || !userData}
                   >
                     🚀 Xác nhận & Thanh toán
                   </Button>
@@ -1005,6 +1015,12 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                   {guestInfo.length === 0 && (
                     <p className="text-xs text-gray-500 text-center mt-2">
                       Vui lòng nhập thông tin khách hàng
+                    </p>
+                  )}
+
+                  {!userData && (
+                    <p className="text-xs text-red-500 text-center mt-2">
+                      Vui lòng đăng nhập để đặt phòng và thanh toán
                     </p>
                   )}
                 </div>

@@ -2,7 +2,7 @@ import { Tag, Space, Typography, Button } from "antd";
 import { 
   CalendarOutlined, 
   EditOutlined, 
-  DeleteOutlined, 
+  // DeleteOutlined, 
   EyeOutlined,
   GlobalOutlined,
   ShopOutlined,

@@ -466,13 +466,26 @@ export default function BookingPage() {
                     ? "green"
                     : detailItem.paymentStatus === "failed"
                     ? "red"
-                    : "blue"
+                    : detailItem.paymentStatus === "refund_requested"
+                    ? "purple"
+                    : detailItem.paymentStatus === "refunded"
+                    ? "blue"
+                    : "default"
                 }
               >
-                {detailItem.paymentStatus === "partial_paid" ? "Thanh toán 50%" : 
-                 detailItem.paymentStatus === "paid" ? "Đã thanh toán đủ" :
-                 detailItem.paymentStatus === "pending" ? "Chờ thanh toán" :
-                 detailItem.paymentStatus}
+                {detailItem.paymentStatus === "partial_paid"
+                  ? "Thanh toán 50%"
+                  : detailItem.paymentStatus === "paid"
+                  ? "Đã thanh toán đủ"
+                  : detailItem.paymentStatus === "pending"
+                  ? "Chờ thanh toán"
+                  : detailItem.paymentStatus === "failed"
+                  ? "Thanh toán thất bại"
+                  : detailItem.paymentStatus === "refund_requested"
+                  ? "Yêu cầu hoàn tiền"
+                  : detailItem.paymentStatus === "refunded"
+                  ? "Đã hoàn tiền"
+                  : detailItem.paymentStatus}
               </Tag>
             </Descriptions.Item>
             {(() => {
