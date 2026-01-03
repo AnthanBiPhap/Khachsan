@@ -14,9 +14,25 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import type { BookingStatusLog, BookingStatusGuestInfo } from "../../types/bookingstatus";
 
+// Dịch nhanh các status thanh toán trong chuỗi ghi chú (ví dụ: "refunded → pending")
+const translatePaymentStatusText = (text: string) => {
+  if (!text) return text;
+  const map: Record<string, string> = {
+    refunded: "Đã hoàn tiền",
+    refund_requested: "Yêu cầu hoàn tiền",
+    pending: "Chờ thanh toán",
+    partial_paid: "Thanh toán 50%",
+    paid: "Đã thanh toán đủ",
+    failed: "Thanh toán thất bại",
+    cancelled: "Đã hủy",
+  };
+  // Thay cả 2 chiều "X → Y" để log failed → paid hiển thị tiếng Việt
+  return text.replace(/\b(refunded|refund_requested|pending|partial_paid|paid|failed|cancelled)\b/g, (m) => map[m] || m);
+};
+
 export const bookingStatusColumns = (
-  handleEdit: (record: BookingStatusLog) => void,
-  handleDelete: (id: string) => void,
+  _handleEdit: (record: BookingStatusLog) => void,
+  _handleDelete: (id: string) => void,
   handleDetail?: (record: BookingStatusLog) => void
 ): ColumnsType<BookingStatusLog> => [
   {
@@ -51,7 +67,7 @@ export const bookingStatusColumns = (
           </Typography.Text>
           {!record.actorId && record.actorName && (
             <div style={{ marginTop: 2, display: 'flex', justifyContent: 'center' }}>
-              <Tag size="small" color="orange" style={{ fontSize: 10 }}>
+              <Tag color="orange" style={{ fontSize: 10, padding: '0 6px' }}>
                 Walk-in
               </Tag>
             </div>
@@ -164,7 +180,7 @@ export const bookingStatusColumns = (
     key: "note",
     render: (note: string) => (
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        {note || "-"}
+        {note ? translatePaymentStatusText(note) : "-"}
       </Typography.Text>
     ),
   },

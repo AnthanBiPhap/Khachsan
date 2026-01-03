@@ -20,6 +20,41 @@ import {
 import { env } from "../../constanst/getEnvs";
 import { bookingStatusColumns } from "../../components/BookingStatus/BookingStatusColumns";
 
+// Dịch nhanh các trạng thái thanh toán trong ghi chú (ví dụ: "failed → paid")
+const translatePaymentStatusText = (text: string) => {
+  if (!text) return text;
+  const map: Record<string, string> = {
+    refunded: "Đã hoàn tiền",
+    refund_requested: "Yêu cầu hoàn tiền",
+    pending: "Chờ thanh toán",
+    partial_paid: "Thanh toán 50%",
+    paid: "Đã thanh toán đủ",
+    failed: "Thanh toán thất bại",
+    cancelled: "Đã hủy",
+  };
+  return text.replace(/\b(refunded|refund_requested|pending|partial_paid|paid|failed|cancelled)\b/g, (m) => map[m] || m);
+};
+
+// Dịch trạng thái hành động (action) trong log
+const translateActionText = (action?: string) => {
+  if (!action) return "";
+  const map: Record<string, string> = {
+    check_in: "Check-in",
+    check_out: "Check-out",
+    cancelled: "Hủy đặt phòng",
+    confirmed: "Đã xác nhận",
+    extend: "Gia hạn",
+    extend_check_out: "Lùi giờ trả",
+    pending: "Chờ xác nhận",
+    paid: "Đã thanh toán",
+    refunded: "Hoàn tiền",
+    refund_requested: "Yêu cầu hoàn tiền",
+    failed: "Thanh toán thất bại",
+    updated: "Cập nhật thông tin",
+  };
+  return map[action] || action;
+};
+
 export default function BookingPage() {
   const [bookings, setBookings] = useState<BookingStatusLog[]>([]);
   const [filteredBookings, setFilteredBookings] = useState<BookingStatusLog[]>([]);
@@ -374,7 +409,7 @@ export default function BookingPage() {
                     : "geekblue"
                 }
               >
-                {detailItem.action}
+                {translateActionText(detailItem.action)}
               </Tag>
             </Descriptions.Item>
             <Descriptions.Item label="Thời gian thao tác">
@@ -392,7 +427,7 @@ export default function BookingPage() {
                 border: '1px solid #e8e8e8',
                 minHeight: '40px'
               }}>
-                {detailItem.note || "Không có ghi chú"}
+                {detailItem.note ? translatePaymentStatusText(detailItem.note) : "Không có ghi chú"}
               </div>
             </Descriptions.Item>
           </Descriptions>
