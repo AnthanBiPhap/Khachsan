@@ -79,7 +79,7 @@ export default function LocationStatistics({
             prefix={<TrophyOutlined style={{ color: '#722ed1' }} />}
             valueStyle={{ color: '#722ed1' }}
             precision={1}
-            suffix="⭐"
+              suffix={<StarOutlined style={{ color: '#faad14' }} />}
           />
         </Card>
       </Col>
@@ -87,7 +87,7 @@ export default function LocationStatistics({
       <Col xs={24} sm={12} md={6} lg={4}>
         <Card>
           <Statistic
-            title="Xuất sắc (5⭐)"
+              title="Xuất sắc (5 sao)"
             value={topRatedCount}
             prefix={<HeartOutlined style={{ color: '#13c2c2' }} />}
             valueStyle={{ color: '#13c2c2' }}

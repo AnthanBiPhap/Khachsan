@@ -1,5 +1,5 @@
 import { Button, Dropdown, message, Modal, DatePicker, Space, Typography, Radio, Select } from "antd";
-import { DownloadOutlined, FileExcelOutlined, CalendarOutlined } from "@ant-design/icons";
+import { DownloadOutlined, FileExcelOutlined, CalendarOutlined, BarChartOutlined, LineChartOutlined } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { useState } from "react";
 import dayjs from 'dayjs';
@@ -507,19 +507,28 @@ export default function ExportButton({ bookings }: Omit<ExportButtonProps, 'stat
           
           {dateRangeType === 'custom' && (
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              📅 Chọn khoảng thời gian từ ngày - đến ngày
+              <Space size={4}>
+                <CalendarOutlined />
+                <span>Chọn khoảng thời gian từ ngày - đến ngày</span>
+              </Space>
             </Typography.Text>
           )}
           
           {dateRangeType === 'month' && (
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              📅 Xuất dữ liệu theo tháng được chọn
+              <Space size={4}>
+                <CalendarOutlined />
+                <span>Xuất dữ liệu theo tháng được chọn</span>
+              </Space>
             </Typography.Text>
           )}
           
           {dateRangeType === 'year' && (
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              📅 Xuất dữ liệu theo năm được chọn
+              <Space size={4}>
+                <CalendarOutlined />
+                <span>Xuất dữ liệu theo năm được chọn</span>
+              </Space>
             </Typography.Text>
           )}
           
@@ -595,7 +604,10 @@ export default function ExportButton({ bookings }: Omit<ExportButtonProps, 'stat
               marginTop: 8
             }}>
               <Typography.Text strong style={{ color: '#1890ff' }}>
-                📊 Sẽ xuất dữ liệu từ {dateRange[0].format('DD/MM/YYYY')} đến {dateRange[1].format('DD/MM/YYYY')}
+                <Space size={4}>
+                  <BarChartOutlined />
+                  <span>Sẽ xuất dữ liệu từ {dateRange[0].format('DD/MM/YYYY')} đến {dateRange[1].format('DD/MM/YYYY')}</span>
+                </Space>
               </Typography.Text>
             </div>
           )}
@@ -609,7 +621,10 @@ export default function ExportButton({ bookings }: Omit<ExportButtonProps, 'stat
               marginTop: 8
             }}>
               <Typography.Text strong style={{ color: '#52c41a' }}>
-                📅 Sẽ xuất dữ liệu tháng {selectedMonth}/{selectedYear}
+                <Space size={4}>
+                  <CalendarOutlined />
+                  <span>Sẽ xuất dữ liệu tháng {selectedMonth}/{selectedYear}</span>
+                </Space>
               </Typography.Text>
             </div>
           )}
@@ -623,7 +638,10 @@ export default function ExportButton({ bookings }: Omit<ExportButtonProps, 'stat
               marginTop: 8
             }}>
               <Typography.Text strong style={{ color: '#fa8c16' }}>
-                📈 Sẽ xuất dữ liệu năm {selectedYear}
+                <Space size={4}>
+                  <LineChartOutlined />
+                  <span>Sẽ xuất dữ liệu năm {selectedYear}</span>
+                </Space>
               </Typography.Text>
             </div>
           )}

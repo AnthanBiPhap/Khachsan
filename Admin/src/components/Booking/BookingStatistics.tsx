@@ -1,11 +1,13 @@
-import { Card, Row, Col, Statistic, Typography } from "antd";
+import { Card, Row, Col, Statistic, Typography, Space } from "antd";
 import { 
   CalendarOutlined, 
   HomeOutlined, 
   DollarOutlined, 
-  UserOutlined,
+  // UserOutlined,
   CheckCircleOutlined,
-  ClockCircleOutlined
+  ClockCircleOutlined,
+  BarChartOutlined,
+  LineChartOutlined
 } from "@ant-design/icons";
 
 const { Title } = Typography;
@@ -37,11 +39,14 @@ export default function BookingStatistics({
   return (
     <div style={{ marginBottom: 24 }}>
       <Title level={5} style={{ marginBottom: 16, color: '#1890ff' }}>
-        📊 Thống kê tổng quan
+        <Space>
+          <BarChartOutlined />
+          <span>Thống kê tổng quan</span>
+        </Space>
       </Title>
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ textAlign: 'center' }}>
+          <Card size="small">
             <Statistic
               title="Tổng đặt phòng"
               value={totalBookings}
@@ -52,7 +57,7 @@ export default function BookingStatistics({
         </Col>
         
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ textAlign: 'center' }}>
+          <Card size="small">
             <Statistic
               title="Khách đang ở"
               value={currentGuests}
@@ -63,7 +68,7 @@ export default function BookingStatistics({
         </Col>
         
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ textAlign: 'center' }}>
+          <Card size="small">
             <Statistic
               title="Doanh thu hôm nay"
               value={todayRevenue}
@@ -75,7 +80,7 @@ export default function BookingStatistics({
         </Col>
         
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ textAlign: 'center' }}>
+          <Card size="small">
             <Statistic
               title="Doanh thu tháng này"
               value={monthRevenue}
@@ -89,7 +94,7 @@ export default function BookingStatistics({
       
       <Row gutter={[16, 16]} style={{ marginTop: 8 }}>
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ textAlign: 'center' }}>
+          <Card size="small">
             <Statistic
               title="Chờ thanh toán"
               value={pendingBookings}
@@ -100,7 +105,7 @@ export default function BookingStatistics({
         </Col>
         
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ textAlign: 'center' }}>
+          <Card size="small">
             <Statistic
               title="Đã thanh toán"
               value={paidBookings}
@@ -111,19 +116,19 @@ export default function BookingStatistics({
         </Col>
         
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ textAlign: 'center' }}>
+          <Card size="small">
             <Statistic
               title="Tỷ lệ thanh toán"
               value={totalBookings > 0 ? ((paidBookings / totalBookings) * 100).toFixed(1) : 0}
               suffix="%"
-              prefix={<UserOutlined style={{ color: '#13c2c2' }} />}
+              prefix={<LineChartOutlined style={{ color: '#13c2c2' }} />}
               valueStyle={{ color: '#13c2c2', fontSize: '18px' }}
             />
           </Card>
         </Col>
         
         <Col xs={24} sm={12} md={6}>
-          <Card size="small" style={{ textAlign: 'center' }}>
+          <Card size="small">
             <Statistic
               title="Trung bình/booking"
               value={totalBookings > 0 ? monthRevenue / totalBookings : 0}

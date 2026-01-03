@@ -90,6 +90,11 @@ const bookingSchema = new Schema(
       enum: ["pending", "partial_paid", "paid", "failed", "refunded", "refund_requested", "cancelled"],
       default: "pending",
     },
+    extendHours: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     notes: {
       type: String,
       trim: true,

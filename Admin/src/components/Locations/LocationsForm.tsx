@@ -127,10 +127,13 @@ export default function LocationsForm({ open, item, onCancel, onSave, loading }:
             <Col span={24}>
               <Form.Item 
                 name="name" 
+                required={false}
                 label={
                   <Space>
                     <EnvironmentOutlined />
-                    <span>Tên địa điểm</span>
+                    <span>
+                      Tên địa điểm <span style={{ color: '#ff4d4f' }}>*</span>
+                    </span>
                   </Space>
                 }
                 rules={[{ required: true, message: "Nhập tên địa điểm" }]}

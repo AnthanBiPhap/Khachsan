@@ -6,9 +6,10 @@ import {
   Descriptions,
   Tag,
   Alert,
+  Space,
 } from "antd";
 import { useEffect, useState } from "react";
-import { CalendarOutlined } from "@ant-design/icons";
+import { CalendarOutlined, HomeOutlined, MailOutlined, PhoneOutlined } from "@ant-design/icons";
 import BookingForm from "../../components/BookingStatus/BookingStatusForm";
 import BookingStatusSearchFilter from "../../components/BookingStatus/BookingStatusSearchFilter";
 import type { BookingStatusLog } from "../../types/bookingstatus";
@@ -298,18 +299,31 @@ export default function BookingPage() {
                   </code>
                 </div>
                 <div style={{ fontSize: 12, color: '#666' }}>
-                  📅 Nhận: {detailItem.bookingId?.checkIn
-                    ? new Date(detailItem.bookingId.checkIn).toLocaleString("vi-VN")
-                    : "-"}
+                  <Space size={4}>
+                    <CalendarOutlined />
+                    <span>
+                      Nhận: {detailItem.bookingId?.checkIn
+                        ? new Date(detailItem.bookingId.checkIn).toLocaleString("vi-VN")
+                        : "-"}
+                    </span>
+                  </Space>
                 </div>
                 <div style={{ fontSize: 12, color: '#666' }}>
-                  📅 Trả: {detailItem.bookingId?.checkOut
-                    ? new Date(detailItem.bookingId.checkOut).toLocaleString("vi-VN")
-                    : "-"}
+                  <Space size={4}>
+                    <CalendarOutlined />
+                    <span>
+                      Trả: {detailItem.bookingId?.checkOut
+                        ? new Date(detailItem.bookingId.checkOut).toLocaleString("vi-VN")
+                        : "-"}
+                    </span>
+                  </Space>
                 </div>
                 {detailItem.bookingId?.roomNumber && (
                   <div style={{ fontSize: 12, color: '#666' }}>
-                    🏠 Phòng: {detailItem.bookingId.roomNumber}
+                    <Space size={4}>
+                      <HomeOutlined />
+                      <span>Phòng: {detailItem.bookingId.roomNumber}</span>
+                    </Space>
                   </div>
                 )}
               </div>
@@ -324,12 +338,18 @@ export default function BookingPage() {
                 </div>
                 {(detailItem.actorId as any)?.email && (
                   <div style={{ fontSize: 12, color: '#666', marginBottom: 2 }}>
-                    📧 {(detailItem.actorId as any).email}
+                    <Space size={4}>
+                      <MailOutlined />
+                      <span>{(detailItem.actorId as any).email}</span>
+                    </Space>
                   </div>
                 )}
                 {(detailItem.actorId as any)?.phoneNumber && (
                   <div style={{ fontSize: 12, color: '#666' }}>
-                    📞 {(detailItem.actorId as any).phoneNumber}
+                    <Space size={4}>
+                      <PhoneOutlined />
+                      <span>{(detailItem.actorId as any).phoneNumber}</span>
+                    </Space>
                   </div>
                 )}
                 {!detailItem.actorId && detailItem.actorName && (

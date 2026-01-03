@@ -139,7 +139,7 @@ export default function BookingForm({
     [selectedRoom]
   );
   const maxExtraHours = useMemo(
-    () => selectedRoom?.typeId?.maxExtendHours || 0,
+    () => selectedRoom?.typeId?.maxExtendHours ?? 6, // mặc định 6 giờ nếu chưa có dữ liệu
     [selectedRoom]
   );
 
@@ -152,6 +152,28 @@ export default function BookingForm({
     () => roomPrice + servicesPrice + extraHours * extraHourPrice,
     [roomPrice, servicesPrice, extraHours, extraHourPrice]
   );
+
+  // Giới hạn số khách theo sức chứa loại phòng (mặc định 10 nếu chưa chọn phòng)
+  const maxGuestAllowed = selectedRoom?.typeId?.capacity || 10;
+
+  useEffect(() => {
+    if (guestCount > maxGuestAllowed) {
+      setGuestCount(maxGuestAllowed);
+    }
+  }, [maxGuestAllowed]);
+
+  // Giới hạn giờ thêm theo maxExtendHours của loại phòng
+  useEffect(() => {
+    if (extraHours > maxExtraHours) {
+      setExtraHours(maxExtraHours);
+    }
+  }, [maxExtraHours]);
+
+  // Hiển thị số liệu thanh toán theo dữ liệu hiện tại trên form / dữ liệu booking
+  const displayTotalAmount = booking?.totalPrice ?? totalPrice;
+  const displayPaidAmount = booking?.paidAmount ?? 0;
+  const displayRemainingAmount =
+    booking?.remainingAmount ?? Math.max(displayTotalAmount - displayPaidAmount, 0);
 
   // Fetch rooms, services
   useEffect(() => {
@@ -462,7 +484,7 @@ export default function BookingForm({
               >
                 <InputNumber
                   min={1}
-                  max={10}
+                  max={maxGuestAllowed}
                   style={{ width: "100%" }}
                   placeholder="Số khách"
                   onChange={(value) => setGuestCount(value || 1)}
@@ -470,6 +492,16 @@ export default function BookingForm({
               </Form.Item>
             </Col>
           </Row>
+
+          {selectedRoom?.typeId?.capacity && (
+            <Row style={{ marginTop: -8, marginBottom: 8 }}>
+              <Col span={12}>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Tối đa {selectedRoom.typeId.capacity} khách theo loại phòng
+                </Typography.Text>
+              </Col>
+            </Row>
+          )}
 
           {guests.map((guest, index) => (
             <Card 
@@ -487,7 +519,12 @@ export default function BookingForm({
                 <Col span={12}>
                   <div>
                     <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
-                      Họ và tên *
+                      <Space size={6} align="center">
+                        <UserOutlined />
+                        <span>
+                          Họ và tên <span style={{ color: '#ff4d4f' }}>*</span>
+                        </span>
+                      </Space>
                     </label>
                     <Input 
                       value={guest.fullName}
@@ -504,7 +541,12 @@ export default function BookingForm({
                 <Col span={12}>
                   <div>
                     <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
-                      Số điện thoại *
+                      <Space size={6} align="center">
+                        <PhoneOutlined />
+                        <span>
+                          Số điện thoại <span style={{ color: '#ff4d4f' }}>*</span>
+                        </span>
+                      </Space>
                     </label>
                     <Input 
                       value={guest.phoneNumber}
@@ -524,7 +566,12 @@ export default function BookingForm({
                 <Col span={8}>
                   <div>
                     <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
-                      CMND/CCCD *
+                      <Space size={6} align="center">
+                        <IdcardOutlined />
+                        <span>
+                          CMND/CCCD <span style={{ color: '#ff4d4f' }}>*</span>
+                        </span>
+                      </Space>
                     </label>
                     <Input 
                       value={guest.idNumber}
@@ -541,7 +588,12 @@ export default function BookingForm({
                 <Col span={8}>
                   <div>
                     <label style={{ display: 'block', marginBottom: 4, fontWeight: 500 }}>
-                      Ngày sinh *
+                      <Space size={6} align="center">
+                        <CalendarOutlined />
+                        <span>
+                          Ngày sinh <span style={{ color: '#ff4d4f' }}>*</span>
+                        </span>
+                      </Space>
                     </label>
                     <DatePicker
                       value={guest.dateOfBirth ? dayjs(guest.dateOfBirth) : null}
@@ -626,13 +678,16 @@ export default function BookingForm({
             <Col span={12}>
               <Form.Item
                 name="checkIn"
+                required={false}
                 label={
                   <Space>
                     <CalendarOutlined />
-                    <span>Ngày nhận phòng</span>
+                    <span>
+                      Ngày nhận phòng <span style={{ color: '#ff4d4f' }}>*</span>
+                    </span>
                   </Space>
                 }
-                rules={[{ required: true }]}
+                rules={[{ required: true, message: "Vui lòng chọn ngày nhận phòng" }]}
               >
                 <DatePicker
                   style={{ width: "100%" }}
@@ -645,13 +700,16 @@ export default function BookingForm({
             <Col span={12}>
               <Form.Item
                 name="checkOut"
+                required={false}
                 label={
                   <Space>
                     <CalendarOutlined />
-                    <span>Ngày trả phòng</span>
+                    <span>
+                      Ngày trả phòng <span style={{ color: '#ff4d4f' }}>*</span>
+                    </span>
                   </Space>
                 }
-                rules={[{ required: true }]}
+                rules={[{ required: true, message: "Vui lòng chọn ngày trả phòng" }]}
               >
                 <DatePicker
                   style={{ width: "100%" }}
@@ -667,10 +725,13 @@ export default function BookingForm({
             <Col span={12}>
               <Form.Item
                 name="roomId"
+                required={false}
                 label={
                   <Space>
                     <HomeOutlined />
-                    <span>Chọn phòng</span>
+                    <span>
+                      Chọn phòng <span style={{ color: '#ff4d4f' }}>*</span>
+                    </span>
                     {loadingAvailableRooms ? (
                       <Tag color="processing">Đang kiểm tra...</Tag>
                     ) : availableRooms.length > 0 ? (
@@ -852,14 +913,14 @@ export default function BookingForm({
                   <Row style={{ marginBottom: 4 }}>
                     <Col span={12}>Tổng giá trị:</Col>
                     <Col span={12} style={{ textAlign: 'right' }}>
-                      <Typography.Text strong>{formatPrice(booking.totalPrice || 0)}</Typography.Text>
+                      <Typography.Text strong>{formatPrice(displayTotalAmount)}</Typography.Text>
                     </Col>
                   </Row>
                   <Row style={{ marginBottom: 4 }}>
                     <Col span={12}>Đã thanh toán:</Col>
                     <Col span={12} style={{ textAlign: 'right' }}>
                       <Typography.Text strong style={{ color: '#52c41a' }}>
-                        {formatPrice(booking.paidAmount || 0)}
+                        {formatPrice(displayPaidAmount)}
                       </Typography.Text>
                     </Col>
                   </Row>
@@ -867,7 +928,7 @@ export default function BookingForm({
                     <Col span={12}>Còn lại:</Col>
                     <Col span={12} style={{ textAlign: 'right' }}>
                       <Typography.Text strong style={{ color: '#fa8c16' }}>
-                        {formatPrice(booking.remainingAmount || 0)}
+                        {formatPrice(displayRemainingAmount)}
                       </Typography.Text>
                     </Col>
                   </Row>

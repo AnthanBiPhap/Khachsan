@@ -207,11 +207,11 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
 
       let descriptionContent: React.ReactNode;
       let navigateUrl = '/bookings';
-      let notificationTitle = '🔔 Đặt phòng mới';
+      let notificationTitle = 'Đặt phòng mới';
 
       if (isBookingRefundRequest && notif.booking) {
         // Booking refund request notification
-        notificationTitle = '💰 Yêu cầu hủy phòng hoàn tiền';
+        notificationTitle = 'Yêu cầu hủy phòng hoàn tiền';
         
         const checkInDate = new Date(notif.booking.checkIn).toLocaleDateString('vi-VN');
         const checkOutDate = new Date(notif.booking.checkOut).toLocaleDateString('vi-VN');
@@ -250,7 +250,7 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
         navigateUrl = '/bookings';
       } else if (isGroupBookingRefundRequest && notif.groupBooking) {
         // Group booking refund request notification
-        notificationTitle = '💰 Yêu cầu hủy phòng hoàn tiền';
+        notificationTitle = 'Yêu cầu hủy phòng hoàn tiền';
         
         const checkInDate = new Date(notif.groupBooking.checkIn).toLocaleDateString('vi-VN');
         const checkOutDate = new Date(notif.groupBooking.checkOut).toLocaleDateString('vi-VN');
@@ -295,10 +295,10 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
         const isDeposit = notif.isDeposit || false;
         const isFullPayment = notif.isFullPayment || false;
         notificationTitle = isDeposit 
-          ? '💳 Nhận đặt cọc đặt phòng nhóm' 
+          ? 'Nhận đặt cọc đặt phòng nhóm' 
           : isFullPayment
-            ? '✅ Thanh toán đủ đặt phòng nhóm'
-            : '💳 Thanh toán đặt phòng nhóm';
+            ? 'Thanh toán đủ đặt phòng nhóm'
+            : 'Thanh toán đặt phòng nhóm';
         
         const checkInDate = new Date(notif.groupBooking.checkIn).toLocaleDateString('vi-VN');
         const checkOutDate = new Date(notif.groupBooking.checkOut).toLocaleDateString('vi-VN');
@@ -350,7 +350,7 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
         navigateUrl = '/group-bookings';
       } else if (isGroupBooking && notif.groupBooking) {
         // Group booking notification
-        notificationTitle = '🔔 Yêu cầu đặt phòng nhóm mới';
+        notificationTitle = 'Yêu cầu đặt phòng nhóm mới';
         const checkInDate = new Date(notif.groupBooking.checkIn).toLocaleDateString('vi-VN');
         const checkOutDate = new Date(notif.groupBooking.checkOut).toLocaleDateString('vi-VN');
         const formattedPrice = notif.groupBooking.quoteAmount 
@@ -375,7 +375,7 @@ const BookingNotification: React.FC<BookingNotificationProps> = ({
         navigateUrl = '/group-bookings';
       } else if (notif.type === 'booking_refunded' && notif.booking) {
         // Booking refunded notification
-        notificationTitle = '💰 Đã hoàn tiền đặt phòng';
+        notificationTitle = 'Đã hoàn tiền đặt phòng';
         const checkInDate = new Date(notif.booking.checkIn).toLocaleDateString('vi-VN');
         const checkOutDate = new Date(notif.booking.checkOut).toLocaleDateString('vi-VN');
         const formattedRefundAmount = notif.booking.refundAmount 

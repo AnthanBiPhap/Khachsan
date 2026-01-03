@@ -427,6 +427,7 @@ const create = async (payload: any) => {
     roomId,
     checkIn,
     checkOut,
+    extendHours: extendHours || 0,
     totalPrice: finalTotalPrice,
     paidAmount: paidAmount,
     remainingAmount: remainingAmount,
@@ -662,7 +663,8 @@ const updateById = async (id: string, payload: any) => {
   const roomId = payload.roomId ?? booking.roomId;
   let checkIn = payload.checkIn ? new Date(payload.checkIn) : booking.checkIn;
   let checkOut = payload.checkOut ? new Date(payload.checkOut) : booking.checkOut;
-  const extendHours = payload.extendHours || 0;
+  const hasExtendHours = payload.extendHours !== undefined && payload.extendHours !== null;
+  const extendHours = hasExtendHours ? Number(payload.extendHours) : Number((booking as any).extendHours || 0);
   const services = payload.services || booking.services || [];
 
   // Thêm số giờ gia hạn vào thời gian check-out nếu có
@@ -849,6 +851,10 @@ const updateById = async (id: string, payload: any) => {
       ([k, v]) => k !== 'source' && v !== "" && v !== null && v !== undefined
     )
   );
+  // Lưu extendHours nếu có truyền vào; nếu không, giữ nguyên giá trị hiện tại
+  if (hasExtendHours) {
+    cleanUpdates.extendHours = extendHours;
+  }
 
   const previousPaymentStatus = (booking as any).paymentStatus;
   const previousTotalPrice = (booking as any).totalPrice;
@@ -865,22 +871,23 @@ const updateById = async (id: string, payload: any) => {
   
   // Cập nhật paidAmount và remainingAmount khi paymentStatus thay đổi
   // Nếu trạng thái là đã thanh toán đủ
-  if (cleanUpdates.paymentStatus === "paid") {
-    cleanUpdates.paidAmount = booking.totalPrice;
-    cleanUpdates.remainingAmount = 0;
+  const updatesAny = cleanUpdates as any;
+  if (updatesAny.paymentStatus === "paid") {
+    updatesAny.paidAmount = booking.totalPrice;
+    updatesAny.remainingAmount = 0;
   } 
   // Nếu trạng thái là thanh toán một phần
-  else if (cleanUpdates.paymentStatus === "partial_paid") {
-    cleanUpdates.paidAmount = Math.round(booking.totalPrice * 0.5);
-    cleanUpdates.remainingAmount = booking.totalPrice - cleanUpdates.paidAmount;
+  else if (updatesAny.paymentStatus === "partial_paid") {
+    updatesAny.paidAmount = Math.round(booking.totalPrice * 0.5);
+    updatesAny.remainingAmount = booking.totalPrice - updatesAny.paidAmount;
   } 
   // Nếu trạng thái là chưa thanh toán
-  else if (cleanUpdates.paymentStatus === "pending") {
-    cleanUpdates.paidAmount = 0;
-    cleanUpdates.remainingAmount = booking.totalPrice;
+  else if (updatesAny.paymentStatus === "pending") {
+    updatesAny.paidAmount = 0;
+    updatesAny.remainingAmount = booking.totalPrice;
   }
   
-  Object.assign(booking, cleanUpdates);
+  Object.assign(booking, updatesAny);
   const updatedBooking = await booking.save();
 
   try {
@@ -1114,7 +1121,7 @@ const updateById = async (id: string, payload: any) => {
       
       const refundAmount = updatedBooking.paidAmount || updatedBooking.totalPrice || 0;
       const formattedRefund = new Intl.NumberFormat("vi-VN").format(refundAmount);
-      const roomNumber = updatedBooking.roomId?.roomNumber || "N/A";
+      const roomNumber = (updatedBooking.roomId as any)?.roomNumber || "N/A";
       const customerName = (updatedBooking.customerId as any)?.fullName || 
                           updatedBooking.guests?.find((g: any) => g.isMainGuest)?.fullName || 
                           "Khách hàng";
@@ -1364,7 +1371,7 @@ const updateById = async (id: string, payload: any) => {
         
         const refundAmount = updatedBooking.paidAmount || updatedBooking.totalPrice || 0;
         const formattedRefund = new Intl.NumberFormat("vi-VN").format(refundAmount);
-        const roomNumber = updatedBooking.roomId?.roomNumber || "N/A";
+        const roomNumber = (updatedBooking.roomId as any)?.roomNumber || "N/A";
         const customerName = customer?.fullName || actorName;
         
         const notificationMessage = `Khách hàng ${customerName} yêu cầu hủy phòng ${roomNumber} và hoàn tiền ${formattedRefund} VND cho đặt phòng ${updatedBooking._id}`;
