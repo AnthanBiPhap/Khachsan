@@ -17,7 +17,6 @@ import RoomTypesPage from "./pages/RoomTypesPage/RoomTypesPage";
 import ServicesPage from "./pages/ServicesPage/ServicesPage";
 import ServiceBookingsPage from "./pages/ServiceBookingsPage/ServiceBookingsPage";
 import LocationsPage from "./pages/LocationsPage/LocationsPage";
-import ReviewsPage from "./pages/ReviewsPage/ReviewsPage";
 import InvoicesPage from "./pages/InvoicesPage/InvoicesPage";
 import PaymentsPage from "./pages/PaymentPage/PaymentsPage";
 import GroupBookingsPage from "./pages/GroupBookingsPage/GroupBookingsPage";
@@ -102,7 +101,6 @@ function App() {
           <Route path="services" element={<RoleProtectedRoute path="/services"><ServicesPage /></RoleProtectedRoute>} />
           <Route path="service-bookings" element={<RoleProtectedRoute path="/service-bookings"><ServiceBookingsPage /></RoleProtectedRoute>} />
           <Route path="locations" element={<RoleProtectedRoute path="/locations"><LocationsPage /></RoleProtectedRoute>} />
-          <Route path="reviews" element={<RoleProtectedRoute path="/reviews"><ReviewsPage /></RoleProtectedRoute>} />
           <Route path="contacts" element={<RoleProtectedRoute path="/contacts"><ContactsPage /></RoleProtectedRoute>} />
           <Route path="contact-info" element={<RoleProtectedRoute path="/contact-info"><ContactInfoPage /></RoleProtectedRoute>} />
           <Route path="about-info" element={<RoleProtectedRoute path="/about-info"><AboutInfoPage /></RoleProtectedRoute>} />

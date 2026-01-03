@@ -66,7 +66,6 @@ const allMenuItems = [
   createMenuItem('Services', '/services', <ToolOutlined />),
   createMenuItem('Service Bookings', '/service-bookings', <ShoppingCartOutlined />),
   createMenuItem('Locations', '/locations', <EnvironmentOutlined />),
-  createMenuItem('Reviews', '/reviews', <StarOutlined />),
   createMenuItem('Contacts', '/contacts', <MessageOutlined />),
   createMenuItem('Contact Info', '/contact-info', <PhoneOutlined />),
   createMenuItem('Coupons', '/coupons', <TagOutlined />),

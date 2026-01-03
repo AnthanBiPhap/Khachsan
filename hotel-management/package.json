@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
+    "dev": "concurrently --raw \"next dev\" \"wait-on http://localhost:3000 && open-cli http://localhost:3000\"",
     "lint": "next lint",
     "start": "next start"
   },
@@ -78,9 +78,12 @@
     "@types/pdfkit": "^0.17.3",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "concurrently": "^9.2.1",
+    "open-cli": "^8.0.0",
     "postcss": "^8.5",
     "tailwindcss": "^4.1.9",
     "tw-animate-css": "1.3.3",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.0.3"
   }
 }

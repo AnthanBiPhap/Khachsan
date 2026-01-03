@@ -59,6 +59,8 @@ interface DashboardStats {
   currentGuests: number
   todayRevenue: number
   monthRevenue: number
+  yearRevenue: number
+  totalRevenue: number
   paidBookings: number
   pendingBookings: number
   paymentRate: number
@@ -141,6 +143,8 @@ const Dashboard: React.FC = () => {
     currentGuests: 0,
     todayRevenue: 0,
     monthRevenue: 0,
+    yearRevenue: 0,
+    totalRevenue: 0,
     paidBookings: 0,
     pendingBookings: 0,
     paymentRate: 0,
@@ -279,6 +283,15 @@ const Dashboard: React.FC = () => {
         })
         .reduce((sum: number, invoice: any) => sum + (invoice.totalAmount || 0), 0)
 
+      // Year revenue (doanh thu trong năm hiện tại)
+      const yearStart = dayjs().startOf('year')
+      const yearRevenue = invoices
+        .filter((invoice: any) => {
+          const issuedDate = dayjs(invoice.issuedAt)
+          return invoice.status === "paid" && issuedDate.isSame(yearStart, 'year')
+        })
+        .reduce((sum: number, invoice: any) => sum + (invoice.totalAmount || 0), 0)
+
       // Paid and pending bookings
       // Từ booking thường
       const paidBookingsRegular = bookingsList.filter((booking: Booking) => booking.paymentStatus === "paid").length
@@ -357,6 +370,8 @@ const Dashboard: React.FC = () => {
         currentGuests,
         todayRevenue,
         monthRevenue,
+        yearRevenue,
+        totalRevenue,
         paidBookings,
         pendingBookings,
         paymentRate,
@@ -1095,6 +1110,30 @@ const Dashboard: React.FC = () => {
               value={stats.monthRevenue}
               prefix={<DollarOutlined />}
               valueStyle={{ color: "#722ed1" }}
+              formatter={(value: any) => `${Number(value).toLocaleString("vi-VN")} VND`}
+              loading={loading}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card hoverable className="shadow-md">
+            <Statistic
+              title="📆 Doanh thu năm này"
+              value={stats.yearRevenue}
+              prefix={<DollarOutlined />}
+              valueStyle={{ color: "#eb2f96" }}
+              formatter={(value: any) => `${Number(value).toLocaleString("vi-VN")} VND`}
+              loading={loading}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} sm={12} lg={6}>
+          <Card hoverable className="shadow-md">
+            <Statistic
+              title="💎 Tổng tiền toàn bộ"
+              value={stats.totalRevenue}
+              prefix={<DollarOutlined />}
+              valueStyle={{ color: "#f5222d" }}
               formatter={(value: any) => `${Number(value).toLocaleString("vi-VN")} VND`}
               loading={loading}
             />
