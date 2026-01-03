@@ -76,13 +76,16 @@ export default function UserForm({ open, user, onCancel, onSave }: UserFormProps
             <Col span={12}>
               <Form.Item
                 name="fullName"
+                required={false}
                 label={
                   <Space>
                     <UserOutlined />
-                    <span>Họ và tên</span>
+                    <span>
+                      Họ và tên <span style={{ color: '#ff4d4f' }}>*</span>
+                    </span>
                   </Space>
                 }
-                rules={[{ required: true, message: "Nhập họ tên!" }]}
+                rules={[{ required: true, message: "Vui lòng nhập họ tên" }]}
               >
                 <Input 
                   placeholder="Nhập họ và tên" 
@@ -93,13 +96,19 @@ export default function UserForm({ open, user, onCancel, onSave }: UserFormProps
             <Col span={12}>
               <Form.Item
                 name="email"
+                required={false}
                 label={
                   <Space>
                     <MailOutlined />
-                    <span>Email</span>
+                    <span>
+                      Email <span style={{ color: '#ff4d4f' }}>*</span>
+                    </span>
                   </Space>
                 }
-                rules={[{ type: "email", message: "Email không hợp lệ" }]}
+                rules={[
+                  { required: true, message: "Vui lòng nhập email" },
+                  { type: "email", message: "Email không hợp lệ" }
+                ]}
               >
                 <Input 
                   placeholder="Nhập email" 
@@ -113,12 +122,19 @@ export default function UserForm({ open, user, onCancel, onSave }: UserFormProps
             <Col span={12}>
               <Form.Item 
                 name="phoneNumber" 
+                required={false}
                 label={
                   <Space>
                     <PhoneOutlined />
-                    <span>Số điện thoại</span>
+                    <span>
+                      Số điện thoại <span style={{ color: '#ff4d4f' }}>*</span>
+                    </span>
                   </Space>
                 }
+                rules={[
+                  { required: true, message: "Vui lòng nhập số điện thoại" },
+                  { pattern: /^\d{8,15}$/, message: "Số điện thoại không hợp lệ" }
+                ]}
               >
                 <Input 
                   placeholder="Nhập số điện thoại" 
