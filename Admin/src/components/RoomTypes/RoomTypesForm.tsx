@@ -25,7 +25,6 @@ import {
 import { useEffect } from "react";
 import type { RoomTypesFormProps } from "../../types/room";
 
-
 export default function RoomTypesForm({ open, roomType, onCancel, onSave, loading }: RoomTypesFormProps) {
   const [form] = Form.useForm();
 
@@ -123,7 +122,7 @@ export default function RoomTypesForm({ open, roomType, onCancel, onSave, loadin
                 }
                 rules={[{ required: true, message: "Nhập sức chứa" }]}
               >
-                <InputNumber 
+                <InputNumber<number> 
                   min={1} 
                   style={{ width: '100%' }} 
                   placeholder="VD: 2"
@@ -172,17 +171,21 @@ export default function RoomTypesForm({ open, roomType, onCancel, onSave, loadin
                 }
                 rules={[{ required: true, message: "Nhập giá/đêm" }]}
               >
-                <InputNumber 
+                <InputNumber<number> 
                   min={0} 
                   style={{ width: '100%' }} 
-                  formatter={(value: string | number | undefined) => 
-                    `₫${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                  step={10000}
+                  addonAfter="₫"
+                  precision={0}
+                  formatter={(value) =>
+                    value
+                      ? value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                      : ''
                   }
-                  parser={(value: string | undefined) => 
-                    parseInt(value?.replace(/₫\s?|(,*)/g, '') || '0', 10)
+                  parser={(value) =>
+                    Number((value || '').replace(/[^\d]/g, '')) || 0
                   }
-                  placeholder="0"
-                  prefix={<DollarOutlined style={{ color: '#bfbfbf' }} />}
+                  placeholder="Nhập giá/đêm"
                 />
               </Form.Item>
             </Col>
@@ -197,17 +200,21 @@ export default function RoomTypesForm({ open, roomType, onCancel, onSave, loadin
                 }
                 rules={[{ required: true, message: "Nhập giá phụ thu mỗi giờ" }]}
               >
-                <InputNumber 
+                <InputNumber<number> 
                   min={0} 
                   style={{ width: '100%' }} 
-                  formatter={(value: string | number | undefined) => 
-                    `₫${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                  step={10000}
+                  addonAfter="₫"
+                  precision={0}
+                  formatter={(value) =>
+                    value
+                      ? value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+                      : ''
                   }
-                  parser={(value: string | undefined) => 
-                    parseInt(value?.replace(/₫\s?|(,*)/g, '') || '0', 10)
+                  parser={(value) =>
+                    Number((value || '').replace(/[^\d]/g, '')) || 0
                   }
-                  placeholder="0"
-                  prefix={<ClockCircleOutlined style={{ color: '#bfbfbf' }} />}
+                  placeholder="Nhập giá phụ thu mỗi giờ"
                 />
               </Form.Item>
             </Col>
