@@ -21,3 +21,51 @@
   -ms-overflow-style: none; /* IE and Edge */
 }
 
+/* Làm đẹp Sider + Menu */
+.custom-sider {
+  background: #2763bf; /* Một màu xanh phẳng */
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.custom-sider .ant-menu {
+  background: transparent;
+}
+
+.custom-sider .ant-menu-item,
+.custom-sider .ant-menu-submenu-title {
+  border-radius: 8px;
+  margin-inline: 8px;
+}
+
+.custom-sider .ant-menu-item-selected,
+.custom-sider .ant-menu-submenu-selected {
+  background: rgba(255, 255, 255, 0.14); 
+  color: #34b4ff;
+}
+
+.custom-sider .ant-menu-item:hover,
+.custom-sider .ant-menu-submenu-title:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.custom-sider .ant-menu-item-selected .ant-menu-title-content,
+.custom-sider .ant-menu-item-selected .anticon {
+  color: #34b4ff;
+}
+
+.custom-sider .ant-menu-item .anticon,
+.custom-sider .ant-menu-submenu-title .anticon {
+  color: #e2ecf9;
+}
+
+/* Nút thu/phóng Sider */
+.custom-sider .ant-layout-sider-trigger {
+  background: #1f4fa0;
+  color: #e2ecf9;
+}
+
+.custom-sider .ant-layout-sider-trigger:hover {
+  background: #2060c2;
+  color: #ffffff;
+}
+
