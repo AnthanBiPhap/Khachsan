@@ -366,6 +366,23 @@ export default function BookingForm({
       if (!selectedRoom || !checkIn || !checkOut)
         return message.error("Vui lòng chọn phòng");
 
+      // Validate bắt buộc cho từng khách
+      for (let i = 0; i < guests.length; i++) {
+        const g = guests[i];
+        if (!g.fullName?.trim()) {
+          return message.error(`Khách ${i + 1}: Vui lòng nhập họ và tên`);
+        }
+        if (!g.phoneNumber?.trim()) {
+          return message.error(`Khách ${i + 1}: Vui lòng nhập số điện thoại`);
+        }
+        if (!g.idNumber?.trim()) {
+          return message.error(`Khách ${i + 1}: Vui lòng nhập CMND/CCCD`);
+        }
+        if (!g.dateOfBirth) {
+          return message.error(`Khách ${i + 1}: Vui lòng chọn ngày sinh`);
+        }
+      }
+
       // Validate độ tuổi >= 18 cho tất cả khách
       for (let i = 0; i < guests.length; i++) {
         const guest = guests[i];
