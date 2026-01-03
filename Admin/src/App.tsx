@@ -43,7 +43,7 @@ function hasAccessToRoute(userRole: string, path: string): boolean {
   } else if (userRole === 'staff') {
     // Staff chỉ được truy cập các route cụ thể
     // Cho phép "/" vì sẽ redirect đến "/bookings"
-    const allowedPaths = ['/', '/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms', '/room-types', '/contacts', '/about-info', '/coupons'];
+    const allowedPaths = ['/', '/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/payments', '/group-bookings', '/chat', '/rooms', '/room-types', '/contacts', '/about-info', '/coupons'];
     return allowedPaths.includes(path);
   } else {
     // User thường chỉ được truy cập dashboard

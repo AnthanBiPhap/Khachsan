@@ -81,10 +81,10 @@ const getMenuItemsByRole = (userRole: string): MenuItem[] => {
     // Admin không có menu Chat
     return allMenuItems.filter(item => item.key !== '/chat');
   } else if (userRole === 'staff') {
-    // Staff chỉ được xem: Users, Bookings, Booking Status, Guests, Service Bookings, Invoices, Group Bookings, Chat, Contacts, Coupons
+    // Staff được xem: Users, Bookings, Booking Status, Guests, Service Bookings, Invoices, Payments, Group Bookings, Chat, Rooms, Room Types, Contacts, Coupons
     // Không có Contact Info
     return allMenuItems.filter(item => 
-      ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/group-bookings', '/chat', '/rooms', '/room-types', '/contacts', '/coupons'].includes(item.key)
+      ['/users', '/bookings', '/bookingStatus', '/guests', '/service-bookings', '/invoices', '/payments', '/group-bookings', '/chat', '/rooms', '/room-types', '/contacts', '/coupons'].includes(item.key)
     );
   } else {
     // User thường chỉ xem Dashboard
@@ -221,46 +221,48 @@ const Defaultlayout: React.FC = () => {
           top: 0,
           bottom: 0,
           height: '100vh',
-          overflow: 'auto',
           zIndex: 1000,
         }}
         className="custom-sider"
       >
-        <div 
-          className="demo-logo-vertical" 
-          style={{ 
-            height: collapsed ? 32 : 'auto', 
-            margin: 16, 
-            background: 'rgba(255, 255, 255, 0.2)',
-            padding: collapsed ? '8px' : '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            borderRadius: '6px'
-          }}
-        >
-          {collapsed ? (
-            <UserOutlined style={{ color: 'white', fontSize: '16px' }} />
-          ) : (
-            <div style={{ color: 'white', textAlign: 'center', width: '100%' }}>
-              <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>
-                {user?.fullName || (user?.role === 'admin' ? 'Admin' : user?.role === 'staff' ? 'Staff' : 'User')}
+        <div className="sider-scroll" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'auto' }}>
+          <div 
+            className="demo-logo-vertical" 
+            style={{ 
+              height: collapsed ? 32 : 'auto', 
+              margin: 16, 
+              background: 'rgba(255, 255, 255, 0.2)',
+              padding: collapsed ? '8px' : '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: collapsed ? 'center' : 'flex-start',
+              borderRadius: '6px'
+            }}
+          >
+            {collapsed ? (
+              <UserOutlined style={{ color: 'white', fontSize: '16px' }} />
+            ) : (
+              <div style={{ color: 'white', textAlign: 'center', width: '100%' }}>
+                <div style={{ fontSize: '14px', fontWeight: 'bold', marginBottom: '4px' }}>
+                  {user?.fullName || (user?.role === 'admin' ? 'Admin' : user?.role === 'staff' ? 'Staff' : 'User')}
+                </div>
+                <div style={{ fontSize: '11px', opacity: 0.8 }}>
+                  {user?.role === 'admin' ? 'Quản trị viên' : user?.role === 'staff' ? 'Nhân viên' : 'Người dùng'}
+                </div>
               </div>
-              <div style={{ fontSize: '11px', opacity: 0.8 }}>
-                {user?.role === 'admin' ? 'Quản trị viên' : user?.role === 'staff' ? 'Nhân viên' : 'Người dùng'}
-              </div>
-            </div>
-          )}
+            )}
+          </div>
+          
+          <Menu 
+            theme="dark" 
+            selectedKeys={[location.pathname]} 
+            mode="inline" 
+            items={menuItems} 
+            onClick={handleMenuClick}
+            className="sider-menu-scroll"
+            style={{ borderRight: 0, background: 'transparent', flex: 1, overflow: 'auto', paddingBottom: 16 }}
+          />
         </div>
-        
-        <Menu 
-          theme="dark" 
-          selectedKeys={[location.pathname]} 
-          mode="inline" 
-          items={menuItems} 
-          onClick={handleMenuClick}
-          style={{ borderRight: 0, background: 'transparent' }}
-        />
       </Sider>
       <Layout style={{ marginLeft: collapsed ? 80 : 200, transition: 'margin-left 0.2s' }}>
         <Header style={{ padding: 0, background: colorBgContainer, paddingLeft: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 999 }}>
