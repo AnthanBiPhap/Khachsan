@@ -6,12 +6,13 @@ const API_URL = `${API_BASE_URL.replace(/\/$/, '')}/api/v1`;
 // Function để fetch dữ liệu từ backend
 async function fetchHotelData() {
   try {
-    const [locationsRes, servicesRes, roomsRes, roomTypesRes, bookingsRes] = await Promise.allSettled([
+    const [locationsRes, servicesRes, roomsRes, roomTypesRes, bookingsRes, contactInfoRes] = await Promise.allSettled([
       fetch(`${API_URL}/locations?status=active&limit=50`).then(r => r.json()),
       fetch(`${API_URL}/services?status=active&limit=50`).then(r => r.json()),
       fetch(`${API_URL}/rooms?limit=50`).then(r => r.json()),
       fetch(`${API_URL}/room-types?limit=50`).then(r => r.json()),
       fetch(`${API_URL}/bookings?limit=20&sort_by=createdAt&sort_type=desc`).then(r => r.json()),
+      fetch(`${API_URL}/contact-info`).then(r => r.json()),
     ]);
 
     const locations = locationsRes.status === 'fulfilled' 
@@ -34,10 +35,14 @@ async function fetchHotelData() {
       ? (bookingsRes.value?.data?.data || bookingsRes.value?.data?.bookings || [])
       : [];
 
-    return { locations, services, rooms, roomTypes, bookings };
+    const contactInfo = contactInfoRes.status === 'fulfilled'
+      ? (contactInfoRes.value?.data || contactInfoRes.value || {})
+      : {};
+
+    return { locations, services, rooms, roomTypes, bookings, contactInfo };
   } catch (error) {
     console.error('Error fetching hotel data:', error);
-    return { locations: [], services: [], rooms: [], roomTypes: [], bookings: [] };
+    return { locations: [], services: [], rooms: [], roomTypes: [], bookings: [], contactInfo: {} };
   }
 }
 
@@ -50,6 +55,7 @@ export async function POST(request: NextRequest) {
   let rooms: any[] = [];
   let roomTypes: any[] = [];
   let bookings: any[] = [];
+  let contactInfo: any = {};
   
   try {
     if (!message) {
@@ -66,6 +72,7 @@ export async function POST(request: NextRequest) {
     rooms = hotelData.rooms;
     roomTypes = hotelData.roomTypes;
     bookings = hotelData.bookings;
+    contactInfo = hotelData.contactInfo;
     
     // Log để debug
     console.log('📊 Hotel data fetched:', {
@@ -73,7 +80,8 @@ export async function POST(request: NextRequest) {
       services: services.length,
       rooms: rooms.length,
       roomTypes: roomTypes.length,
-      bookings: bookings.length
+      bookings: bookings.length,
+      contactInfo: Object.keys(contactInfo || {}).length
     });
 
     // Format dữ liệu để đưa vào context
@@ -116,6 +124,19 @@ export async function POST(request: NextRequest) {
         }).join('\n')}`
       : '';
 
+    const contactInfoText = contactInfo && Object.keys(contactInfo).length > 0
+      ? `\n\n=== THÔNG TIN LIÊN HỆ ===\n${[
+          contactInfo.hotelName ? `Khách sạn: ${contactInfo.hotelName}` : null,
+          contactInfo.address ? `Địa chỉ: ${contactInfo.address}` : null,
+          contactInfo.phone ? `SĐT: ${contactInfo.phone}` : null,
+          contactInfo.email ? `Email: ${contactInfo.email}` : null,
+          contactInfo.facebook ? `Facebook: ${contactInfo.facebook}` : null,
+          contactInfo.zalo ? `Zalo: ${contactInfo.zalo}` : null,
+          contactInfo.website ? `Website: ${contactInfo.website}` : null,
+          contactInfo.description ? `Mô tả: ${contactInfo.description}` : null,
+        ].filter(Boolean).join('\n')}`
+      : '';
+
     const preferencesText = userPreferences && userPreferences.length > 0 
       ? `\nSở thích của khách hàng: ${userPreferences.join(', ')}. Hãy ưu tiên gợi ý phù hợp với sở thích này.`
       : '';
@@ -133,7 +154,7 @@ Thông tin về Miko Hotel Đà Nẵng:
 - Tên: ${locationInfo?.name || 'Miko Hotel Đà Nẵng'}
 - Địa chỉ: ${locationInfo?.address || 'Đà Nẵng, Việt Nam'}${preferencesText}
 
-DỮ LIỆU THỰC TẾ TỪ HỆ THỐNG KHÁCH SẠN:${roomTypesText}${roomsText}${servicesText}${locationsText}${bookingsText}
+DỮ LIỆU THỰC TẾ TỪ HỆ THỐNG KHÁCH SẠN:${roomTypesText}${roomsText}${servicesText}${locationsText}${bookingsText}${contactInfoText}
 
 Câu hỏi của khách hàng: "${message}"
 
