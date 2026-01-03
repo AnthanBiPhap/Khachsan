@@ -282,6 +282,7 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
     // Tính tổng giá trước khi áp dụng coupon
     let baseTotal = 0;
     if (pricingInfo) {
+      // pricingInfo.totalPrice đã bao gồm: giá phòng sau giảm sinh nhật và giảm khách hàng thân thiết (backend đã trừ)
       baseTotal = pricingInfo.totalPrice + serviceTotal + extraHoursPrice;
     } else {
       const nights = getNights();
@@ -550,9 +551,10 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                     </label>
                     <Input
                       type="date"
-                      value={checkIn}
+                      value={checkIn ? checkIn.slice(0, 10) : ""}
                       onChange={(e) => setCheckIn(e.target.value)}
                       className="w-full"
+                      disabled
                     />
                   </div>
                   <div>
@@ -561,9 +563,10 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                     </label>
                     <Input
                       type="date"
-                      value={checkOut}
+                      value={checkOut ? checkOut.slice(0, 10) : ""}
                       onChange={(e) => setCheckOut(e.target.value)}
                       className="w-full"
+                      disabled
                     />
                   </div>
                   <div>
@@ -573,6 +576,7 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                     <Select
                       value={guests.toString()}
                       onValueChange={(v) => setGuests(parseInt(v))}
+                      disabled
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Chọn số khách" />
@@ -605,7 +609,7 @@ export default function RoomDetailPage({ params }: { params: { id: string } }) {
                       </SelectTrigger>
                       <SelectContent>
                         {Array.from(
-                          { length: room?.typeId?.maxExtendHours ?? 0 + 1 },
+                          { length: (room?.typeId?.maxExtendHours ?? 0) + 1 },
                           (_, i) => (
                             <SelectItem key={i} value={i.toString()}>
                               {i} giờ

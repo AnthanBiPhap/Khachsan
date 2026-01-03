@@ -249,6 +249,7 @@ const create = async (payload: any) => {
 
   // Tính lại giá phòng với giảm giá sinh nhật (nếu có) và giảm giá khách hàng mới
   let finalTotalPrice = payload.totalPrice;
+  let usedRecalculatedPrice = false; // đánh dấu khi đã tính lại giá (để tránh trừ coupon hai lần)
   let baseRoomPrice = 0; // Giá gốc phòng (chưa giảm gì)
   let newCustomerDiscount = {
     applied: false,
@@ -337,6 +338,7 @@ const create = async (payload: any) => {
       
       // Tính tổng giá: giá phòng (đã giảm sinh nhật) - giảm giá khách hàng mới + dịch vụ + extra hours
       finalTotalPrice = pricingInfo.totalPrice - newCustomerDiscount.amount + servicesTotal + extraHoursTotal;
+      usedRecalculatedPrice = true;
       
       console.log(`💰 Price calculation:`, {
         baseRoomPrice,
@@ -370,6 +372,21 @@ const create = async (payload: any) => {
   } catch (pricingError) {
     console.error('❌ Error calculating discounts:', pricingError);
     // Nếu lỗi, sử dụng giá gốc
+  }
+
+  // Áp dụng giảm giá coupon nếu có và chỉ khi đã tính lại giá (để không trừ trùng với payload.totalPrice đã bao gồm coupon)
+  if (usedRecalculatedPrice && payload.coupon) {
+    const couponRoomDiscount = Number(payload.coupon.roomDiscount) || 0;
+    const couponServiceDiscount = Number(payload.coupon.serviceDiscount) || 0;
+    // Một số trường hợp chỉ có discountAmount tổng
+    const couponTotalDiscount =
+      couponRoomDiscount + couponServiceDiscount > 0
+        ? couponRoomDiscount + couponServiceDiscount
+        : Number(payload.coupon.discountAmount) || 0;
+
+    if (couponTotalDiscount > 0) {
+      finalTotalPrice = Math.max(0, finalTotalPrice - couponTotalDiscount);
+    }
   }
 
   // Tính số tiền thanh toán dựa trên paymentStatus từ payload
