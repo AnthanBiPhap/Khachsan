@@ -278,8 +278,14 @@ const create = async (payload: any) => {
       const pricePerNight = (room.typeId as any).pricePerNight;
       const extraHourPrice = (room.typeId as any).extraHourPrice || 0;
       
-      // Tính giá gốc phòng (chưa giảm gì)
-      const nights = Math.ceil((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24)) || 1;
+      // Tính giá gốc phòng (chưa giảm gì) dựa trên số đêm thực tế
+      const MS_PER_DAY = 1000 * 60 * 60 * 24;
+      const normalizedCheckIn = new Date(checkIn);
+      normalizedCheckIn.setUTCHours(0, 0, 0, 0);
+      const normalizedCheckOut = new Date(checkOut);
+      normalizedCheckOut.setUTCHours(0, 0, 0, 0);
+      const diffMs = normalizedCheckOut.getTime() - normalizedCheckIn.getTime();
+      const nights = Math.max(1, Math.floor(diffMs / MS_PER_DAY));
       baseRoomPrice = nights * pricePerNight;
       
       const pricingInfo = await calculateRoomPriceWithBirthdayDiscount(

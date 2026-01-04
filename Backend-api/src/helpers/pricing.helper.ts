@@ -16,7 +16,7 @@ export const calculateRoomPriceWithBirthdayDiscount = async (
   checkIn: Date,
   checkOut: Date,
   customerId?: string,
-  guests?: Array<{ dateOfBirth?: Date | string }>
+  guests?: Array<{ dateOfBirth?: Date | string; fullName?: string; isMainGuest?: boolean }>
 ) => {
   let customerBirthday: Date | null = null;
 
@@ -52,9 +52,15 @@ export const calculateRoomPriceWithBirthdayDiscount = async (
     }
   }
 
-  // Nếu không có ngày sinh, tính giá bình thường
+  // Nếu không có ngày sinh, tính giá bình thường (dựa trên số đêm thực tế, không làm tròn lên)
   if (!customerBirthday) {
-    const nights = Math.ceil((checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60 * 24)) || 1;
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    const checkInDate = new Date(checkIn);
+    checkInDate.setUTCHours(0, 0, 0, 0);
+    const checkOutDate = new Date(checkOut);
+    checkOutDate.setUTCHours(0, 0, 0, 0);
+    const diffMs = checkOutDate.getTime() - checkInDate.getTime();
+    const nights = Math.max(1, Math.floor(diffMs / MS_PER_DAY));
     return {
       totalPrice: nights * pricePerNight,
       breakdown: [],
