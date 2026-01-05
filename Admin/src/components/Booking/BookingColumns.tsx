@@ -177,16 +177,18 @@ export const bookingColumns = (
     ),
     dataIndex: "paymentStatus",
     key: "paymentStatus",
-    render: (s: string) => {
+    render: (s: string, record: any) => {
+      const isWalkIn = record?.source === 'walk_in';
+      const normalizedStatus = isWalkIn && s === 'refund_requested' ? 'paid' : s;
       const map: Record<string, { color: string; text: string; icon: React.ReactNode }> = {
         pending: { color: 'orange', text: 'Chờ thanh toán', icon: <CalendarOutlined /> },
         partial_paid: { color: 'blue', text: 'Thanh toán 50%', icon: <CreditCardOutlined /> },
-        paid: { color: 'green', text: 'Đã thanh toán đủ', icon: <CreditCardOutlined /> },
+        paid: { color: 'green', text: isWalkIn ? 'Thanh toán trực tiếp' : 'Đã thanh toán đủ', icon: <CreditCardOutlined /> },
         failed: { color: 'red', text: 'Thất bại', icon: <DeleteOutlined /> },
         refunded: { color: 'blue', text: 'Hoàn tiền', icon: <DollarOutlined /> },
         refund_requested: { color: 'purple', text: 'Yêu cầu hoàn tiền', icon: <EditOutlined /> },
       };
-      const v = map[s] || { color: 'default', text: s, icon: null };
+      const v = map[normalizedStatus] || { color: 'default', text: normalizedStatus, icon: null };
       return (
         <Tag color={v.color} icon={v.icon}>
           {v.text}

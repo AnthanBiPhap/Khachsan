@@ -72,7 +72,7 @@ const allMenuItems = [
   createMenuItem('Chat', '/chat', <MessageOutlined />),
   createMenuItem('About Info', '/about-info', <InfoCircleOutlined />),
   createMenuItem('Invoices', '/invoices', <FileTextOutlined />),
-  createMenuItem('Payments', '/payments', <CreditCardOutlined />),
+  // createMenuItem('Payments', '/payments', <CreditCardOutlined />),
 ];
 
 // Function to get menu items based on user role

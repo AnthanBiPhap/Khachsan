@@ -205,7 +205,7 @@ export default function AIChatBubble() {
           <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-purple-500 to-pink-600 text-white">
             <div className="flex items-center">
               <Bot className="h-6 w-6 mr-2" />
-              <h3 className="text-lg font-semibold">AI Hướng dẫn viên</h3>
+              <h3 className="text-lg font-semibold">Miko Hướng dẫn viên</h3>
             </div>
             <Button
               onClick={() => setIsOpen(false)}

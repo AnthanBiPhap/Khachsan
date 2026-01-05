@@ -456,37 +456,47 @@ export default function BookingPage() {
               }).format(detailItem.totalPrice || 0)}
             </Descriptions.Item>
             <Descriptions.Item label="Thanh toán">
-              <Tag
-                color={
-                  detailItem.paymentStatus === "pending"
+              {(() => {
+                const isWalkIn = detailItem.source === "walk_in";
+                const status = detailItem.paymentStatus;
+                const displayStatus =
+                  isWalkIn && status === "refund_requested"
+                    ? "paid"
+                    : status;
+                const color =
+                  displayStatus === "pending"
                     ? "orange"
-                    : detailItem.paymentStatus === "partial_paid"
+                    : displayStatus === "partial_paid"
                     ? "blue"
-                    : detailItem.paymentStatus === "paid"
+                    : displayStatus === "paid"
                     ? "green"
-                    : detailItem.paymentStatus === "failed"
+                    : displayStatus === "failed"
                     ? "red"
-                    : detailItem.paymentStatus === "refund_requested"
+                    : displayStatus === "refund_requested"
                     ? "purple"
-                    : detailItem.paymentStatus === "refunded"
+                    : displayStatus === "refunded"
                     ? "blue"
-                    : "default"
-                }
-              >
-                {detailItem.paymentStatus === "partial_paid"
-                  ? "Thanh toán 50%"
-                  : detailItem.paymentStatus === "paid"
-                  ? "Đã thanh toán đủ"
-                  : detailItem.paymentStatus === "pending"
-                  ? "Chờ thanh toán"
-                  : detailItem.paymentStatus === "failed"
-                  ? "Thanh toán thất bại"
-                  : detailItem.paymentStatus === "refund_requested"
-                  ? "Yêu cầu hoàn tiền"
-                  : detailItem.paymentStatus === "refunded"
-                  ? "Đã hoàn tiền"
-                  : detailItem.paymentStatus}
-              </Tag>
+                    : "default";
+                const text =
+                  displayStatus === "partial_paid"
+                    ? "Thanh toán 50%"
+                    : displayStatus === "paid"
+                    ? isWalkIn ? "Thanh toán trực tiếp" : "Đã thanh toán đủ"
+                    : displayStatus === "pending"
+                    ? "Chờ thanh toán"
+                    : displayStatus === "failed"
+                    ? "Thanh toán thất bại"
+                    : displayStatus === "refund_requested"
+                    ? "Yêu cầu hoàn tiền"
+                    : displayStatus === "refunded"
+                    ? "Đã hoàn tiền"
+                    : displayStatus;
+                return (
+                  <Tag color={color}>
+                    {text}
+                  </Tag>
+                );
+              })()}
             </Descriptions.Item>
             {(() => {
               const guests = Array.isArray(detailItem.guests) ? detailItem.guests : [];

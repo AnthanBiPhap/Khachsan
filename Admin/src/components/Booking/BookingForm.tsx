@@ -81,8 +81,8 @@ export default function BookingForm({
     discountAmount: number;
   } | null>(null);
 
-  // Walk-in khi không có customerId (đặt trực tiếp tại quầy)
-  // const isWalkIn = !booking?.customerId;
+  // Walk-in: đặt trực tiếp tại quầy
+  const isWalkIn = booking?.source === 'walk_in';
 
   // Memoize guests string để tránh useEffect chạy lại không cần thiết
   const guestsString = useMemo(() => JSON.stringify(guests), [guests]);
@@ -957,7 +957,11 @@ export default function BookingForm({
                   <span>Trạng thái thanh toán</span>
                 </Space>
               }
-              initialValue={booking?.paymentStatus || 'pending'}
+              initialValue={
+                isWalkIn && booking?.paymentStatus === 'refund_requested'
+                  ? 'paid'
+                  : booking?.paymentStatus || 'pending'
+              }
             >
             <Select style={{ width: '100%' }}>
               <Select.Option value="pending">
@@ -969,9 +973,11 @@ export default function BookingForm({
               <Select.Option value="paid">
                 <Tag color="green" style={{ display: 'flex', justifyContent: 'center' }}>Đã thanh toán đủ</Tag>
               </Select.Option>
-              <Select.Option value="refund_requested">
-                <Tag color="purple" style={{ display: 'flex', justifyContent: 'center' }}>Yêu cầu hoàn tiền</Tag>
-              </Select.Option>
+              {!isWalkIn && (
+                <Select.Option value="refund_requested">
+                  <Tag color="purple" style={{ display: 'flex', justifyContent: 'center' }}>Yêu cầu hoàn tiền</Tag>
+                </Select.Option>
+              )}
               <Select.Option value="failed">
                 <Tag color="red" style={{ display: 'flex', justifyContent: 'center' }}>Thanh toán thất bại</Tag>
               </Select.Option>
